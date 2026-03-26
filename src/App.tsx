@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, Droplets, Pill, Thermometer, AlertCircle } from 'lucide-react';
-import { validateOrganisation, parseMedicationCodes } from './protocolService';
+import { validateOrganisation } from './protocolService';
 import { MED_MAP } from './medicationData';
 import type { MedContent } from './medicationData';
 import { collection, getDocs } from 'firebase/firestore';
