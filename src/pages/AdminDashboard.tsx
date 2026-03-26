@@ -4,7 +4,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, Timestamp } fro
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical } from 'lucide-react';
+import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2 } from 'lucide-react';
 
 interface Practice {
   id: string;
@@ -26,6 +26,11 @@ const AdminDashboard: React.FC = () => {
   const [newOds, setNewOds] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [addError, setAddError] = useState('');
+  const [editingPractice, setEditingPractice] = useState<Practice | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editOds, setEditOds] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editError, setEditError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -127,6 +132,46 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const openEditForm = (practice: Practice) => {
+    setEditingPractice(practice);
+    setEditName(practice.name);
+    setEditOds(practice.ods_code || '');
+    setEditEmail(practice.contact_email || '');
+    setEditError('');
+  };
+
+  const savePracticeEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError('');
+
+    if (!editingPractice) return;
+
+    if (!editName.trim()) {
+      setEditError('Organisation name is required');
+      return;
+    }
+
+    if (!editEmail.trim()) {
+      setEditError('Contact email is required');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'practices', editingPractice.id), {
+        name: editName.trim(),
+        name_lowercase: editName.trim().toLowerCase(),
+        ods_code: editOds.trim().toUpperCase(),
+        contact_email: editEmail.trim(),
+      });
+
+      setEditingPractice(null);
+      loadPractices();
+    } catch (error) {
+      console.error('Error updating practice:', error);
+      setEditError('Failed to update practice. Please try again.');
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut(auth);
     navigate('/admin');
@@ -203,6 +248,58 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      {editingPractice && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Edit Practice</h2>
+            <button onClick={() => setEditingPractice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
+              <X size={20} />
+            </button>
+          </div>
+          {editError && (
+            <div style={{ padding: '0.5rem 0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+              {editError}
+            </div>
+          )}
+          <form onSubmit={savePracticeEdit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Organisation Name *</label>
+              <input
+                type="text" value={editName} onChange={e => setEditName(e.target.value)} required
+                placeholder="Exact name as in SystmOne"
+                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>ODS Code</label>
+                <input
+                  type="text" value={editOds} onChange={e => setEditOds(e.target.value)}
+                  placeholder="e.g. C84001"
+                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Contact Email *</label>
+                <input
+                  type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} required
+                  placeholder="e.g. admin@nhs.net"
+                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-start' }}>
+              <button type="submit" className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                Save Changes
+              </button>
+              <button type="button" onClick={() => setEditingPractice(null)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <div className="card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
@@ -250,6 +347,16 @@ const AdminDashboard: React.FC = () => {
                       <XCircle size={16} /> Inactive
                     </span>
                   )}
+                  <button
+                    onClick={() => openEditForm(practice)}
+                    style={{
+                      padding: '0.4rem 0.75rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                      fontSize: '0.8rem', fontWeight: 600,
+                      background: '#005eb8', color: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem'
+                    }}
+                  >
+                    <Edit2 size={14} /> Edit
+                  </button>
                   <button
                     onClick={() => toggleActive(practice)}
                     style={{
