@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Stethoscope, Eye } from 'lucide-react';
+import { Shield, Stethoscope, Zap } from 'lucide-react';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -92,9 +92,9 @@ const Landing: React.FC = () => {
             </button>
           </div>
 
-          {/* Patient View */}
+          {/* Demo */}
           <div
-            onClick={() => navigate('/?demo=true')}
+            onClick={() => navigate('/demo')}
             style={{
               padding: '2rem',
               background: 'white',
@@ -115,9 +115,9 @@ const Landing: React.FC = () => {
               (e.currentTarget as HTMLDivElement).style.borderColor = 'transparent';
             }}
           >
-            <Eye size={48} style={{ color: '#FF9800', marginBottom: '1rem', margin: '0 auto 1rem' }} />
-            <h2 style={{ fontSize: '1.5rem', color: '#212b32', marginBottom: '0.5rem' }}>Patient View</h2>
-            <p style={{ fontSize: '0.9rem', color: '#4c6272', marginBottom: '1rem' }}>View medication information</p>
+            <Zap size={48} style={{ color: '#FF9800', marginBottom: '1rem', margin: '0 auto 1rem' }} />
+            <h2 style={{ fontSize: '1.5rem', color: '#212b32', marginBottom: '0.5rem' }}>Demo</h2>
+            <p style={{ fontSize: '0.9rem', color: '#4c6272', marginBottom: '1rem' }}>Try the live demo</p>
             <button style={{
               padding: '0.75rem 1.5rem',
               background: '#FF9800',
@@ -128,7 +128,7 @@ const Landing: React.FC = () => {
               fontSize: '1rem',
               fontWeight: '600'
             }}>
-              View as Patient
+              Launch Demo
             </button>
           </div>
         </div>
