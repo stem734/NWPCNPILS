@@ -5,6 +5,8 @@ import { validateOrganisation, parseMedicationCodes } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import PracticeSignup from './pages/PracticeSignup';
+import PracticeLogin from './pages/PracticeLogin';
+import PracticeDashboard from './pages/PracticeDashboard';
 
 // Content Mapping
 interface MedResource {
@@ -424,6 +426,8 @@ const App: React.FC = () => {
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/signup" element={<PracticeSignup />} />
+            <Route path="/practice" element={<PracticeLogin />} />
+            <Route path="/practice/dashboard" element={<PracticeDashboard />} />
           </Routes>
         </main>
 
