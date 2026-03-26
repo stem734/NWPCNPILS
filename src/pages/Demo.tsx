@@ -1,9 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pill, Monitor, Droplets, Thermometer, FlaskConical } from 'lucide-react';
+import { MED_MAP } from '../medicationData';
 
 const Demo: React.FC = () => {
   const navigate = useNavigate();
+
+  const ICON_MAP: Record<string, React.ReactNode> = {
+    '101': <Pill size={20} />,
+    '102': <Monitor size={20} />,
+    '201': <Droplets size={20} />,
+    '202': <Droplets size={20} />,
+    '301': <Droplets size={20} />,
+    '401': <Thermometer size={20} />,
+    '501': <FlaskConical size={20} />,
+  };
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
@@ -27,34 +38,83 @@ const Demo: React.FC = () => {
         <ArrowLeft size={16} /> Back
       </button>
 
-      <h1 style={{ fontSize: '2rem', color: '#212b32', marginBottom: '1rem' }}>MyMedInfo Demo</h1>
-      <p style={{ fontSize: '1rem', color: '#4c6272', marginBottom: '2rem' }}>
-        This is a demonstration of the MyMedInfo patient medication information portal.
-      </p>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', color: '#212b32', marginBottom: '0.5rem' }}>MyMedInfo Demo</h1>
+        <p style={{ fontSize: '1rem', color: '#4c6272', margin: 0 }}>
+          Clear, Trusted Medication Information
+        </p>
+      </div>
 
-      <div style={{ background: '#f5f7fa', padding: '2rem', borderRadius: '8px', border: '1px solid #d8dde0' }}>
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '6px', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.3rem', color: '#212b32', marginBottom: '1rem' }}>Demo Content Coming Soon</h2>
-          <p style={{ color: '#4c6272', lineHeight: '1.6' }}>
-            The demo page will showcase example medications, dosages, and patient information in the MyMedInfo system.
-            Use the Admin and Practice login sections to manage and configure your practice medications.
-          </p>
-        </div>
+      <div style={{ marginBottom: '3rem', padding: '1.5rem', background: '#eef7ff', borderRadius: '8px', border: '1px solid #005eb8' }}>
+        <h2 style={{ fontSize: '1.1rem', color: '#005eb8', marginBottom: '0.5rem', margin: '0 0 0.5rem 0' }}>Medication Selection</h2>
+        <p style={{ color: '#4c6272', margin: 0, fontSize: '0.95rem' }}>
+          Click on any medication card below to view detailed information
+        </p>
+      </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '6px', border: '1px solid #d8dde0' }}>
-            <h3 style={{ color: '#005eb8', fontSize: '1rem', marginBottom: '0.5rem' }}>👨‍⚕️ Admin Portal</h3>
-            <p style={{ color: '#4c6272', fontSize: '0.9rem', margin: 0 }}>Manage system medications and settings</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        {Object.entries(MED_MAP).map(([key, item]) => (
+          <div
+            key={key}
+            onClick={() => navigate(`?code=${key}`)}
+            className="resource-card"
+            style={{
+              textAlign: 'center',
+              padding: '1.5rem',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              border: '1px solid #d8dde0',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            }}
+          >
+            <div style={{ color: '#005eb8', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+              {ICON_MAP[key] || <Pill size={32} />}
+            </div>
+            <h3 style={{ fontSize: '1rem', color: '#212b32', marginBottom: '0.5rem', margin: '0 0 0.5rem 0' }}>
+              {item.title}
+            </h3>
+            <span
+              style={{
+                display: 'inline-block',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                backgroundColor:
+                  item.badge === 'NEW'
+                    ? '#e3f2fd'
+                    : item.badge === 'REAUTH'
+                    ? '#f0f4f5'
+                    : '#f5f5f5',
+                color:
+                  item.badge === 'NEW'
+                    ? '#005eb8'
+                    : item.badge === 'REAUTH'
+                    ? '#212b32'
+                    : '#4c6272',
+              }}
+            >
+              {item.badge}
+            </span>
           </div>
-          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '6px', border: '1px solid #d8dde0' }}>
-            <h3 style={{ color: '#007f3b', fontSize: '1rem', marginBottom: '0.5rem' }}>🏥 Practice Portal</h3>
-            <p style={{ color: '#4c6272', fontSize: '0.9rem', margin: 0 }}>Configure practice medications and content</p>
-          </div>
-          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '6px', border: '1px solid #d8dde0' }}>
-            <h3 style={{ color: '#FF9800', fontSize: '1rem', marginBottom: '0.5rem' }}>📱 Patient View</h3>
-            <p style={{ color: '#4c6272', fontSize: '0.9rem', margin: 0 }}>View medication information clearly</p>
-          </div>
-        </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: '3rem', padding: '1.5rem', background: '#f5f7fa', borderRadius: '8px', border: '1px solid #d8dde0' }}>
+        <h2 style={{ fontSize: '1.1rem', color: '#212b32', marginBottom: '1rem', margin: '0 0 1rem 0' }}>About the Demo</h2>
+        <p style={{ color: '#4c6272', margin: 0, lineHeight: '1.6' }}>
+          This demo shows how patients interact with the MyMedInfo system. Click on any medication card above to view detailed information about that medication. The system provides clear, trusted medication information in an easy-to-understand format.
+        </p>
       </div>
     </div>
   );
