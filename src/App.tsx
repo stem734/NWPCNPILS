@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
-import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, Droplets, Pill, Thermometer } from 'lucide-react';
+import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, Droplets, Pill, Thermometer, AlertCircle } from 'lucide-react';
+import { decodeProtocolMetadata, validateProtocolWithCloudFunction } from './protocolService';
+import type { ProtocolMetadata } from './protocolService';
 
 // Content Mapping
 interface MedResource {
@@ -127,6 +129,48 @@ const MED_MAPPING: Record<string, MedResource> = {
 const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
+  const metaParam = searchParams.get('meta');
+
+  const [protocol, setProtocol] = useState<ProtocolMetadata | null>(null);
+  const [protocolError, setProtocolError] = useState<string | null>(null);
+  const [isValidatingProtocol, setIsValidatingProtocol] = useState(false);
+
+  // Validate protocol on mount or when meta parameter changes
+  useEffect(() => {
+    if (!metaParam) {
+      setProtocol(null);
+      setProtocolError(null);
+      return;
+    }
+
+    const validateProtocol = async () => {
+      setIsValidatingProtocol(true);
+
+      // First, try to decode the metadata from the parameter
+      const decodedMeta = decodeProtocolMetadata(metaParam);
+
+      if (!decodedMeta) {
+        setProtocolError('Invalid protocol metadata');
+        setIsValidatingProtocol(false);
+        return;
+      }
+
+      // Then validate with Cloud Function
+      const result = await validateProtocolWithCloudFunction(decodedMeta.protocol_id);
+
+      if (result.valid && result.metadata) {
+        setProtocol(result.metadata);
+        setProtocolError(null);
+      } else {
+        setProtocol(null);
+        setProtocolError(result.error || 'Failed to validate protocol');
+      }
+
+      setIsValidatingProtocol(false);
+    };
+
+    validateProtocol();
+  }, [metaParam]);
 
   const contents = useMemo(() => {
     // Extract all valid 3-digit clinical codes (e.g. 101, 102, 201, 202, 301, 401, 501)
@@ -139,12 +183,51 @@ const ResourceView: React.FC = () => {
       .filter(item => item && item.title);
   }, [rawCode]);
 
+  // Show protocol error if validation failed
+  if (protocolError && metaParam) {
+    return (
+      <div className="card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
+        <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} />
+        <h1>Protocol Validation Error</h1>
+        <p style={{ color: '#d5281b', marginBottom: '1rem' }}>{protocolError}</p>
+        <a href="/" className="action-button" style={{ backgroundColor: '#d5281b' }}>
+          Return to Home
+        </a>
+      </div>
+    );
+  }
+
+  // Show loading state while validating protocol
+  if (isValidatingProtocol && metaParam) {
+    return (
+      <div className="card" style={{ textAlign: 'center' }}>
+        <div style={{ marginBottom: '1rem' }}>
+          <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>
+            <FlaskConical size={64} color="#005eb8" />
+          </div>
+        </div>
+        <h1>Validating Protocol...</h1>
+        <p>Please wait while we verify your protocol.</p>
+      </div>
+    );
+  }
+
   if (contents.length === 0) {
     return (
       <div className="card" style={{ textAlign: 'center' }}>
         <FlaskConical size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
         <h1>Patient Medication Portal</h1>
         <p>Please use the link provided by your GP or scan the QR code to find information about your specific medication.</p>
+        {protocol && (
+          <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
+            <div style={{ fontWeight: 700, color: '#005eb8', marginBottom: '0.5rem' }}>
+              Protocol Validated: {protocol.protocol_id}
+            </div>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#212b32' }}>
+              Version {protocol.version} - {protocol.active_medications.length} medications available
+            </p>
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '2rem' }}>
           {Object.entries(MED_MAPPING).map(([key, item]) => (
             <a key={key} href={`?code=${key}`} className="resource-card" style={{ textAlign: 'center' }}>
