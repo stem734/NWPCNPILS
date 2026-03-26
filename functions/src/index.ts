@@ -3,7 +3,7 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineString } from 'firebase-functions/params';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// import { GoogleGenerativeAI } from '@google/generative-ai'; // Disabled for MVP
 
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
 
@@ -191,6 +191,7 @@ export const updatePracticeMedications = onCall(
 
 /**
  * Generate medication content using Gemini AI.
+ * DISABLED FOR MVP - Admins can manually enter medication information
  */
 export const generateMedicationContent = onCall(
   { region: 'europe-west2' },
@@ -199,48 +200,11 @@ export const generateMedicationContent = onCall(
       throw new HttpsError('unauthenticated', 'Must be logged in as admin');
     }
 
-    const { medicationName, type } = request.data as { medicationName: string; type: 'NEW' | 'REAUTH' | 'GENERAL' };
-
-    if (!medicationName) {
-      throw new HttpsError('invalid-argument', 'Medication name is required');
-    }
-
-    const key = geminiKey.value();
-    if (!key) {
-      throw new HttpsError('failed-precondition', 'Gemini API key not configured. Run: firebase functions:secrets:set GEMINI_API_KEY');
-    }
-
-    try {
-      const genAI = new GoogleGenerativeAI(key);
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-
-      const typeLabel = type === 'NEW' ? 'starting treatment' : type === 'REAUTH' ? 'annual reauthorisation review' : 'general information';
-
-      const prompt = `You are a UK NHS clinical pharmacist. Generate patient-facing medication information for "${medicationName}" (${typeLabel}).
-
-Return ONLY valid JSON with no markdown formatting, no code blocks, just the raw JSON object:
-{
-  "title": "Short title for the medication card",
-  "description": "2-3 sentence patient-friendly description of the medication, what it does, and why it has been prescribed. Use plain English suitable for UK NHS patients.",
-  "category": "The therapeutic category (e.g. Diabetes, Cardiovascular, Respiratory, Dermatology, Pain Management, etc.)",
-  "keyInfo": ["3-5 key safety or usage points as short sentences. Include practical advice like when to take it, common side effects to watch for, and when to seek help."],
-  "sickDaysNeeded": true or false - whether sick day rules apply (typically true for diabetes/kidney medications),
-  "nhsLink": "The most relevant NHS.uk medicines page URL if you know it, or empty string"
-}`;
-
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-
-      // Parse the JSON from the response, stripping any markdown code blocks
-      const cleaned = text.replace(/^```json?\s*/i, '').replace(/\s*```$/i, '');
-      const parsed = JSON.parse(cleaned);
-
-      return { success: true, content: parsed };
-    } catch (error) {
-      console.error('Error generating content:', error);
-      const message = error instanceof Error ? error.message : 'AI generation failed';
-      throw new HttpsError('internal', message);
-    }
+    // MVP: Return placeholder message indicating AI generation is not yet available
+    throw new HttpsError(
+      'failed-precondition',
+      'AI-powered medication generation is not available in this MVP version. Please manually enter medication information using the form below.'
+    );
   }
 );
 
@@ -352,9 +316,9 @@ export const deleteMedication = onCall(
  * Health check endpoint
  */
 export const healthCheck = onCall({ region: 'europe-west2' }, async () => {
-  return { 
-    status: 'ok', 
+  return {
+    status: 'ok',
     timestamp: new Date().toISOString(),
-    apiKeyLoaded: !!geminiKey.value()
+    apiKeyLoaded: true // MVP: Not checking Gemini key
   };
 });
