@@ -335,7 +335,7 @@ const App: React.FC = () => {
       <div className="app-container">
         <header>
           <div className="header-content">
-            <img src="/MyMedinfo.png" alt="MyMedInfo" style={{ height: 'auto', width: '240px', marginBottom: '0' }} />
+            <img src="/MyMedinfo.png" alt="MyMedInfo" style={{ height: 'auto', width: '80px', marginBottom: '0' }} />
           </div>
         </header>
 
