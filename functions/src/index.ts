@@ -1,84 +1,60 @@
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 initializeApp();
 const db = getFirestore();
 
-interface ProtocolValidationRequest {
-  protocolId: string;
-  practiceOdsCode?: string;
-}
-
-interface ProtocolData {
-  protocol_id: string;
-  version: string;
-  name: string;
-  description: string;
-  active_medications: string[];
-  is_active: boolean;
-}
-
-interface ProtocolValidationResponse {
-  valid: boolean;
-  protocol: ProtocolData | null;
-  error?: string;
-  lastUsedAt?: FieldValue;
-}
-
 /**
- * Validates protocol access and retrieves protocol data
- * Called from React app via httpsCallable
+ * Validates a practice by organisation name against the practices collection.
+ *
+ * URL format: ?org=<organisation_name>&codes=101,102
+ *
+ * Flow:
+ * 1. Practice signs up → org name stored in Firestore
+ * 2. SystmOne protocol auto-fills <organisation_name> into URL
+ * 3. React app calls this function with the org name
+ * 4. If org exists and is active → show medications
+ * 5. If not → blocked
  */
-export const validateProtocol = onCall(
+export const validatePractice = onCall(
   { region: 'europe-west2', maxInstances: 100 },
-  async (request): Promise<ProtocolValidationResponse> => {
-    const { protocolId, practiceOdsCode } = request.data as ProtocolValidationRequest;
+  async (request): Promise<{ valid: boolean; error?: string }> => {
+    const { orgName } = request.data as { orgName: string };
 
-    // Validate input
-    if (!protocolId || typeof protocolId !== 'string') {
-      throw new HttpsError('invalid-argument', 'Protocol ID is required and must be a string');
+    if (!orgName || typeof orgName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Organisation name is required');
     }
 
     try {
-      // Query the protocols collection for the requested protocol
-      const protocolDoc = await db.collection('protocols').doc(protocolId).get();
+      // Look up by organisation name (case-insensitive via lowercase field)
+      const practicesRef = db.collection('practices');
+      const snapshot = await practicesRef
+        .where('name_lowercase', '==', orgName.toLowerCase().trim())
+        .limit(1)
+        .get();
 
-      if (!protocolDoc.exists) {
-        throw new HttpsError('not-found', `Protocol ${protocolId} not found`);
+      if (snapshot.empty) {
+        return { valid: false, error: 'Practice not registered' };
       }
 
-      const protocolData = protocolDoc.data();
+      const practiceDoc = snapshot.docs[0];
+      const practice = practiceDoc.data();
 
-      // Verify protocol is active
-      if (!protocolData?.is_active) {
-        throw new HttpsError('unavailable', `Protocol ${protocolId} is not active`);
+      if (!practice.is_active) {
+        return { valid: false, error: 'Practice subscription is inactive' };
       }
 
-      // Update last_used_at timestamp
-      await protocolDoc.ref.update({
-        last_used_at: Timestamp.now(),
+      // Update last_accessed timestamp
+      await practiceDoc.ref.update({
+        last_accessed: Timestamp.now(),
       });
 
-      // Return protocol data
-      return {
-        valid: true,
-        protocol: {
-          protocol_id: protocolData.protocol_id,
-          version: protocolData.version,
-          name: protocolData.name,
-          description: protocolData.description,
-          active_medications: protocolData.active_medications || [],
-          is_active: protocolData.is_active,
-        },
-      };
+      return { valid: true };
     } catch (error) {
-      if (error instanceof HttpsError) {
-        throw error;
-      }
-
-      console.error('Unexpected error validating protocol:', error);
-      throw new HttpsError('internal', 'An unexpected error occurred while validating the protocol');
+      if (error instanceof HttpsError) throw error;
+      console.error('Error validating practice:', error);
+      throw new HttpsError('internal', 'Unable to validate practice');
     }
   }
 );

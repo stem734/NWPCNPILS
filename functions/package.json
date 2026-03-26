@@ -1,11 +1,13 @@
 {
   "name": "nwpcnpils-functions",
   "description": "Cloud Functions for NWPCNPILS",
+  "main": "lib/index.js",
   "type": "module",
   "engines": {
     "node": "20"
   },
   "scripts": {
+    "build": "tsc",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"

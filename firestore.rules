@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Practices collection
+    match /practices/{document=**} {
+      // Authenticated admins can read and write
+      allow read, write: if request.auth != null;
+      // Anyone can create (sign-up form) but not read/update/delete
+      allow create: if true;
+    }
+
+    // Protocols collection: admin only
+    match /protocols/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

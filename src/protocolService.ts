@@ -1,88 +1,42 @@
 import { functions } from './firebase';
 import { httpsCallable } from 'firebase/functions';
 
-export interface ProtocolMetadata {
-  protocol_id: string;
-  version: string;
-  active_medications: string[];
-}
-
-export interface ProtocolValidationResult {
-  valid: boolean;
-  metadata: ProtocolMetadata | null;
-  error?: string;
-}
-
 /**
- * Decode Base64-encoded protocol metadata from URL parameter
+ * Validate organisation name against signed-up practices in Firestore
+ * via Cloud Function
  */
-export function decodeProtocolMetadata(encodedMeta: string): ProtocolMetadata | null {
+export async function validateOrganisation(orgName: string): Promise<{ valid: boolean; error?: string }> {
   try {
-    const decoded = atob(encodedMeta);
-    const parsed = JSON.parse(decoded);
+    const validateFunc = httpsCallable(functions, 'validatePractice');
+    const result = await validateFunc({ orgName });
+    const data = result.data as Record<string, unknown>;
 
-    // Validate required fields
-    if (!parsed.protocol_id || !parsed.version || !Array.isArray(parsed.active_medications)) {
-      console.error('Invalid protocol metadata structure:', parsed);
-      return null;
-    }
-
-    return {
-      protocol_id: parsed.protocol_id,
-      version: parsed.version,
-      active_medications: parsed.active_medications,
-    };
-  } catch (error) {
-    console.error('Failed to decode protocol metadata:', error);
-    return null;
-  }
-}
-
-/**
- * Encode protocol metadata to Base64 for URL parameter
- */
-export function encodeProtocolMetadata(metadata: ProtocolMetadata): string {
-  try {
-    return btoa(JSON.stringify(metadata));
-  } catch (error) {
-    console.error('Failed to encode protocol metadata:', error);
-    return '';
-  }
-}
-
-/**
- * Validate protocol via Cloud Function
- */
-export async function validateProtocolWithCloudFunction(
-  protocolId: string
-): Promise<ProtocolValidationResult> {
-  try {
-    const validateProtocol = httpsCallable(functions, 'validateProtocol');
-    const result = await validateProtocol({ protocolId });
-
-    if (result.data && (result.data as Record<string, unknown>).valid) {
-      const protocolData = (result.data as Record<string, unknown>).protocol as Record<string, unknown>;
-      return {
-        valid: true,
-        metadata: {
-          protocol_id: protocolData.protocol_id as string,
-          version: protocolData.version as string,
-          active_medications: protocolData.active_medications as string[],
-        },
-      };
+    if (data.valid) {
+      return { valid: true };
     }
 
     return {
       valid: false,
-      metadata: null,
-      error: 'Protocol validation failed',
+      error: 'This practice is not registered with NWPCN PILS.',
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unexpected error during protocol validation';
+    console.error('Organisation validation error:', error);
     return {
       valid: false,
-      metadata: null,
-      error: errorMessage,
+      error: 'Unable to verify practice. Please try again later.',
     };
   }
+}
+
+/**
+ * Parse medication codes from the codes parameter
+ * Accepts: "101,102" or "101,202,301"
+ */
+export function parseMedicationCodes(codesParam: string): string[] {
+  if (!codesParam) return [];
+
+  return codesParam
+    .split(',')
+    .map(c => c.trim())
+    .filter(c => /^[1-5]0[12]$/.test(c));
 }

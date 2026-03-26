@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import { getAuth } from 'firebase/auth';
 
 // Replace these with your Firebase project config
 // Get these from Firebase Console > Project Settings
@@ -21,6 +22,9 @@ export const db = getFirestore(app);
 
 // Initialize Cloud Functions
 export const functions = getFunctions(app, 'europe-west2');
+
+// Initialize Auth
+export const auth = getAuth(app);
 
 // Connect to emulator in development if VITE_USE_EMULATOR is set
 if (import.meta.env.VITE_USE_EMULATOR === 'true') {

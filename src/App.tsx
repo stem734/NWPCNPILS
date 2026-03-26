@@ -1,8 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, Droplets, Pill, Thermometer, AlertCircle } from 'lucide-react';
-import { decodeProtocolMetadata, validateProtocolWithCloudFunction } from './protocolService';
-import type { ProtocolMetadata } from './protocolService';
+import { validateOrganisation, parseMedicationCodes } from './protocolService';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import PracticeSignup from './pages/PracticeSignup';
 
 // Content Mapping
 interface MedResource {
@@ -129,76 +131,54 @@ const MED_MAPPING: Record<string, MedResource> = {
 const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
-  const metaParam = searchParams.get('meta');
+  const orgParam = searchParams.get('org');
+  const codesParam = searchParams.get('codes');
 
-  const [protocol, setProtocol] = useState<ProtocolMetadata | null>(null);
-  const [protocolError, setProtocolError] = useState<string | null>(null);
-  const [isValidatingProtocol, setIsValidatingProtocol] = useState(false);
+  const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
-  // Validate protocol on mount or when meta parameter changes
+  // Validate organisation against Firestore
   useEffect(() => {
-    if (!metaParam) {
-      setProtocol(null);
-      setProtocolError(null);
+    if (!orgParam) {
+      setIsAuthorised(null);
+      setAuthError(null);
       return;
     }
 
-    const validateProtocol = async () => {
-      setIsValidatingProtocol(true);
-
-      // First, try to decode the metadata from the parameter
-      const decodedMeta = decodeProtocolMetadata(metaParam);
-
-      if (!decodedMeta) {
-        setProtocolError('Invalid protocol metadata');
-        setIsValidatingProtocol(false);
-        return;
-      }
-
-      // Then validate with Cloud Function
-      const result = await validateProtocolWithCloudFunction(decodedMeta.protocol_id);
-
-      if (result.valid && result.metadata) {
-        setProtocol(result.metadata);
-        setProtocolError(null);
-      } else {
-        setProtocol(null);
-        setProtocolError(result.error || 'Failed to validate protocol');
-      }
-
-      setIsValidatingProtocol(false);
+    const validate = async () => {
+      setIsValidating(true);
+      const result = await validateOrganisation(orgParam);
+      setIsAuthorised(result.valid);
+      if (!result.valid) setAuthError(result.error || 'Practice not registered');
+      setIsValidating(false);
     };
 
-    validateProtocol();
-  }, [metaParam]);
+    validate();
+  }, [orgParam]);
 
   const contents = useMemo(() => {
-    // Extract all valid 3-digit clinical codes (e.g. 101, 102, 201, 202, 301, 401, 501)
-    // This allows strings like "101????301??" to match both 101 and 301
+    // If org param present, must be validated first
+    if (orgParam && !isAuthorised) return [];
+
+    // Use codes param if present (from SystmOne: ?org=NAME&codes=101,102)
+    if (codesParam) {
+      const codes = parseMedicationCodes(codesParam);
+      return codes
+        .map(code => ({ id: code, ...(MED_MAPPING[code] as MedResource) }))
+        .filter(item => item && item.title);
+    }
+
+    // Fallback: extract from code/med param (demo mode: ?code=101)
     const codes = rawCode.match(/[1-5]0[12]/g) || [];
     const uniqueCodes = Array.from(new Set(codes));
-
     return uniqueCodes
       .map(code => ({ id: code, ...(MED_MAPPING[code] as MedResource) }))
       .filter(item => item && item.title);
-  }, [rawCode]);
+  }, [rawCode, orgParam, codesParam, isAuthorised]);
 
-  // Show protocol error if validation failed
-  if (protocolError && metaParam) {
-    return (
-      <div className="card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
-        <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} />
-        <h1>Protocol Validation Error</h1>
-        <p style={{ color: '#d5281b', marginBottom: '1rem' }}>{protocolError}</p>
-        <a href="/" className="action-button" style={{ backgroundColor: '#d5281b' }}>
-          Return to Home
-        </a>
-      </div>
-    );
-  }
-
-  // Show loading state while validating protocol
-  if (isValidatingProtocol && metaParam) {
+  // Show loading while validating
+  if (isValidating && orgParam) {
     return (
       <div className="card" style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '1rem' }}>
@@ -206,8 +186,22 @@ const ResourceView: React.FC = () => {
             <FlaskConical size={64} color="#005eb8" />
           </div>
         </div>
-        <h1>Validating Protocol...</h1>
-        <p>Please wait while we verify your protocol.</p>
+        <h1>Verifying Practice...</h1>
+        <p>Please wait while we verify your practice is registered.</p>
+      </div>
+    );
+  }
+
+  // Show auth error - practice not signed up
+  if (orgParam && isAuthorised === false) {
+    return (
+      <div className="card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
+        <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} />
+        <h1>Practice Not Registered</h1>
+        <p style={{ color: '#d5281b', marginBottom: '1rem' }}>{authError}</p>
+        <p style={{ fontSize: '0.9rem', color: '#4c6272' }}>
+          If your practice would like to use this service, please contact your PCN coordinator.
+        </p>
       </div>
     );
   }
@@ -218,25 +212,17 @@ const ResourceView: React.FC = () => {
         <FlaskConical size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
         <h1>Patient Medication Portal</h1>
         <p>Please use the link provided by your GP or scan the QR code to find information about your specific medication.</p>
-        {protocol && (
-          <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
-            <div style={{ fontWeight: 700, color: '#005eb8', marginBottom: '0.5rem' }}>
-              Protocol Validated: {protocol.protocol_id}
-            </div>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#212b32' }}>
-              Version {protocol.version} - {protocol.active_medications.length} medications available
-            </p>
+        {!orgParam && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '2rem' }}>
+            {Object.entries(MED_MAPPING).map(([key, item]) => (
+              <a key={key} href={`?code=${key}`} className="resource-card" style={{ textAlign: 'center' }}>
+                <div style={{ color: 'var(--nhs-blue)', marginBottom: '0.5rem' }}>{item.icon}</div>
+                <h3>{item.title}</h3>
+                <span className={`badge badge-${item.badge.toLowerCase()}`}>{item.badge}</span>
+              </a>
+            ))}
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '2rem' }}>
-          {Object.entries(MED_MAPPING).map(([key, item]) => (
-            <a key={key} href={`?code=${key}`} className="resource-card" style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--nhs-blue)', marginBottom: '0.5rem' }}>{item.icon}</div>
-              <h3>{item.title}</h3>
-              <span className={`badge badge-${item.badge.toLowerCase()}`}>{item.badge}</span>
-            </a>
-          ))}
-        </div>
       </div>
     );
   }
@@ -435,6 +421,9 @@ const App: React.FC = () => {
         <main>
           <Routes>
             <Route path="/" element={<ResourceView />} />
+            <Route path="/admin" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/signup" element={<PracticeSignup />} />
           </Routes>
         </main>
 
