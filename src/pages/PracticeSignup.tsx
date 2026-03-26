@@ -17,8 +17,14 @@ const PracticeSignup: React.FC = () => {
     setError('');
     setLoading(true);
 
+    // TODO: Uncomment for production - restrict to nhs.net only
+    // if (!contactEmail.trim().toLowerCase().endsWith('@nhs.net')) {
+    //   setError('Only nhs.net email addresses are accepted');
+    //   setLoading(false);
+    //   return;
+    // }
+
     try {
-      const docId = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
       await addDoc(collection(db, 'practices'), {
         name: name.trim(),
@@ -46,7 +52,7 @@ const PracticeSignup: React.FC = () => {
           <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>Registration Submitted</h1>
           <p style={{ color: '#4c6272', marginBottom: '1.5rem' }}>
             Thank you for registering <strong>{name}</strong>.
-            Your application is now pending review by the NWPCN team.
+            Your application is now pending review by the MyMedInfo team.
           </p>
           <div style={{ padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
             <p style={{ margin: 0, fontSize: '0.9rem' }}>
@@ -67,7 +73,7 @@ const PracticeSignup: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <FlaskConical size={48} color="#005eb8" style={{ marginBottom: '0.5rem' }} />
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Practice Registration</h1>
-          <p style={{ color: '#4c6272' }}>Register your practice for NWPCN Patient Information Leaflet Service</p>
+          <p style={{ color: '#4c6272' }}>Register your practice for MyMedInfo</p>
         </div>
 
         {error && (

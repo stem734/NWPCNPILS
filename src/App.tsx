@@ -2,132 +2,25 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, Droplets, Pill, Thermometer, AlertCircle } from 'lucide-react';
 import { validateOrganisation, parseMedicationCodes } from './protocolService';
+import { MED_MAP } from './medicationData';
+import type { MedContent } from './medicationData';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from './firebase';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import PracticeSignup from './pages/PracticeSignup';
 import PracticeLogin from './pages/PracticeLogin';
 import PracticeDashboard from './pages/PracticeDashboard';
+import DrugBuilder from './pages/DrugBuilder';
 
-// Content Mapping
-interface MedResource {
-  title: string;
-  description: string;
-  badge: 'NEW' | 'REAUTH' | 'GENERAL';
-  icon: React.ReactNode;
-  nhsLink?: string;
-  trendLinks: { title: string; url: string }[];
-  keyInfo: string[];
-  sickDaysNeeded?: boolean;
-}
-
-const MED_MAPPING: Record<string, MedResource> = {
-  '101': {
-    title: 'Sulfonylurea - Starting Treatment',
-    description: 'You are starting a Sulfonylurea medication (such as Gliclazide). This medicine helps your body produce more insulin to lower blood glucose.',
-    badge: 'NEW',
-    icon: <Pill size={20} />,
-    nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
-    trendLinks: [
-      { title: 'Hypoglycaemia Explained', url: 'https://trenddiabetes.online/portfolio/diabetes-why-do-i-sometimes-feel-shaky-dizzy-and-sweaty-hypoglygaemia-explained/' }
-    ],
-    keyInfo: [
-      'Take this medication with a meal.',
-      'Be aware of "hypos" (low blood sugar).',
-      'Always carry glucose or a sugary snack.'
-    ]
-  },
-  '102': {
-    title: 'Sulfonylurea - Reauthorisation',
-    description: 'Your Sulfonylurea medication has been reviewed and reauthorised for another year. It continues to be an important part of your glucose management.',
-    badge: 'REAUTH',
-    icon: <Monitor size={20} />,
-    nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
-    trendLinks: [
-      { title: 'Keeping well with T2 Diabetes', url: 'https://trenddiabetes.online/portfolio/65-years-old-keeping-well-with-your-type-2-diabetes/' }
-    ],
-    keyInfo: [
-      'Continue taking as prescribed, usually with breakfast.',
-      'Maintain regular check-ups.'
-    ]
-  },
-  '201': {
-    title: 'SGLT2 Inhibitor - First Initiation',
-    description: 'You are starting an SGLT2 inhibitor (such as Dapagliflozin or Empagliflozin). This medicine helps your kidneys remove excess sugar through your urine.',
-    badge: 'NEW',
-    icon: <Droplets size={20} />,
-    nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
-    trendLinks: [
-      { title: 'A simple guide to SGLT2 inhibitors', url: 'https://trenddiabetes.online/portfolio/looking-after-your-heart-kidneys-and-glucose-levels-a-simple-guide-to-sglt2-inhibitors/' },
-      { title: 'Genital Fungal Infection Prevention', url: 'https://trenddiabetes.online/portfolio/something-you-need-to-know-how-to-reduce-you-risk-of-genital-fungal-infection/' }
-    ],
-    keyInfo: [
-      'Stay hydrated by drinking plenty of water.',
-      'Maintain good personal hygiene to reduce infection risk.',
-      'Be aware of the risk of Ketoacidosis (rare but serious).'
-    ],
-    sickDaysNeeded: true
-  },
-  '202': {
-    title: 'SGLT2 Inhibitor - Reauthorisation',
-    description: 'Your SGLT2 inhibitor treatment has been reviewed and reauthorised. This medication provides protection for your heart and kidneys.',
-    badge: 'REAUTH',
-    icon: <Droplets size={20} />,
-    nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
-    trendLinks: [
-      { title: 'A simple guide to SGLT2 inhibitors', url: 'https://trenddiabetes.online/portfolio/looking-after-your-heart-kidneys-and-glucose-levels-a-simple-guide-to-sglt2-inhibitors/' },
-      { title: 'Sick Day Rules', url: 'https://trenddiabetes.online/portfolio/type-2-diabetes-what-to-do-when-you-are-ill/' }
-    ],
-    keyInfo: [
-      'Continue to stay hydrated.',
-      'Remember "Sick Day Rules" (Pause medication if you are unable to eat or drink).'
-    ],
-    sickDaysNeeded: true
-  },
-  '301': {
-    title: 'Emollients and Skin Care',
-    description: 'Emollients are moisturising treatments applied directly to the skin to soothe it and hydrate it.',
-    badge: 'GENERAL',
-    icon: <Droplets size={20} />,
-    nhsLink: 'https://www.nhs.uk/conditions/emollients/',
-    trendLinks: [],
-    keyInfo: [
-      'Apply frequently and in the direction of hair growth.',
-      'Important: Emollients with paraffin or oils are flammable. Keep away from naked flames.',
-      'Wash your hands after application if smoking.'
-    ]
-  },
-  '401': {
-    title: 'Insulin Therapy',
-    description: 'Insulin is a vital hormone for managing your blood glucose levels. You have been prescribed or reviewed for insulin therapy.',
-    badge: 'NEW',
-    icon: <Thermometer size={20} />,
-    nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
-    trendLinks: [
-      { title: 'Keeping safe with insulin therapy', url: 'https://trenddiabetes.online/portfolio/keeping-safe-with-insulin-therapy/' },
-      { title: 'Using an insulin cartridge pen', url: 'https://trenddiabetes.online/portfolio/a-stepwise-guide-on-how-to-use-an-insulin-cartridge-pen/' }
-    ],
-    keyInfo: [
-      'Rotate your injection sites regularly.',
-      'Check your injection sites for lumps (Lipohypertrophy).',
-      'Inform the DVLA if you are a driver on insulin.'
-    ],
-    sickDaysNeeded: true
-  },
-  '501': {
-    title: 'Mounjaro (Tirzepatide)',
-    description: 'Mounjaro is a medication for Type 2 Diabetes that mimics hormones to improve blood sugar control and support weight management.',
-    badge: 'NEW',
-    icon: <FlaskConical size={20} />,
-    nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
-    trendLinks: [
-      { title: 'GLP-1 RA and GIP guide', url: 'https://trenddiabetes.online/portfolio/glp-1-ra-gip-glp-1-ra-and-type-2-diabetes/' }
-    ],
-    keyInfo: [
-      'Usually a once-weekly injection.',
-      'May cause nausea or gastrointestinal side effects initially.',
-      'Report any severe abdominal pain immediately.'
-    ]
-  }
+const ICON_MAP: Record<string, React.ReactNode> = {
+  '101': <Pill size={20} />,
+  '102': <Monitor size={20} />,
+  '201': <Droplets size={20} />,
+  '202': <Droplets size={20} />,
+  '301': <Droplets size={20} />,
+  '401': <Thermometer size={20} />,
+  '501': <FlaskConical size={20} />,
 };
 
 const ResourceView: React.FC = () => {
@@ -139,6 +32,31 @@ const ResourceView: React.FC = () => {
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [customMeds, setCustomMeds] = useState<Record<string, MedContent>>({});
+
+  // Load custom medications from Firestore
+  useEffect(() => {
+    const loadCustomMeds = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'medications'));
+        const meds: Record<string, MedContent> = {};
+        snapshot.docs.forEach(doc => {
+          const data = doc.data() as MedContent;
+          meds[data.code] = data;
+        });
+        setCustomMeds(meds);
+      } catch {
+        // Custom meds not critical, built-ins still work
+      }
+    };
+    loadCustomMeds();
+  }, []);
+
+  // Merged medication map: built-in + custom
+  const allMeds: Record<string, MedContent> = useMemo(
+    () => ({ ...MED_MAP, ...customMeds }),
+    [customMeds]
+  );
 
   // Validate organisation against Firestore
   useEffect(() => {
@@ -163,21 +81,21 @@ const ResourceView: React.FC = () => {
     // If org param present, must be validated first
     if (orgParam && !isAuthorised) return [];
 
-    // Use codes param if present (from SystmOne: ?org=NAME&codes=101,102)
+    // Use codes param if present (from SystmOne: ?org=NAME&codes=101,102,601)
     if (codesParam) {
-      const codes = parseMedicationCodes(codesParam);
+      const codes = codesParam.split(',').map(c => c.trim()).filter(Boolean);
       return codes
-        .map(code => ({ id: code, ...(MED_MAPPING[code] as MedResource) }))
-        .filter(item => item && item.title);
+        .map(code => allMeds[code] ? { id: code, icon: ICON_MAP[code], ...allMeds[code] } : null)
+        .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
     }
 
     // Fallback: extract from code/med param (demo mode: ?code=101)
-    const codes = rawCode.match(/[1-5]0[12]/g) || [];
+    const codes = rawCode.match(/\d{3}/g) || [];
     const uniqueCodes = Array.from(new Set(codes));
     return uniqueCodes
-      .map(code => ({ id: code, ...(MED_MAPPING[code] as MedResource) }))
-      .filter(item => item && item.title);
-  }, [rawCode, orgParam, codesParam, isAuthorised]);
+      .map(code => allMeds[code] ? { id: code, icon: ICON_MAP[code], ...allMeds[code] } : null)
+      .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
+  }, [rawCode, orgParam, codesParam, isAuthorised, allMeds]);
 
   // Show loading while validating
   if (isValidating && orgParam) {
@@ -212,13 +130,14 @@ const ResourceView: React.FC = () => {
     return (
       <div className="card" style={{ textAlign: 'center' }}>
         <FlaskConical size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
-        <h1>Patient Medication Portal</h1>
+        <h1>MyMedInfo</h1>
+        <p style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '1rem' }}>Clear, trusted medication information</p>
         <p>Please use the link provided by your GP or scan the QR code to find information about your specific medication.</p>
         {!orgParam && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '2rem' }}>
-            {Object.entries(MED_MAPPING).map(([key, item]) => (
+            {Object.entries(allMeds).map(([key, item]) => (
               <a key={key} href={`?code=${key}`} className="resource-card" style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--nhs-blue)', marginBottom: '0.5rem' }}>{item.icon}</div>
+                <div style={{ color: 'var(--nhs-blue)', marginBottom: '0.5rem' }}>{ICON_MAP[key] || <Pill size={20} />}</div>
                 <h3>{item.title}</h3>
                 <span className={`badge badge-${item.badge.toLowerCase()}`}>{item.badge}</span>
               </a>
@@ -296,7 +215,7 @@ const ResourceView: React.FC = () => {
                   If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
                   Click the resources below to learn about "Sick Day Rules".
                 </p>
-                <a href="https://trenddiabetes.online/portfolio/type-2-diabetes-what-to-do-when-you-are-ill/" target="_blank" rel="noopener noreferrer" className="action-button">
+                <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
                   View Sick Day Guide <ExternalLink size={18} />
                 </a>
               </div>
@@ -371,14 +290,14 @@ const ClinicianDemo: React.FC = () => {
               <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
                 Select a scenario to demonstrate how the portal appears to patients based on different SystmOne protocols.
               </p>
-              {Object.entries(MED_MAPPING).map(([code, med]) => (
+              {Object.entries(MED_MAP).map(([code, med]) => (
                 <button
                   key={code}
                   className={`scenario-card ${currentCode === code ? 'active' : ''}`}
                   onClick={() => selectScenario(code)}
                 >
                   <div className="scenario-icon">
-                    {med.icon}
+                    {ICON_MAP[code]}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, color: '#212b32' }}>{med.title}</div>
@@ -415,8 +334,7 @@ const App: React.FC = () => {
       <div className="app-container">
         <header>
           <div className="header-content">
-            <span className="nhs-logo">NHS</span>
-            <span style={{ fontWeight: 500, fontSize: '1.2rem', opacity: 0.9 }}>Medication Portal</span>
+            <img src="/MyMedinfo.png" alt="MyMedInfo" style={{ height: 'auto', width: '240px', marginBottom: '0' }} />
           </div>
         </header>
 
@@ -426,13 +344,14 @@ const App: React.FC = () => {
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/signup" element={<PracticeSignup />} />
+            <Route path="/admin/drug-builder" element={<DrugBuilder />} />
             <Route path="/practice" element={<PracticeLogin />} />
             <Route path="/practice/dashboard" element={<PracticeDashboard />} />
           </Routes>
         </main>
 
         <footer className="footer">
-          <p>© {new Date().getFullYear()} North West PCN - Provided in partnership with SystmOne</p>
+          <p>© {new Date().getFullYear()} Nottingham West Primary Care Network - MyMedInfo</p>
           <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>
             This information is for guidance only. Always follow the specific advice from your GP or clinical team.
           </p>

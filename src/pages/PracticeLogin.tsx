@@ -45,7 +45,7 @@ const PracticeLogin: React.FC = () => {
       <div className="card" style={{ textAlign: 'center' }}>
         <FlaskConical size={48} color="#005eb8" style={{ marginBottom: '1rem' }} />
         <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Practice Portal</h1>
-        <p style={{ color: '#4c6272', marginBottom: '2rem' }}>NWPCN Patient Information Leaflet Service</p>
+        <p style={{ color: '#4c6272', marginBottom: '2rem' }}>MyMedInfo - Practice Portal</p>
 
         {error && (
           <div style={{ padding: '0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem' }}>

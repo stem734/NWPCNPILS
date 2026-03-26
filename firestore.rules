@@ -9,6 +9,12 @@ service cloud.firestore {
       allow create: if true;
     }
 
+    // Medications collection: anyone can read (patient view), admin can write
+    match /medications/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // Protocols collection: admin only
     match /protocols/{document=**} {
       allow read, write: if request.auth != null;

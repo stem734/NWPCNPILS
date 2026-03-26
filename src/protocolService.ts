@@ -17,7 +17,7 @@ export async function validateOrganisation(orgName: string): Promise<{ valid: bo
 
     return {
       valid: false,
-      error: 'This practice is not registered with NWPCN PILS.',
+      error: 'This practice is not registered with MyMedInfo.',
     };
   } catch (error) {
     console.error('Organisation validation error:', error);

@@ -4,7 +4,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, Timestamp } fro
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X } from 'lucide-react';
+import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical } from 'lucide-react';
 
 interface Practice {
   id: string;
@@ -90,6 +90,12 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
+    // TODO: Uncomment for production - restrict to nhs.net only
+    // if (!newEmail.trim().toLowerCase().endsWith('@nhs.net')) {
+    //   setAddError('Only nhs.net email addresses are accepted');
+    //   return;
+    // }
+
     try {
       // 1. Create the practice document
       const docRef = await addDoc(collection(db, 'practices'), {
@@ -138,6 +144,9 @@ const AdminDashboard: React.FC = () => {
           <p style={{ color: '#4c6272', margin: '0.25rem 0 0' }}>Manage registered practices</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => navigate('/admin/drug-builder')} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+            <FlaskConical size={16} /> Drug Builder
+          </button>
           <button onClick={loadPractices} className="action-button" style={{ backgroundColor: '#4c6272' }}>
             <RefreshCw size={16} /> Refresh
           </button>

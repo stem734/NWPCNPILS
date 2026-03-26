@@ -30,7 +30,7 @@ const AdminLogin: React.FC = () => {
       <div className="card" style={{ textAlign: 'center' }}>
         <ShieldAlert size={48} color="#005eb8" style={{ marginBottom: '1rem' }} />
         <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Admin Login</h1>
-        <p style={{ color: '#4c6272', marginBottom: '2rem' }}>NWPCN PILS Administration</p>
+        <p style={{ color: '#4c6272', marginBottom: '2rem' }}>MyMedInfo Administration</p>
 
         {error && (
           <div style={{ padding: '0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem' }}>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 280" width="700" height="280">
+  <!-- Dark Blue Cross Background -->
+  <rect x="40" y="20" width="140" height="140" rx="20" fill="#1e3a5f"/>
+  <rect x="10" y="70" width="200" height="100" rx="20" fill="#1e3a5f"/>
+
+  <!-- Pill/Capsule (Blue and White) -->
+  <ellipse cx="80" cy="110" rx="30" ry="40" fill="#5eb3e8"/>
+  <ellipse cx="120" cy="110" rx="30" ry="40" fill="white"/>
+  <rect x="50" y="90" width="60" height="40" fill="#5eb3e8"/>
+  <rect x="120" y="90" width="30" height="40" fill="white"/>
+
+  <!-- Information Circle "i" -->
+  <circle cx="165" cy="125" r="35" fill="#1e3a5f" stroke="white" stroke-width="4"/>
+  <circle cx="165" cy="105" r="7" fill="white"/>
+  <text x="165" y="145" font-size="35" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">i</text>
+
+  <!-- MyMedInfo Text -->
+  <text x="380" y="160" font-size="80" font-weight="bold" fill="#1e3a5f" font-family="Arial, sans-serif">MyMedInfo</text>
+</svg>
