@@ -181,12 +181,12 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '900px', margin: '2rem auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
         <div>
-          <h1 style={{ fontSize: '1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldAlert size={14} color="#005eb8" /> Admin Dashboard
+          <h1 style={{ fontSize: '0.75rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <ShieldAlert size={12} color="#005eb8" /> Admin Dashboard
           </h1>
-          <p style={{ color: '#4c6272', margin: '0.1rem 0 0', fontSize: '0.8rem' }}>Manage registered practices</p>
+          <p style={{ color: '#4c6272', margin: '0.05rem 0 0', fontSize: '0.65rem' }}>Manage registered practices</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => navigate('/admin/drug-builder')} className="action-button" style={{ backgroundColor: '#005eb8' }}>
