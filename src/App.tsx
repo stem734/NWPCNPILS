@@ -12,6 +12,7 @@ import PracticeSignup from './pages/PracticeSignup';
 import PracticeLogin from './pages/PracticeLogin';
 import PracticeDashboard from './pages/PracticeDashboard';
 import DrugBuilder from './pages/DrugBuilder';
+import Landing from './pages/Landing';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   '101': <Pill size={20} />,
@@ -340,7 +341,8 @@ const App: React.FC = () => {
 
         <main>
           <Routes>
-            <Route path="/" element={<ResourceView />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/patient" element={<ResourceView />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/signup" element={<PracticeSignup />} />
