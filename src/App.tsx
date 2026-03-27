@@ -28,6 +28,11 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '502': <FlaskConical size={20} />,
 };
 
+const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const getValidationCacheKey = (orgName: string) =>
+  `practice-validation:${orgName.trim().toLowerCase()}`;
+
 const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
@@ -68,18 +73,57 @@ const ResourceView: React.FC = () => {
     if (!orgParam) {
       setIsAuthorised(null);
       setAuthError(null);
+      setIsValidating(false);
       return;
     }
 
+    const cacheKey = getValidationCacheKey(orgParam);
+    const cached = window.sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as { expiresAt?: number; valid?: boolean };
+        if (parsed.valid && typeof parsed.expiresAt === 'number' && parsed.expiresAt > Date.now()) {
+          setIsAuthorised(true);
+          setAuthError(null);
+          setIsValidating(false);
+          return;
+        }
+      } catch {
+        // Ignore invalid cached values and fall through to live validation.
+      }
+      window.sessionStorage.removeItem(cacheKey);
+    }
+
+    setIsAuthorised(null);
+    setAuthError(null);
+    const loadingTimer = window.setTimeout(() => setIsValidating(true), 150);
+    let cancelled = false;
+
     const validate = async () => {
-      setIsValidating(true);
       const result = await validateOrganisation(orgParam);
+      if (cancelled) return;
+
+      window.clearTimeout(loadingTimer);
       setIsAuthorised(result.valid);
-      if (!result.valid) setAuthError(result.error || 'Practice not registered');
+      setAuthError(result.valid ? null : result.error || 'Practice not registered');
       setIsValidating(false);
+
+      if (result.valid) {
+        window.sessionStorage.setItem(cacheKey, JSON.stringify({
+          valid: true,
+          expiresAt: Date.now() + VALIDATION_CACHE_TTL_MS,
+        }));
+      } else {
+        window.sessionStorage.removeItem(cacheKey);
+      }
     };
 
     validate();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(loadingTimer);
+    };
   }, [orgParam]);
 
   const contents = useMemo(() => {
@@ -111,8 +155,7 @@ const ResourceView: React.FC = () => {
             <FlaskConical size={64} color="#005eb8" />
           </div>
         </div>
-        <h1>Verifying Practice...</h1>
-        <p>Please wait while we verify your practice is registered.</p>
+        <h1>Loading...</h1>
       </div>
     );
   }
