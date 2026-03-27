@@ -170,91 +170,92 @@ const ResourceView: React.FC = () => {
         {contents.map((content) => (
           <article key={content.id} className="patient-content-panel">
             <div className="card patient-card">
-            <span className={`badge badge-${content.badge.toLowerCase()}`}>
-              {content.badge === 'NEW' ? 'NEW MEDICATION' : content.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
-            </span>
+              <span className={`badge badge-${content.badge.toLowerCase()}`}>
+                {content.badge === 'NEW' ? 'NEW MEDICATION' : content.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
+              </span>
 
-            {content.badge === 'NEW' && (
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
-                <div style={{ fontWeight: 700, color: '#005eb8', marginBottom: '0.25rem' }}>Beginning Your Treatment</div>
-                <p style={{ margin: 0, fontSize: '0.95rem', color: '#212b32' }}>
-                  You are starting a new course of treatment. This information will help you understand your medication and how to take it safely.
-                </p>
-              </div>
-            )}
-
-            {content.badge === 'REAUTH' && (
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f0f4f5', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
-                <div style={{ fontWeight: 700, color: '#212b32', marginBottom: '0.25rem' }}>Annual Treatment Reminder</div>
-                <p style={{ margin: 0, fontSize: '0.95rem', color: '#4c6272' }}>
-                  As you have been taking this medication for 12 months or more, we are sending this as a routine review reminder of safe management.
-                </p>
-              </div>
-            )}
-
-            <h1 style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              {content.title}
-            </h1>
-            <p>{content.description}</p>
-
-            <div style={{ marginTop: '2rem' }}>
-              <h2>Key Information</h2>
-              <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {content.keyInfo.map((info, i) => (
-                  <li key={i} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', alignItems: 'flex-start' }}>
-                    <div style={{ marginTop: '0.2rem' }}>
-                      <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} />
-                    </div>
-                    <span style={{ fontSize: '1.1rem' }}>{info}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {content.sickDaysNeeded && (
-              <div className="sick-days-callout">
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <ShieldAlert size={28} color="#d5281b" />
-                  <h2 style={{ margin: 0, color: '#212b32' }}>Sick Day Rules Apply</h2>
+              {content.badge === 'NEW' && (
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
+                  <div style={{ fontWeight: 700, color: '#005eb8', marginBottom: '0.25rem' }}>Beginning Your Treatment</div>
+                  <p style={{ margin: 0, fontSize: '0.95rem', color: '#212b32' }}>
+                    You are starting a new course of treatment. This information will help you understand your medication and how to take it safely.
+                  </p>
                 </div>
-                <p style={{ marginBottom: '1rem', color: '#212b32' }}>
-                  If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
-                  Click the resources below to learn about "Sick Day Rules".
-                </p>
-                <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
-                  View Sick Day Guide <ExternalLink size={18} />
-                </a>
-              </div>
-            )}
-            </div>
+              )}
 
-            <div className="patient-resources" style={{ marginTop: '2rem' }}>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--nhs-blue)', display: 'inline-block', paddingBottom: '0.25rem' }}>
-                Trusted Resources for {content.title.split('-')[0]}
-              </h2>
-              <div className="patient-resource-grid">
+              {content.badge === 'REAUTH' && (
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f0f4f5', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
+                  <div style={{ fontWeight: 700, color: '#212b32', marginBottom: '0.25rem' }}>Annual Treatment Reminder</div>
+                  <p style={{ margin: 0, fontSize: '0.95rem', color: '#4c6272' }}>
+                    As you have been taking this medication for 12 months or more, we are sending this as a routine review reminder of safe management.
+                  </p>
+                </div>
+              )}
+
+              <h1 style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {content.title}
+              </h1>
+              <p>{content.description}</p>
+
+              <div style={{ marginTop: '2rem' }}>
+                <h2>Key Information</h2>
+                <ul style={{ listStyleType: 'none', padding: 0 }}>
+                  {content.keyInfo.map((info, i) => (
+                    <li key={i} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', alignItems: 'flex-start' }}>
+                      <div style={{ marginTop: '0.2rem' }}>
+                        <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} />
+                      </div>
+                      <span style={{ fontSize: '1.1rem' }}>{info}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {content.sickDaysNeeded && (
+                <div className="sick-days-callout">
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <ShieldAlert size={28} color="#d5281b" />
+                    <h2 style={{ margin: 0, color: '#212b32' }}>Sick Day Rules Apply</h2>
+                  </div>
+                  <p style={{ marginBottom: '1rem', color: '#212b32' }}>
+                    If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
+                    Click the resources below to learn about "Sick Day Rules".
+                  </p>
+                  <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
+                    View Sick Day Guide <ExternalLink size={18} />
+                  </a>
+                </div>
+              )}
+
+              <div className="patient-resources">
+                <h2 className="patient-resources-heading">
+                  Trusted Resources for {content.title.split('-')[0].trim()}
+                </h2>
+                <div className="patient-resource-list">
                 {content.nhsLink && (
-                  <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="resource-card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       <div style={{ background: '#005eb8', color: 'white', padding: '0.2rem 0.5rem', fontWeight: 800 }}>NHS</div>
                       <span style={{ fontWeight: 600 }}>Official Guidance</span>
                     </div>
-                    <p style={{ fontSize: '0.9rem', flex: 1 }}>Read the comprehensive medical guide from the NHS website.</p>
-                    <span className="action-button">Read NHS.UK <ExternalLink size={18} /></span>
+                    <h3>Read NHS.UK</h3>
+                    <p style={{ fontSize: '0.9rem', marginBottom: 0 }}>Read the comprehensive medical guide from the NHS website.</p>
+                    <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                   </a>
                 )}
 
                 {content.trendLinks.map((link, i) => (
-                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="resource-card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                       <FlaskConical size={24} color="#007f3b" />
                       <span style={{ fontWeight: 600 }}>Trend Diabetes</span>
                     </div>
                     <h3>{link.title}</h3>
-                    <p style={{ fontSize: '0.9rem', flex: 1 }}>Specific leaflet for living well with your medication.</p>
-                    <span className="action-button" style={{ backgroundColor: '#007f3b' }}>View Resource <ExternalLink size={18} /></span>
+                    <p style={{ fontSize: '0.9rem', marginBottom: 0 }}>Specific leaflet for living well with your medication.</p>
+                    <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                   </a>
                 ))}
+                </div>
               </div>
             </div>
           </article>
