@@ -239,23 +239,20 @@ export const saveMedication = onCall(
     }
 
     try {
-      // Find next available code: query all custom medications, find max code
+      // Allocate the next custom family in x01 / x02 format, where
+      // x01 = starting treatment and x02 = yearly reauthorisation.
       const snapshot = await db.collection('medications').orderBy('code', 'desc').limit(1).get();
-      let nextCode: string;
-
-      if (snapshot.empty) {
-        nextCode = '601';
-      } else {
-        const maxCode = parseInt(snapshot.docs[0].data().code, 10);
-        // Next group: increment by 100 (601 -> 701 -> 801...)
-        nextCode = String(Math.floor(maxCode / 100) * 100 + 100 + 1);
-      }
+      const badge = data.badge === 'REAUTH' ? 'REAUTH' : 'NEW';
+      const nextFamily = snapshot.empty
+        ? 6
+        : Math.floor(parseInt(snapshot.docs[0].data().code, 10) / 100) + 1;
+      const nextCode = String(nextFamily * 100 + (badge === 'REAUTH' ? 2 : 1));
 
       const medDoc = {
         code: nextCode,
         title: data.title,
         description: data.description,
-        badge: data.badge || 'NEW',
+        badge,
         category: data.category,
         keyInfo: data.keyInfo || [],
         nhsLink: data.nhsLink || '',

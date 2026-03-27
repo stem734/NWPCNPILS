@@ -14,8 +14,11 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '201': <Droplets size={20} />,
   '202': <Droplets size={20} />,
   '301': <Droplets size={20} />,
+  '302': <Droplets size={20} />,
   '401': <Thermometer size={20} />,
+  '402': <Thermometer size={20} />,
   '501': <FlaskConical size={20} />,
+  '502': <FlaskConical size={20} />,
 };
 
 const PreviewModal: React.FC<{ med: MedContent; onClose: () => void }> = ({ med, onClose }) => {
