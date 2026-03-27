@@ -147,6 +147,8 @@ const PracticeDashboard: React.FC = () => {
   const [practiceName, setPracticeName] = useState('');
   const [selectedMeds, setSelectedMeds] = useState<string[]>([]);
   const [savedMeds, setSavedMeds] = useState<string[]>([]);
+  const [linkVisitCount, setLinkVisitCount] = useState(0);
+  const [lastAccessedMs, setLastAccessedMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -189,6 +191,8 @@ const PracticeDashboard: React.FC = () => {
         const meds = (data.practice.selected_medications as string[]) || [];
         setSelectedMeds(meds);
         setSavedMeds(meds);
+        setLinkVisitCount((data.practice.link_visit_count as number) || 0);
+        setLastAccessedMs((data.practice.last_accessed_ms as number | null) || null);
       } else {
         setError('No practice linked to this account. Contact your administrator.');
       }
@@ -238,6 +242,15 @@ const PracticeDashboard: React.FC = () => {
 
   const hasChanges = JSON.stringify(selectedMeds.sort()) !== JSON.stringify(savedMeds.sort());
   const allSelected = selectedMeds.length === allMedications.length;
+  const lastAccessedLabel = lastAccessedMs
+    ? new Date(lastAccessedMs).toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'No patient visits yet';
 
   if (loading) {
     return (
@@ -292,6 +305,23 @@ const PracticeDashboard: React.FC = () => {
           {error}
         </div>
       )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div style={{ fontSize: '0.85rem', color: '#4c6272', marginBottom: '0.35rem' }}>Patient link uses</div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#005eb8' }}>{linkVisitCount}</div>
+          <p style={{ color: '#4c6272', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
+            Increases each time your active SystmOne patient link is opened successfully.
+          </p>
+        </div>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div style={{ fontSize: '0.85rem', color: '#4c6272', marginBottom: '0.35rem' }}>Last patient access</div>
+          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#212b32' }}>{lastAccessedLabel}</div>
+          <p style={{ color: '#4c6272', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
+            This updates when a patient opens a valid link for your practice.
+          </p>
+        </div>
+      </div>
 
       {saveSuccess && (
         <div style={{ padding: '0.75rem', background: '#f0f9f0', color: '#007f3b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

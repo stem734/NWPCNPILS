@@ -15,6 +15,7 @@ interface Practice {
   contact_email?: string;
   signed_up_at?: Timestamp;
   last_accessed?: Timestamp;
+  link_visit_count?: number;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -109,6 +110,7 @@ const AdminDashboard: React.FC = () => {
         ods_code: newOds.trim().toUpperCase(),
         contact_email: newEmail.trim(),
         is_active: true,
+        link_visit_count: 0,
         selected_medications: [],
         signed_up_at: Timestamp.now(),
       });
@@ -332,6 +334,7 @@ const AdminDashboard: React.FC = () => {
                   <div style={{ fontSize: '0.8rem', color: '#4c6272', display: 'flex', gap: '1rem', marginTop: '0.25rem' }}>
                     {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
                     {practice.contact_email && <span>{practice.contact_email}</span>}
+                    <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
                     {practice.last_accessed && (
                       <span>Last active: {practice.last_accessed.toDate?.().toLocaleDateString() || 'N/A'}</span>
                     )}
