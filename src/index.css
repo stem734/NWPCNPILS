@@ -113,6 +113,39 @@ p {
   gap: 1.5rem;
 }
 
+.patient-summary {
+  width: 100%;
+}
+
+.patient-content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.patient-content-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.patient-card {
+  margin-bottom: 0;
+  height: 100%;
+}
+
+.patient-resources {
+  display: flex;
+  flex-direction: column;
+}
+
+.patient-resource-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
 .resource-card {
   padding: 1.5rem;
   background: #f8fafb;
@@ -313,4 +346,42 @@ p {
   align-items: center;
   justify-content: center;
   color: var(--nhs-blue);
+}
+
+@media (min-width: 900px) {
+  .patient-content-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .patient-resource-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  .patient-view .card {
+    padding: 1.25rem;
+  }
+
+  .patient-view h1 {
+    font-size: 1.75rem;
+  }
+
+  .patient-view h2 {
+    font-size: 1.25rem;
+  }
+
+  .patient-view p {
+    font-size: 1rem;
+  }
+
+  .patient-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .patient-view .action-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
