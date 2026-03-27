@@ -33,6 +33,7 @@ const PracticeSignup: React.FC = () => {
         contact_email: contactEmail.trim(),
         contact_name: contactName.trim(),
         is_active: false, // Requires admin approval
+        link_visit_count: 0,
         signed_up_at: Timestamp.now(),
       });
 

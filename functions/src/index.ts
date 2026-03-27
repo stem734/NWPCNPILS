@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineString } from 'firebase-functions/params';
@@ -43,6 +43,7 @@ export const validatePractice = onCall(
 
       await practiceDoc.ref.update({
         last_accessed: Timestamp.now(),
+        link_visit_count: FieldValue.increment(1),
       });
 
       return { valid: true };
@@ -139,6 +140,10 @@ export const getMyPractice = onCall(
           ods_code: data.ods_code,
           is_active: data.is_active,
           selected_medications: data.selected_medications || [],
+          link_visit_count: typeof data.link_visit_count === 'number' ? data.link_visit_count : 0,
+          last_accessed_ms: data.last_accessed && typeof data.last_accessed.toMillis === 'function'
+            ? data.last_accessed.toMillis()
+            : null,
         },
       };
     } catch (error) {
