@@ -28,14 +28,14 @@ const DrugBuilder: React.FC = () => {
 
   // Search / generate
   const [medName, setMedName] = useState('');
-  const [medType, setMedType] = useState<'NEW' | 'REAUTH' | 'GENERAL'>('NEW');
+  const [medType, setMedType] = useState<'NEW' | 'REAUTH'>('NEW');
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
 
   // Editable fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [badge, setBadge] = useState<'NEW' | 'REAUTH' | 'GENERAL'>('NEW');
+  const [badge, setBadge] = useState<'NEW' | 'REAUTH'>('NEW');
   const [category, setCategory] = useState('');
   const [keyInfo, setKeyInfo] = useState<string[]>(['']);
   const [nhsLink, setNhsLink] = useState('');
@@ -281,7 +281,7 @@ const DrugBuilder: React.FC = () => {
           />
           <select
             value={medType}
-            onChange={e => setMedType(e.target.value as 'NEW' | 'REAUTH' | 'GENERAL')}
+            onChange={e => setMedType(e.target.value as 'NEW' | 'REAUTH')}
             style={{
               padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px',
               fontSize: '0.95rem', background: 'white',
@@ -289,7 +289,6 @@ const DrugBuilder: React.FC = () => {
           >
             <option value="NEW">New Prescription</option>
             <option value="REAUTH">Reauthorisation</option>
-            <option value="GENERAL">General Info</option>
           </select>
           <button
             onClick={handleGenerate}
@@ -341,12 +340,11 @@ const DrugBuilder: React.FC = () => {
               <div style={{ minWidth: '150px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Type</label>
                 <select
-                  value={badge} onChange={e => setBadge(e.target.value as 'NEW' | 'REAUTH' | 'GENERAL')}
+                  value={badge} onChange={e => setBadge(e.target.value as 'NEW' | 'REAUTH')}
                   style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', background: 'white' }}
                 >
                   <option value="NEW">New Medication</option>
                   <option value="REAUTH">Reauthorisation</option>
-                  <option value="GENERAL">General Info</option>
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'end', paddingBottom: '0.2rem' }}>

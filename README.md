@@ -85,9 +85,12 @@ Current codes defined:
 - **102**: Sulfonylurea - Reauthorisation
 - **201**: SGLT2 Inhibitor - First Initiation
 - **202**: SGLT2 Inhibitor - Reauthorisation
-- **301**: Emollients and Skin Care
-- **401**: Insulin Therapy
-- **501**: Mounjaro (Tirzepatide)
+- **301**: Emollients and Skin Care - Starting Treatment
+- **302**: Emollients and Skin Care - Reauthorisation
+- **401**: Insulin Therapy - Starting Treatment
+- **402**: Insulin Therapy - Reauthorisation
+- **501**: Mounjaro (Tirzepatide) - Starting Treatment
+- **502**: Mounjaro (Tirzepatide) - Reauthorisation
 
 ## Project Structure
 

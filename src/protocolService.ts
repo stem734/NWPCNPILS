@@ -38,5 +38,5 @@ export function parseMedicationCodes(codesParam: string): string[] {
   return codesParam
     .split(',')
     .map(c => c.trim())
-    .filter(c => /^[1-5]0[12]$/.test(c));
+    .filter(c => /^\d0[12]$/.test(c));
 }

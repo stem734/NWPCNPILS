@@ -79,9 +79,9 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '301',
-    title: 'Emollients and Skin Care',
-    description: 'Emollients are moisturising treatments applied directly to the skin to soothe it and hydrate it.',
-    badge: 'GENERAL',
+    title: 'Emollients and Skin Care - Starting Treatment',
+    description: 'You are starting an emollient and skin care treatment. Emollients are moisturising treatments applied directly to the skin to soothe it and hydrate it.',
+    badge: 'NEW',
     category: 'Dermatology',
     nhsLink: 'https://www.nhs.uk/conditions/emollients/',
     trendLinks: [],
@@ -92,9 +92,23 @@ export const MEDICATIONS: MedContent[] = [
     ]
   },
   {
+    code: '302',
+    title: 'Emollients and Skin Care - Reauthorisation',
+    description: 'Your emollient and skin care treatment has been reviewed and reauthorised. Continue using it regularly to help protect and soothe your skin.',
+    badge: 'REAUTH',
+    category: 'Dermatology',
+    nhsLink: 'https://www.nhs.uk/conditions/emollients/',
+    trendLinks: [],
+    keyInfo: [
+      'Continue applying regularly and in the direction of hair growth.',
+      'Important: Emollients with paraffin or oils are flammable. Keep away from naked flames.',
+      'Re-order before you run out so your skin care routine stays consistent.'
+    ]
+  },
+  {
     code: '401',
-    title: 'Insulin Therapy',
-    description: 'Insulin is a vital hormone for managing your blood glucose levels. You have been prescribed or reviewed for insulin therapy.',
+    title: 'Insulin Therapy - Starting Treatment',
+    description: 'You are starting insulin therapy. Insulin is a vital hormone for managing your blood glucose levels and this information will help you begin treatment safely.',
     badge: 'NEW',
     category: 'Insulin',
     nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
@@ -110,10 +124,44 @@ export const MEDICATIONS: MedContent[] = [
     sickDaysNeeded: true
   },
   {
+    code: '402',
+    title: 'Insulin Therapy - Reauthorisation',
+    description: 'Your insulin therapy has been reviewed and reauthorised. Continue following your insulin plan and regular monitoring advice.',
+    badge: 'REAUTH',
+    category: 'Insulin',
+    nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
+    trendLinks: [
+      { title: 'Keeping safe with insulin therapy', url: 'https://trenddiabetes.online/wp-content/uploads/2025/08/A5_Insulin_TREND.pdf' },
+      { title: 'Using an insulin cartridge pen', url: 'https://trenddiabetes.online/wp-content/uploads/2023/08/A4_Novopen_Factsheet_TREND_v6-2.pdf' }
+    ],
+    keyInfo: [
+      'Continue rotating your injection sites regularly.',
+      'Check your injection sites for lumps (Lipohypertrophy).',
+      'Inform the DVLA if you are a driver on insulin.'
+    ],
+    sickDaysNeeded: true
+  },
+  {
     code: '501',
-    title: 'Mounjaro (Tirzepatide)',
-    description: 'Mounjaro is a medication for Type 2 Diabetes that mimics hormones to improve blood sugar control and support weight management.',
+    title: 'Mounjaro (Tirzepatide) - Starting Treatment',
+    description: 'You are starting Mounjaro for Type 2 Diabetes. This medicine mimics hormones to improve blood sugar control and support weight management.',
     badge: 'NEW',
+    category: 'GLP-1 / GIP',
+    nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
+    trendLinks: [
+      { title: 'GLP-1 RA and GIP guide', url: 'https://trenddiabetes.online/wp-content/uploads/2025/11/GLP1RA_TREND_FINAL.pdf' }
+    ],
+    keyInfo: [
+      'Usually a once-weekly injection.',
+      'May cause nausea or gastrointestinal side effects initially.',
+      'Report any severe abdominal pain immediately.'
+    ]
+  },
+  {
+    code: '502',
+    title: 'Mounjaro (Tirzepatide) - Reauthorisation',
+    description: 'Your Mounjaro treatment has been reviewed and reauthorised. Continue taking it as advised and keep monitoring for side effects or dose changes.',
+    badge: 'REAUTH',
     category: 'GLP-1 / GIP',
     nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
     trendLinks: [

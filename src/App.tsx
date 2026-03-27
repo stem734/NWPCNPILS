@@ -21,8 +21,11 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '201': <Droplets size={20} />,
   '202': <Droplets size={20} />,
   '301': <Droplets size={20} />,
+  '302': <Droplets size={20} />,
   '401': <Thermometer size={20} />,
+  '402': <Thermometer size={20} />,
   '501': <FlaskConical size={20} />,
+  '502': <FlaskConical size={20} />,
 };
 
 const ResourceView: React.FC = () => {
@@ -92,7 +95,7 @@ const ResourceView: React.FC = () => {
     }
 
     // Fallback: extract from code/med param (demo mode: ?code=101)
-    const codes = rawCode.match(/\d{3}/g) || [];
+    const codes = rawCode.match(/\d0[12]/g) || [];
     const uniqueCodes = Array.from(new Set(codes));
     return uniqueCodes
       .map(code => allMeds[code] ? { id: code, icon: ICON_MAP[code], ...allMeds[code] } : null)
@@ -151,9 +154,9 @@ const ResourceView: React.FC = () => {
   }
 
   return (
-    <div className="animation-container">
+    <div className="animation-container patient-view">
       {contents.length > 1 && (
-        <div style={{ marginBottom: '2rem', padding: '1.25rem', background: '#eef7ff', borderRadius: '12px', border: '1px solid #005eb8', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="patient-summary" style={{ marginBottom: '2rem', padding: '1.25rem', background: '#eef7ff', borderRadius: '12px', border: '1px solid #005eb8', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ background: '#005eb8', color: 'white', padding: '0.5rem', borderRadius: '50%', display: 'flex' }}>
             <Info size={20} />
           </div>
@@ -163,9 +166,10 @@ const ResourceView: React.FC = () => {
         </div>
       )}
 
-      {contents.map((content, idx) => (
-        <div key={content.id} style={{ marginBottom: idx === contents.length - 1 ? 0 : '4rem' }}>
-          <div className="card">
+      <div className="patient-content-grid">
+        {contents.map((content) => (
+          <article key={content.id} className="patient-content-panel">
+            <div className="card patient-card">
             <span className={`badge badge-${content.badge.toLowerCase()}`}>
               {content.badge === 'NEW' ? 'NEW MEDICATION' : content.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
             </span>
@@ -222,40 +226,40 @@ const ResourceView: React.FC = () => {
                 </a>
               </div>
             )}
-          </div>
-
-          <div style={{ marginTop: '2rem' }}>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--nhs-blue)', display: 'inline-block', paddingBottom: '0.25rem' }}>
-              Trusted Resources for {content.title.split('-')[0]}
-            </h2>
-            <div className="resource-grid">
-              {content.nhsLink && (
-                <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="resource-card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <div style={{ background: '#005eb8', color: 'white', padding: '0.2rem 0.5rem', fontWeight: 800 }}>NHS</div>
-                    <span style={{ fontWeight: 600 }}>Official Guidance</span>
-                  </div>
-                  <p style={{ fontSize: '0.9rem', flex: 1 }}>Read the comprehensive medical guide from the NHS website.</p>
-                  <span className="action-button">Read NHS.UK <ExternalLink size={18} /></span>
-                </a>
-              )}
-
-              {content.trendLinks.map((link, i) => (
-                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="resource-card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                    <FlaskConical size={24} color="#007f3b" />
-                    <span style={{ fontWeight: 600 }}>Trend Diabetes</span>
-                  </div>
-                  <h3>{link.title}</h3>
-                  <p style={{ fontSize: '0.9rem', flex: 1 }}>Specific leaflet for living well with your medication.</p>
-                  <span className="action-button" style={{ backgroundColor: '#007f3b' }}>View Resource <ExternalLink size={18} /></span>
-                </a>
-              ))}
             </div>
-          </div>
-          {idx < contents.length - 1 && <hr style={{ border: 'none', height: '1px', background: 'var(--nhs-border)', marginTop: '4rem', marginBottom: '4rem' }} />}
-        </div>
-      ))}
+
+            <div className="patient-resources" style={{ marginTop: '2rem' }}>
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--nhs-blue)', display: 'inline-block', paddingBottom: '0.25rem' }}>
+                Trusted Resources for {content.title.split('-')[0]}
+              </h2>
+              <div className="patient-resource-grid">
+                {content.nhsLink && (
+                  <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="resource-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <div style={{ background: '#005eb8', color: 'white', padding: '0.2rem 0.5rem', fontWeight: 800 }}>NHS</div>
+                      <span style={{ fontWeight: 600 }}>Official Guidance</span>
+                    </div>
+                    <p style={{ fontSize: '0.9rem', flex: 1 }}>Read the comprehensive medical guide from the NHS website.</p>
+                    <span className="action-button">Read NHS.UK <ExternalLink size={18} /></span>
+                  </a>
+                )}
+
+                {content.trendLinks.map((link, i) => (
+                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="resource-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                      <FlaskConical size={24} color="#007f3b" />
+                      <span style={{ fontWeight: 600 }}>Trend Diabetes</span>
+                    </div>
+                    <h3>{link.title}</h3>
+                    <p style={{ fontSize: '0.9rem', flex: 1 }}>Specific leaflet for living well with your medication.</p>
+                    <span className="action-button" style={{ backgroundColor: '#007f3b' }}>View Resource <ExternalLink size={18} /></span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 };
