@@ -127,23 +127,69 @@ p {
 .patient-content-panel {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
 }
 
 .patient-card {
   margin-bottom: 0;
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .patient-resources {
   display: flex;
   flex-direction: column;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--nhs-border);
 }
 
-.patient-resource-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
+.patient-resources-heading {
+  font-size: 1.35rem;
+  margin-bottom: 1rem;
+  color: var(--nhs-blue);
+}
+
+.patient-resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.patient-resource-link {
+  position: relative;
+  display: block;
+  padding: 1rem 3.25rem 1rem 1rem;
+  border: 1px solid var(--nhs-border);
+  border-radius: 10px;
+  background: #f8fafb;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.patient-resource-link:hover {
+  border-color: var(--nhs-blue);
+  box-shadow: 0 8px 14px -8px rgba(0, 94, 184, 0.35);
+  transform: translateY(-1px);
+}
+
+.patient-resource-link h3 {
+  color: var(--nhs-blue);
+  margin-bottom: 0.35rem;
+  font-size: 1rem;
+}
+
+.patient-resource-link p {
+  color: var(--nhs-secondary-text);
+}
+
+.patient-resource-arrow {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  color: var(--nhs-blue);
 }
 
 .resource-card {
@@ -350,10 +396,6 @@ p {
 
 @media (min-width: 900px) {
   .patient-content-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .patient-resource-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
