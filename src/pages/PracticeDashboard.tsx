@@ -96,7 +96,38 @@ const PracticeDashboard: React.FC = () => {
     navigate('/practice');
   };
 
-  const hasChanges = JSON.stringify(selectedMeds.sort()) !== JSON.stringify(savedMeds.sort());
+  const selectedMedicationSet = useMemo(() => new Set(selectedMeds), [selectedMeds]);
+
+  const activeMedications = useMemo(
+    () => allMedications.filter((med) => selectedMedicationSet.has(med.code)),
+    [allMedications, selectedMedicationSet],
+  );
+
+  const availableMedications = useMemo(() => {
+    const query = librarySearch.trim().toLowerCase();
+    return allMedications.filter((med) => {
+      if (!query) return true;
+      return [
+        med.title,
+        med.category,
+        med.description,
+        med.code,
+      ].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [allMedications, librarySearch]);
+
+  const categories = availableMedications.reduce((acc, med) => {
+    if (!acc[med.category]) acc[med.category] = [];
+    acc[med.category].push(med);
+    return acc;
+  }, {} as Record<string, MedContent[]>);
+
+  const hasChanges = useMemo(() => {
+    const selectedSorted = [...selectedMeds].sort();
+    const savedSorted = [...savedMeds].sort();
+    return JSON.stringify(selectedSorted) !== JSON.stringify(savedSorted);
+  }, [savedMeds, selectedMeds]);
+
   const allSelected = allMedications.length > 0 && selectedMeds.length === allMedications.length;
   const lastAccessedLabel = lastAccessedMs
     ? new Date(lastAccessedMs).toLocaleString('en-GB', {
@@ -132,33 +163,6 @@ const PracticeDashboard: React.FC = () => {
       </div>
     );
   }
-
-  // Group medications by category
-  const selectedMedicationSet = useMemo(() => new Set(selectedMeds), [selectedMeds]);
-
-  const activeMedications = useMemo(
-    () => allMedications.filter((med) => selectedMedicationSet.has(med.code)),
-    [allMedications, selectedMedicationSet],
-  );
-
-  const availableMedications = useMemo(() => {
-    const query = librarySearch.trim().toLowerCase();
-    return allMedications.filter((med) => {
-      if (!query) return true;
-      return [
-        med.title,
-        med.category,
-        med.description,
-        med.code,
-      ].some((value) => value.toLowerCase().includes(query));
-    });
-  }, [allMedications, librarySearch]);
-
-  const categories = availableMedications.reduce((acc, med) => {
-    if (!acc[med.category]) acc[med.category] = [];
-    acc[med.category].push(med);
-    return acc;
-  }, {} as Record<string, MedContent[]>);
 
   return (
     <div className="dashboard-shell">
