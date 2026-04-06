@@ -196,6 +196,9 @@ const PracticeDashboard: React.FC = () => {
   const availableMedications = useMemo(() => {
     const query = librarySearch.trim().toLowerCase();
     return allMedications.filter((med) => {
+      // Exclude medications already selected
+      if (selectedMeds.includes(med.code)) return false;
+      // Filter by search query
       if (!query) return true;
       return [
         med.title,
@@ -204,7 +207,7 @@ const PracticeDashboard: React.FC = () => {
         med.code,
       ].some((value) => value.toLowerCase().includes(query));
     });
-  }, [allMedications, librarySearch]);
+  }, [allMedications, librarySearch, selectedMeds]);
 
   const categories = availableMedications.reduce((acc, med) => {
     if (!acc[med.category]) acc[med.category] = [];
@@ -494,17 +497,15 @@ const PracticeDashboard: React.FC = () => {
               {category}
             </h3>
             <div className="dashboard-list">
-              {meds.map(med => {
-                const isSelected = selectedMeds.includes(med.code);
-                return (
+              {meds.map(med => (
                   <div
                     key={med.code}
-                    className={`dashboard-list-card${isSelected ? ' dashboard-list-card--selected' : ''}`}
+                    className="dashboard-list-card"
                   >
                     <div
                       onClick={() => toggleMed(med.code)}
                       role="checkbox"
-                      aria-checked={isSelected}
+                      aria-checked="false"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === ' ' || e.key === 'Enter') {
@@ -514,22 +515,22 @@ const PracticeDashboard: React.FC = () => {
                       }}
                       style={{
                         width: '24px', height: '24px', borderRadius: '4px',
-                        border: `2px solid ${isSelected ? '#005eb8' : '#d8dde0'}`,
-                        background: isSelected ? '#005eb8' : 'white',
+                        border: '2px solid #d8dde0',
+                        background: 'white',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexShrink: 0, cursor: 'pointer',
                       }}
                     >
-                      {isSelected && <CheckCircle size={16} color="white" aria-hidden="true" />}
+                      {/* Checkbox stays empty until clicked */}
                     </div>
                     <div
                       onClick={() => toggleMed(med.code)}
-                      style={{ color: isSelected ? '#005eb8' : '#4c6272', flexShrink: 0, cursor: 'pointer' }}
+                      style={{ color: '#4c6272', flexShrink: 0, cursor: 'pointer' }}
                     >
                       {getMedicationIcon(med.code)}
                     </div>
                     <div className="dashboard-list-main" style={{ cursor: 'pointer' }} onClick={() => toggleMed(med.code)}>
-                      <div className="dashboard-list-title" style={{ color: isSelected ? '#003087' : '#212b32' }}>
+                      <div className="dashboard-list-title">
                         {med.title}
                       </div>
                       <div className="dashboard-list-copy">
@@ -550,13 +551,12 @@ const PracticeDashboard: React.FC = () => {
                       >
                         <Eye size={14} /> Preview
                       </button>
-                      <div className={`dashboard-badge ${isSelected ? 'dashboard-badge--blue' : 'dashboard-badge--amber'}`}>
+                      <div className="dashboard-badge dashboard-badge--amber">
                         {med.code}
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                ))}
             </div>
           </div>
         ))}
