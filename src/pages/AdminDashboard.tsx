@@ -51,6 +51,8 @@ const AdminDashboard: React.FC = () => {
   const [editAdminEmail, setEditAdminEmail] = useState('');
   const [editAdminActive, setEditAdminActive] = useState(true);
   const [editAdminError, setEditAdminError] = useState('');
+  const [adminActionLink, setAdminActionLink] = useState('');
+  const [adminActionMessage, setAdminActionMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -215,6 +217,8 @@ const AdminDashboard: React.FC = () => {
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddAdminError('');
+    setAdminActionLink('');
+    setAdminActionMessage('');
 
     if (!newAdminEmail.trim()) {
       setAddAdminError('Administrator email is required');
@@ -223,13 +227,16 @@ const AdminDashboard: React.FC = () => {
 
     try {
       const createAdmin = httpsCallable(functions, 'createAdminUser');
-      await createAdmin({
+      const result = await createAdmin({
         email: newAdminEmail.trim(),
         name: newAdminName.trim(),
       });
+      const data = result.data as { resetLink?: string };
       setNewAdminName('');
       setNewAdminEmail('');
       setShowAddAdminForm(false);
+      setAdminActionMessage(`Administrator created. Copy the setup link below and send it to ${newAdminEmail.trim()}.`);
+      setAdminActionLink(data.resetLink || '');
       loadAdmins();
     } catch (error) {
       console.error('Error adding admin:', error);
@@ -270,8 +277,10 @@ const AdminDashboard: React.FC = () => {
   const resetAdminPassword = async (adminUser: AdminUser) => {
     try {
       const resetAdmin = httpsCallable(functions, 'sendAdminPasswordReset');
-      await resetAdmin({ uid: adminUser.uid });
-      alert(`Password reset email prepared for ${adminUser.email}.`);
+      const result = await resetAdmin({ uid: adminUser.uid });
+      const data = result.data as { resetLink?: string };
+      setAdminActionMessage(`Password reset link prepared for ${adminUser.email}. Copy and send it manually.`);
+      setAdminActionLink(data.resetLink || '');
     } catch (error) {
       console.error('Error sending reset:', error);
       alert(error instanceof Error ? error.message : 'Failed to send password reset');
@@ -313,6 +322,46 @@ const AdminDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {adminActionLink && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
+          <h2 style={{ fontSize: '1.1rem', marginTop: 0 }}>Administrator Link Ready</h2>
+          <p style={{ color: '#4c6272', marginBottom: '1rem' }}>{adminActionMessage}</p>
+          <textarea
+            readOnly
+            value={adminActionLink}
+            rows={4}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #d8dde0',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              boxSizing: 'border-box',
+              resize: 'vertical',
+            }}
+          />
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+            <button
+              onClick={() => navigator.clipboard.writeText(adminActionLink)}
+              className="action-button"
+              style={{ backgroundColor: '#005eb8' }}
+            >
+              Copy Link
+            </button>
+            <button
+              onClick={() => {
+                setAdminActionLink('');
+                setAdminActionMessage('');
+              }}
+              className="action-button"
+              style={{ backgroundColor: '#4c6272' }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {showAddForm && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
