@@ -355,7 +355,7 @@ export const listAdminUsers = onCall(
 
 export const createAdminUser = onCall(
   { region: 'europe-west2' },
-  async (request): Promise<{ success: boolean; uid: string }> => {
+  async (request): Promise<{ success: boolean; uid: string; resetLink: string }> => {
     const actingAdmin = await assertAdmin(request);
     const { email, name } = request.data as { email: string; name?: string };
 
@@ -382,15 +382,11 @@ export const createAdminUser = onCall(
       } satisfies AdminRecord);
 
       const resetLink = await adminAuth.generatePasswordResetLink(email.trim(), getAdminActionCodeSettings());
-      await sendAdminWelcomeEmail({
-        email: email.trim(),
-        name: typeof name === 'string' && name.trim() ? name.trim() : email.trim(),
-        resetLink,
-      });
 
       return {
         success: true,
         uid: userRecord.uid,
+        resetLink,
       };
     } catch (error) {
       console.error('Error creating admin user:', error);
@@ -451,7 +447,7 @@ export const updateAdminUser = onCall(
 
 export const sendAdminPasswordReset = onCall(
   { region: 'europe-west2' },
-  async (request): Promise<{ success: boolean }> => {
+  async (request): Promise<{ success: boolean; resetLink: string }> => {
     await assertAdmin(request);
     const { uid } = request.data as { uid: string };
 
@@ -466,12 +462,7 @@ export const sendAdminPasswordReset = onCall(
       }
 
       const resetLink = await adminAuth.generatePasswordResetLink(userRecord.email, getAdminActionCodeSettings());
-      await sendAdminPasswordResetEmail({
-        email: userRecord.email,
-        name: userRecord.displayName || userRecord.email,
-        resetLink,
-      });
-      return { success: true };
+      return { success: true, resetLink };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error sending admin password reset:', error);
