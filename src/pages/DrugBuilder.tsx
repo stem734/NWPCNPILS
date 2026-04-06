@@ -412,7 +412,7 @@ const DrugBuilder: React.FC = () => {
             onChange={e => setMedName(e.target.value)}
             placeholder="Enter medication name (e.g. Metformin, Atorvastatin)"
             style={{
-              flex: 1, minWidth: '200px', padding: '0.75rem', border: '2px solid #d8dde0',
+              flex: '1 1 200px', padding: '0.75rem', border: '2px solid #d8dde0',
               borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box',
             }}
             onKeyDown={e => e.key === 'Enter' && handleGenerate()}
@@ -421,7 +421,7 @@ const DrugBuilder: React.FC = () => {
             value={medType}
             onChange={e => setMedType(e.target.value as 'NEW' | 'REAUTH')}
             style={{
-              padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px',
+              flex: '1 1 120px', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px',
               fontSize: '0.95rem', background: 'white',
             }}
           >
@@ -432,7 +432,7 @@ const DrugBuilder: React.FC = () => {
             onClick={handleGenerate}
             disabled={generating || !medName.trim()}
             className="action-button"
-            style={{ backgroundColor: '#005eb8', opacity: generating || !medName.trim() ? 0.6 : 1 }}
+            style={{ flex: '1 1 auto', backgroundColor: '#005eb8', opacity: generating || !medName.trim() ? 0.6 : 1, justifyContent: 'center' }}
           >
             <Sparkles size={16} /> {generating ? 'Generating...' : 'Generate with AI'}
           </button>
@@ -469,7 +469,7 @@ const DrugBuilder: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '150px' }}>
+              <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Category *</label>
                 <input
                   type="text" value={category} onChange={e => setCategory(e.target.value)}
@@ -477,7 +477,7 @@ const DrugBuilder: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
-              <div style={{ minWidth: '150px' }}>
+              <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Type</label>
                 <select
                   value={badge} onChange={e => setBadge(e.target.value as 'NEW' | 'REAUTH')}
@@ -487,7 +487,7 @@ const DrugBuilder: React.FC = () => {
                   <option value="REAUTH">Reauthorisation</option>
                 </select>
               </div>
-              <div style={{ minWidth: '150px' }}>
+              <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Code</label>
                 <input
                   type="text"
@@ -497,7 +497,7 @@ const DrugBuilder: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
-              <div style={{ minWidth: '150px' }}>
+              <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Review Period (months)</label>
                 <input
                   type="number"
@@ -509,7 +509,7 @@ const DrugBuilder: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
-              <div style={{ display: 'flex', alignItems: 'end', paddingBottom: '0.2rem' }}>
+              <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'end', paddingBottom: '0.2rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
                   <input
                     type="checkbox" checked={sickDaysNeeded} onChange={e => setSickDaysNeeded(e.target.checked)}
@@ -608,7 +608,7 @@ const DrugBuilder: React.FC = () => {
               onClick={() => previewDraft && setPreviewMed(previewDraft)}
               disabled={!previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0}
               className="action-button"
-              style={{ backgroundColor: '#005eb8', opacity: !previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0 ? 0.6 : 1 }}
+              style={{ flex: '1 1 auto', justifyContent: 'center', backgroundColor: '#005eb8', opacity: !previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0 ? 0.6 : 1 }}
             >
               <Eye size={16} /> Preview
             </button>
@@ -616,11 +616,11 @@ const DrugBuilder: React.FC = () => {
               onClick={handleSave}
               disabled={saving}
               className="action-button"
-              style={{ backgroundColor: '#007f3b', opacity: saving ? 0.6 : 1 }}
+              style={{ flex: '1 1 auto', justifyContent: 'center', backgroundColor: '#007f3b', opacity: saving ? 0.6 : 1 }}
             >
-              <Save size={16} /> {saving ? 'Saving...' : editingCode ? 'Save Changes' : 'Save Medication'}
+              <Save size={16} /> {saving ? 'Saving...' : editingCode ? 'Save Changes' : 'Save'}
             </button>
-            <button onClick={resetForm} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+            <button onClick={resetForm} className="action-button" style={{ flex: '1 1 auto', justifyContent: 'center', backgroundColor: '#4c6272' }}>
               {editingCode ? 'Cancel Edit' : 'Reset'}
             </button>
           </div>
@@ -635,15 +635,11 @@ const DrugBuilder: React.FC = () => {
         ) : existingMeds.length === 0 ? (
           <p style={{ color: '#4c6272' }}>No medications available. Use the search above to create your first one.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="dashboard-list">
             {existingMeds.map(med => (
               <div
                 key={med.code}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '1rem', background: '#f8fafb', borderRadius: '8px',
-                  border: '1px solid #d8dde0',
-                }}
+                className="dashboard-list-card"
               >
                 <div style={{
                   padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem',
@@ -652,10 +648,10 @@ const DrugBuilder: React.FC = () => {
                 }}>
                   {med.code}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{med.title}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#4c6272', display: 'flex', gap: '0.75rem', marginTop: '0.15rem', flexWrap: 'wrap' }}>
-                    <span>{med.category}</span>
+                <div className="dashboard-list-main">
+                  <div className="dashboard-list-title">{med.title}</div>
+                  <div className="dashboard-meta" style={{ marginTop: '0.15rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#4c6272' }}>{med.category}</span>
                     <span style={{
                       padding: '0 0.4rem', borderRadius: '3px', fontSize: '0.7rem', fontWeight: 700,
                       background: med.badge === 'NEW' ? '#005eb8' : med.badge === 'REAUTH' ? '#007f3b' : '#4c6272',
@@ -685,60 +681,72 @@ const DrugBuilder: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => setPreviewMed(med)}
-                  title="Preview patient view"
-                  style={{
-                    background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8',
-                    borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
-                  }}
-                >
-                  <Eye size={14} /> Preview
-                </button>
-                <button
-                  onClick={() => startEditingMedication(med)}
-                  title="Edit medication"
-                  style={{
-                    background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272',
-                    borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
-                  }}
-                >
-                  <Edit2 size={14} /> Edit
-                </button>
-                <button
-                  onClick={() => duplicateMedication(med)}
-                  title="Duplicate medication"
-                  style={{
-                    background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b',
-                    borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
-                  }}
-                >
-                  <CopyPlus size={14} /> Duplicate
-                </button>
-                <button
-                  onClick={() => copyCode(med.code)}
-                  title="Copy SystmOne code"
-                  style={{
-                    background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8',
-                    borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
-                  }}
-                >
-                  <Copy size={14} /> Copy
-                </button>
-                <button
-                  onClick={() => handleDelete(med)}
-                  disabled={deletingCode === med.code}
-                  style={{
-                    background: '#fde8e8', border: 'none', color: '#d5281b',
-                    borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', display: 'flex',
-                  }}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="dashboard-list-actions">
+                  <button
+                    onClick={() => setPreviewMed(med)}
+                    title="Preview patient view"
+                    className="action-button-sm"
+                    style={{
+                      background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8',
+                      borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Eye size={14} /> Preview
+                  </button>
+                  <button
+                    onClick={() => startEditingMedication(med)}
+                    title="Edit medication"
+                    className="action-button-sm"
+                    style={{
+                      background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272',
+                      borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Edit2 size={14} /> Edit
+                  </button>
+                  <button
+                    onClick={() => duplicateMedication(med)}
+                    title="Duplicate medication"
+                    className="action-button-sm"
+                    style={{
+                      background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b',
+                      borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <CopyPlus size={14} /> Duplicate
+                  </button>
+                  <button
+                    onClick={() => copyCode(med.code)}
+                    title="Copy SystmOne code"
+                    className="action-button-sm"
+                    style={{
+                      background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8',
+                      borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Copy size={14} /> Copy
+                  </button>
+                  <button
+                    onClick={() => handleDelete(med)}
+                    disabled={deletingCode === med.code}
+                    className="action-button-sm"
+                    style={{
+                      background: '#fde8e8', border: 'none', color: '#d5281b',
+                      borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', display: 'flex',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
