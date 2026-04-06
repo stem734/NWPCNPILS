@@ -13,8 +13,8 @@ export interface MedContent {
 export const MEDICATIONS: MedContent[] = [
   {
     code: '101',
-    title: 'Sulfonylurea medicines, such as gliclazide or glimepiride - Starting Treatment',
-    description: 'You are starting a sulfonylurea medicine, such as gliclazide or glimepiride. These medicines help your body produce more insulin to lower blood glucose.',
+    title: 'Sulfonylurea medicine - Starting Treatment',
+    description: 'You are starting a sulfonylurea medicine. Examples include gliclazide and glimepiride. This medicine helps your body make more insulin to lower your blood sugar.',
     badge: 'NEW',
     category: 'Sulfonylureas',
     nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
@@ -29,8 +29,8 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '102',
-    title: 'Sulfonylurea medicines, such as gliclazide or glimepiride - Reauthorisation',
-    description: 'Your sulfonylurea medicine, such as gliclazide or glimepiride, has been reviewed and reauthorised for another year. It continues to be an important part of your glucose management.',
+    title: 'Sulfonylurea medicine - Reauthorisation',
+    description: 'Your sulfonylurea medicine has been reviewed and renewed for another year. Examples include gliclazide and glimepiride. It remains an important part of your blood sugar treatment.',
     badge: 'REAUTH',
     category: 'Sulfonylureas',
     nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
@@ -44,8 +44,8 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '201',
-    title: 'SGLT2 inhibitor medicines, such as dapagliflozin or empagliflozin - Starting Treatment',
-    description: 'You are starting an SGLT2 inhibitor medicine, such as dapagliflozin or empagliflozin. Many of these medicine names end in "-gliflozin". They help your kidneys remove excess sugar through your urine.',
+    title: 'SGLT2 inhibitor medicine - Starting Treatment',
+    description: 'You are starting an SGLT2 inhibitor medicine. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This medicine helps your body pass extra sugar in your urine.',
     badge: 'NEW',
     category: 'SGLT2 Inhibitors',
     nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
@@ -62,8 +62,8 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '202',
-    title: 'SGLT2 inhibitor medicines, such as dapagliflozin or empagliflozin - Reauthorisation',
-    description: 'Your SGLT2 inhibitor medicine, such as dapagliflozin or empagliflozin, has been reviewed and reauthorised. Many of these medicine names end in "-gliflozin". This treatment can help protect your heart and kidneys.',
+    title: 'SGLT2 inhibitor medicine - Reauthorisation',
+    description: 'Your SGLT2 inhibitor medicine has been reviewed and renewed. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This treatment can also help protect your heart and kidneys.',
     badge: 'REAUTH',
     category: 'SGLT2 Inhibitors',
     nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
@@ -79,8 +79,8 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '301',
-    title: 'Emollients and skin care, such as Cetraben, Diprobase or E45 - Starting Treatment',
-    description: 'You are starting an emollient and skin care treatment, such as Cetraben, Diprobase or E45. Emollients are moisturising treatments applied directly to the skin to soothe it and hydrate it.',
+    title: 'Emollient and skin care treatment - Starting Treatment',
+    description: 'You are starting an emollient and skin care treatment. Examples include Cetraben, Diprobase and E45. These products moisturise your skin and help soothe dryness and irritation.',
     badge: 'NEW',
     category: 'Dermatology',
     nhsLink: 'https://www.nhs.uk/conditions/emollients/',
@@ -93,8 +93,8 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '302',
-    title: 'Emollients and skin care, such as Cetraben, Diprobase or E45 - Reauthorisation',
-    description: 'Your emollient and skin care treatment, such as Cetraben, Diprobase or E45, has been reviewed and reauthorised. Continue using it regularly to help protect and soothe your skin.',
+    title: 'Emollient and skin care treatment - Reauthorisation',
+    description: 'Your emollient and skin care treatment has been reviewed and renewed. Examples include Cetraben, Diprobase and E45. Keep using it often to protect and soothe your skin.',
     badge: 'REAUTH',
     category: 'Dermatology',
     nhsLink: 'https://www.nhs.uk/conditions/emollients/',
@@ -107,8 +107,8 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '401',
-    title: 'Insulin therapy, such as Levemir, Tresiba or Humulin - Starting Treatment',
-    description: 'You are starting insulin therapy, such as Levemir, Tresiba or Humulin. Insulin is a vital hormone for managing your blood glucose levels and this information will help you begin treatment safely.',
+    title: 'Insulin therapy - Starting Treatment',
+    description: 'You are starting insulin therapy. Examples include Levemir, Tresiba and Humulin. Insulin helps control your blood sugar and this guide will help you start treatment safely.',
     badge: 'NEW',
     category: 'Insulin',
     nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
@@ -125,8 +125,8 @@ export const MEDICATIONS: MedContent[] = [
   },
   {
     code: '402',
-    title: 'Insulin therapy, such as Levemir, Tresiba or Humulin - Reauthorisation',
-    description: 'Your insulin therapy, such as Levemir, Tresiba or Humulin, has been reviewed and reauthorised. Continue following your insulin plan and regular monitoring advice.',
+    title: 'Insulin therapy - Reauthorisation',
+    description: 'Your insulin therapy has been reviewed and renewed. Examples include Levemir, Tresiba and Humulin. Keep following your insulin plan and checking your blood sugar as advised.',
     badge: 'REAUTH',
     category: 'Insulin',
     nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
@@ -144,7 +144,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '501',
     title: 'Mounjaro (Tirzepatide) - Starting Treatment',
-    description: 'You are starting Mounjaro for Type 2 Diabetes. This medicine mimics hormones to improve blood sugar control and support weight management.',
+    description: 'You are starting Mounjaro for type 2 diabetes. This medicine is also called tirzepatide. It helps improve blood sugar control and may also help with weight management.',
     badge: 'NEW',
     category: 'GLP-1 / GIP',
     nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
@@ -160,7 +160,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '502',
     title: 'Mounjaro (Tirzepatide) - Reauthorisation',
-    description: 'Your Mounjaro treatment has been reviewed and reauthorised. Continue taking it as advised and keep monitoring for side effects or dose changes.',
+    description: 'Your Mounjaro treatment has been reviewed and renewed. This medicine is also called tirzepatide. Keep taking it as advised and watch for side effects or dose changes.',
     badge: 'REAUTH',
     category: 'GLP-1 / GIP',
     nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
