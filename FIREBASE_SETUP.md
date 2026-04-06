@@ -78,6 +78,20 @@ VITE_FIREBASE_APP_ID=your_app_id_here
 VITE_USE_EMULATOR=false
 ```
 
+### 6b. Set Gemini API Key For AI Draft Generation
+
+To use Gemini for the admin Drug Builder, add your personal Gemini API key to the functions environment:
+
+```env
+# functions/.env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+Notes:
+- This key is used only inside Firebase Cloud Functions, not in the browser.
+- For local emulator use, `functions/.env` is enough.
+- For deployed functions, make sure `GEMINI_API_KEY` is available when you deploy functions.
+
 ### 7. Test Cloud Functions Locally (Optional)
 
 To test functions locally with the emulator:

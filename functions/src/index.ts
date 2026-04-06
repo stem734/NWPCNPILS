@@ -3,13 +3,99 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineString } from 'firebase-functions/params';
-// import { GoogleGenerativeAI } from '@google/generative-ai'; // Disabled for MVP
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import type { ResponseSchema } from '@google/generative-ai';
 
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
 
 initializeApp();
 const db = getFirestore();
 const adminAuth = getAuth();
+
+type MedicationGenerationRequest = {
+  medicationName: string;
+  type: 'NEW' | 'REAUTH';
+};
+
+type MedicationGenerationResponse = {
+  title: string;
+  description: string;
+  category: string;
+  keyInfo: string[];
+  nhsLink: string;
+  trendLinks: { title: string; url: string }[];
+  sickDaysNeeded: boolean;
+};
+
+const medicationGenerationSchema: ResponseSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    title: {
+      type: SchemaType.STRING,
+      description: 'Short patient-friendly title for the medication card.',
+    },
+    description: {
+      type: SchemaType.STRING,
+      description: 'Two to three sentence patient-friendly overview.',
+    },
+    category: {
+      type: SchemaType.STRING,
+      description: 'Clinical category such as Diabetes, Dermatology, Cardiovascular.',
+    },
+    keyInfo: {
+      type: SchemaType.ARRAY,
+      description: 'Three to five short safety or usage points.',
+      items: { type: SchemaType.STRING },
+    },
+    nhsLink: {
+      type: SchemaType.STRING,
+      description: 'An official NHS link if known, otherwise an empty string.',
+    },
+    trendLinks: {
+      type: SchemaType.ARRAY,
+      description: 'Optional supporting leaflet links. Use an empty array if unsure.',
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          title: { type: SchemaType.STRING },
+          url: { type: SchemaType.STRING },
+        },
+        required: ['title', 'url'],
+      },
+    },
+    sickDaysNeeded: {
+      type: SchemaType.BOOLEAN,
+      description: 'True when this medication typically needs sick day rule advice.',
+    },
+  },
+  required: ['title', 'description', 'category', 'keyInfo', 'nhsLink', 'trendLinks', 'sickDaysNeeded'],
+};
+
+const extractMedicationPayload = (raw: string): MedicationGenerationResponse => {
+  const parsed = JSON.parse(raw) as Partial<MedicationGenerationResponse>;
+
+  return {
+    title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
+    description: typeof parsed.description === 'string' ? parsed.description.trim() : '',
+    category: typeof parsed.category === 'string' ? parsed.category.trim() : '',
+    keyInfo: Array.isArray(parsed.keyInfo)
+      ? parsed.keyInfo.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 5)
+      : [],
+    nhsLink: typeof parsed.nhsLink === 'string' ? parsed.nhsLink.trim() : '',
+    trendLinks: Array.isArray(parsed.trendLinks)
+      ? parsed.trendLinks
+          .filter((item): item is { title: string; url: string } =>
+            !!item &&
+            typeof item.title === 'string' &&
+            item.title.trim().length > 0 &&
+            typeof item.url === 'string' &&
+            item.url.trim().length > 0
+          )
+          .slice(0, 4)
+      : [],
+    sickDaysNeeded: Boolean(parsed.sickDaysNeeded),
+  };
+};
 
 /**
  * Validates a practice by organisation name against the practices collection.
@@ -196,7 +282,6 @@ export const updatePracticeMedications = onCall(
 
 /**
  * Generate medication content using Gemini AI.
- * DISABLED FOR MVP - Admins can manually enter medication information
  */
 export const generateMedicationContent = onCall(
   { region: 'europe-west2' },
@@ -205,11 +290,66 @@ export const generateMedicationContent = onCall(
       throw new HttpsError('unauthenticated', 'Must be logged in as admin');
     }
 
-    // MVP: Return placeholder message indicating AI generation is not yet available
-    throw new HttpsError(
-      'failed-precondition',
-      'AI-powered medication generation is not available in this MVP version. Please manually enter medication information using the form below.'
-    );
+    if (!geminiKey.value()) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Gemini API key is not configured for Cloud Functions.'
+      );
+    }
+
+    const { medicationName, type } = request.data as MedicationGenerationRequest;
+    const medType = type === 'REAUTH' ? 'REAUTH' : 'NEW';
+
+    if (!medicationName || typeof medicationName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Medication name is required');
+    }
+
+    try {
+      const genAI = new GoogleGenerativeAI(geminiKey.value());
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+        generationConfig: {
+          temperature: 0.4,
+          topP: 0.9,
+          maxOutputTokens: 800,
+          responseMimeType: 'application/json',
+          responseSchema: medicationGenerationSchema,
+        },
+      });
+
+      const prompt = `
+You are generating concise NHS-style draft content for a clinician-admin medication information card.
+
+Medication name: ${medicationName.trim()}
+Card type: ${medType === 'NEW' ? 'Starting treatment' : 'Yearly reauthorisation review'}
+
+Rules:
+- Return JSON only.
+- Make the content suitable for UK patients in plain English.
+- title should include the medication name and whether it is starting treatment or reauthorisation.
+- description should be 2 to 3 short sentences.
+- keyInfo should contain 3 to 5 short bullet-style points.
+- If you are not confident of an NHS URL, set nhsLink to an empty string.
+- If you are not confident of extra leaflet URLs, return trendLinks as an empty array.
+- sickDaysNeeded should be true only when sick day rule advice is commonly relevant.
+`;
+
+      const result = await model.generateContent(prompt);
+      const content = extractMedicationPayload(result.response.text());
+
+      if (!content.title || !content.description || !content.category || content.keyInfo.length === 0) {
+        throw new Error('Incomplete AI response');
+      }
+
+      return {
+        success: true,
+        content,
+      };
+    } catch (error) {
+      console.error('Error generating medication content:', error);
+      const message = error instanceof Error ? error.message : 'Failed to generate medication content';
+      throw new HttpsError('internal', message);
+    }
   }
 );
 
