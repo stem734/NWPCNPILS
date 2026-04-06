@@ -469,7 +469,9 @@ const PracticeDashboard: React.FC = () => {
 
           <div className="dashboard-toolbar">
             <div className="dashboard-search">
+              <label htmlFor="med-library-search" style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Search Medications</label>
               <input
+                id="med-library-search"
                 type="text"
                 value={librarySearch}
                 onChange={(e) => setLibrarySearch(e.target.value)}
@@ -501,6 +503,15 @@ const PracticeDashboard: React.FC = () => {
                   >
                     <div
                       onClick={() => toggleMed(med.code)}
+                      role="checkbox"
+                      aria-checked={isSelected}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault();
+                          toggleMed(med.code);
+                        }
+                      }}
                       style={{
                         width: '24px', height: '24px', borderRadius: '4px',
                         border: `2px solid ${isSelected ? '#005eb8' : '#d8dde0'}`,
@@ -509,7 +520,7 @@ const PracticeDashboard: React.FC = () => {
                         flexShrink: 0, cursor: 'pointer',
                       }}
                     >
-                      {isSelected && <CheckCircle size={16} color="white" />}
+                      {isSelected && <CheckCircle size={16} color="white" aria-hidden="true" />}
                     </div>
                     <div
                       onClick={() => toggleMed(med.code)}

@@ -4,6 +4,7 @@ export interface MedContent {
   description: string;
   badge: 'NEW' | 'REAUTH' | 'GENERAL';
   category: string;
+  reviewMonths?: number;
   nhsLink?: string;
   trendLinks: { title: string; url: string }[];
   keyInfo: string[];
@@ -17,6 +18,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting a sulfonylurea medicine. Examples include gliclazide and glimepiride. This medicine helps your body make more insulin to lower your blood sugar.',
     badge: 'NEW',
     category: 'Sulfonylureas',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
     trendLinks: [
       { title: 'Hypoglycaemia Explained', url: 'https://trenddiabetes.online/wp-content/uploads/2026/01/A5_Hypo_TREND.pdf' }
@@ -33,6 +35,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your sulfonylurea medicine has been reviewed and renewed for another year. Examples include gliclazide and glimepiride. It remains an important part of your blood sugar treatment.',
     badge: 'REAUTH',
     category: 'Sulfonylureas',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
     trendLinks: [
       { title: 'Keeping well with T2 Diabetes', url: 'https://trenddiabetes.online/wp-content/uploads/2023/10/A5_Older_Person_TREND.pdf' }
@@ -48,6 +51,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting an SGLT2 inhibitor medicine. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This medicine helps your body pass extra sugar in your urine.',
     badge: 'NEW',
     category: 'SGLT2 Inhibitors',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
     trendLinks: [
       { title: 'A simple guide to SGLT2 inhibitors', url: 'https://trenddiabetes.online/wp-content/uploads/2025/10/SGLT2i_TREND_FINAL_v2.pdf' },
@@ -66,6 +70,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your SGLT2 inhibitor medicine has been reviewed and renewed. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This treatment can also help protect your heart and kidneys.',
     badge: 'REAUTH',
     category: 'SGLT2 Inhibitors',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
     trendLinks: [
       { title: 'A simple guide to SGLT2 inhibitors', url: 'https://trenddiabetes.online/wp-content/uploads/2025/10/SGLT2i_TREND_FINAL_v2.pdf' },
@@ -83,6 +88,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting an emollient and skin care treatment. Examples include Cetraben, Diprobase and E45. These products moisturise your skin and help soothe dryness and irritation.',
     badge: 'NEW',
     category: 'Dermatology',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/emollients/',
     trendLinks: [],
     keyInfo: [
@@ -97,6 +103,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your emollient and skin care treatment has been reviewed and renewed. Examples include Cetraben, Diprobase and E45. Keep using it often to protect and soothe your skin.',
     badge: 'REAUTH',
     category: 'Dermatology',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/emollients/',
     trendLinks: [],
     keyInfo: [
@@ -111,6 +118,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting insulin therapy. Examples include Levemir, Tresiba and Humulin. Insulin helps control your blood sugar and this guide will help you start treatment safely.',
     badge: 'NEW',
     category: 'Insulin',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
     trendLinks: [
       { title: 'Keeping safe with insulin therapy', url: 'https://trenddiabetes.online/wp-content/uploads/2025/08/A5_Insulin_TREND.pdf' },
@@ -129,6 +137,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your insulin therapy has been reviewed and renewed. Examples include Levemir, Tresiba and Humulin. Keep following your insulin plan and checking your blood sugar as advised.',
     badge: 'REAUTH',
     category: 'Insulin',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
     trendLinks: [
       { title: 'Keeping safe with insulin therapy', url: 'https://trenddiabetes.online/wp-content/uploads/2025/08/A5_Insulin_TREND.pdf' },
@@ -147,6 +156,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting Mounjaro for type 2 diabetes. This medicine is also called tirzepatide. It helps improve blood sugar control and may also help with weight management.',
     badge: 'NEW',
     category: 'GLP-1 / GIP',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
     trendLinks: [
       { title: 'GLP-1 RA and GIP guide', url: 'https://trenddiabetes.online/wp-content/uploads/2025/11/GLP1RA_TREND_FINAL.pdf' }
@@ -163,6 +173,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your Mounjaro treatment has been reviewed and renewed. This medicine is also called tirzepatide. Keep taking it as advised and watch for side effects or dose changes.',
     badge: 'REAUTH',
     category: 'GLP-1 / GIP',
+    reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
     trendLinks: [
       { title: 'GLP-1 RA and GIP guide', url: 'https://trenddiabetes.online/wp-content/uploads/2025/11/GLP1RA_TREND_FINAL.pdf' }

@@ -53,7 +53,7 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Eye size={20} color="#005eb8" />
+            <Eye size={20} color="#005eb8" aria-hidden="true" />
             <span style={{ fontWeight: 700, fontSize: '1rem', color: '#005eb8' }}>Patient Preview</span>
           </div>
           <button
@@ -116,7 +116,7 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
           )}
 
           <h2 style={{ fontSize: '1.3rem', margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ color: '#005eb8', display: 'flex' }}>{getMedicationIcon(med.code)}</span>
+            <span style={{ color: '#005eb8', display: 'flex' }} aria-hidden="true">{getMedicationIcon(med.code)}</span>
             {med.title}
           </h2>
           <p style={{ color: '#212b32', fontSize: '1rem', lineHeight: 1.6 }}>{med.description}</p>
@@ -129,7 +129,7 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
                   key={`${med.code}-info-${index}`}
                   style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'flex-start' }}
                 >
-                  <Info size={20} color="#005eb8" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                  <Info size={20} color="#005eb8" style={{ flexShrink: 0, marginTop: '0.1rem' }} aria-hidden="true" />
                   <span style={{ fontSize: '0.95rem' }}>{info}</span>
                 </li>
               ))}
@@ -145,9 +145,10 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
                 borderRadius: '8px',
                 borderLeft: '4px solid #d5281b',
               }}
+              role="alert"
             >
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.25rem' }}>
-                <ShieldAlert size={20} color="#d5281b" />
+                <ShieldAlert size={20} color="#d5281b" aria-hidden="true" />
                 <strong style={{ color: '#d5281b' }}>Sick Day Rules Apply</strong>
               </div>
               <p style={{ margin: 0, fontSize: '0.9rem', color: '#212b32' }}>

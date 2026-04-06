@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle } from 'lucide-react';
 import { validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
@@ -174,8 +174,8 @@ const ResourceView: React.FC = () => {
   // Show auth error - practice not signed up
   if (orgParam && isAuthorised === false) {
     return (
-      <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
-        <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} />
+      <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
+        <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
         <h1>Practice Not Registered</h1>
         <p style={{ color: '#d5281b', marginBottom: '1rem' }}>{authError}</p>
         <p style={{ fontSize: '0.9rem', color: '#4c6272' }}>
@@ -210,9 +210,9 @@ const ResourceView: React.FC = () => {
   return (
     <div className="animation-container patient-view">
       {contents.length > 1 && (
-        <div className="patient-summary patient-summary-card">
+        <div className="patient-summary patient-summary-card" role="alert" aria-live="polite">
           <div className="patient-summary-icon">
-            <Info size={20} />
+            <Info size={20} aria-hidden="true" />
           </div>
           <p className="patient-summary-text">
             Consultation Summary: We found {contents.length} medication guides for you.
@@ -248,7 +248,7 @@ const ResourceView: React.FC = () => {
                       {content.keyInfo.map((info, i) => (
                         <li key={i} className="patient-info-item">
                           <div className="patient-info-icon">
-                            <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} />
+                            <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} aria-hidden="true" />
                           </div>
                           <span className="patient-info-text">{info}</span>
                         </li>
@@ -312,12 +312,14 @@ const ResourceView: React.FC = () => {
   );
 };
 
-const ClinicianDemo: React.FC = () => {
+const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const currentCode = searchParams.get('code');
   const { medicationMap } = useMedicationCatalog();
   const navigate = useNavigate();
+
+  if (!show) return null;
 
   const selectScenario = (code: string) => {
     navigate(`/patient?code=${encodeURIComponent(code)}`);
@@ -385,16 +387,20 @@ const ClinicianDemo: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const location = useLocation();
+  const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
+
   return (
     <BrowserRouter>
       <div className="app-container">
+        <a href="#main-content" className="sr-only">Skip to content</a>
         <header>
           <div className="header-content">
             <img src="/MyMedinfo.png" alt="MyMedInfo" style={{ height: 'auto', width: '80px', marginBottom: '0' }} />
           </div>
         </header>
 
-        <main>
+        <main id="main-content">
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/demo" element={<Demo />} />
@@ -410,12 +416,12 @@ const App: React.FC = () => {
 
         <footer className="footer">
           <p>© {new Date().getFullYear()} Nottingham West Primary Care Network - MyMedInfo</p>
-          <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+          <p>
             This information is for guidance only. Always follow the specific advice from your GP or clinical team.
           </p>
         </footer>
 
-        <ClinicianDemo />
+        <ClinicianDemo show={showClinicianDemo} />
       </div>
     </BrowserRouter>
   );

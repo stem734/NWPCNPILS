@@ -54,6 +54,10 @@ export const mergeMedicationCatalog = (overrides: MedicationOverride[]): Medicat
       badge: override.badge,
       category: override.category,
       keyInfo: Array.isArray(override.keyInfo) ? override.keyInfo : base?.keyInfo ?? [],
+      reviewMonths:
+        typeof override.reviewMonths === 'number' && override.reviewMonths > 0
+          ? override.reviewMonths
+          : base?.reviewMonths ?? 12,
       nhsLink: typeof override.nhsLink === 'string' ? override.nhsLink : base?.nhsLink,
       trendLinks: Array.isArray(override.trendLinks) ? override.trendLinks : base?.trendLinks ?? [],
       sickDaysNeeded: typeof override.sickDaysNeeded === 'boolean' ? override.sickDaysNeeded : base?.sickDaysNeeded,
