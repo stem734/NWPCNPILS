@@ -38,6 +38,7 @@ const DrugBuilder: React.FC = () => {
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
   const [hasContent, setHasContent] = useState(false);
   const [editingCode, setEditingCode] = useState('');
+  const [requestedCode, setRequestedCode] = useState('');
   const [previewMed, setPreviewMed] = useState<MedicationRecord | null>(null);
 
   // Save state
@@ -96,6 +97,7 @@ const DrugBuilder: React.FC = () => {
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
     setEditingCode(medication.code);
+    setRequestedCode(medication.code);
     setHasContent(true);
     setSavedCode('');
     setSavedAction('updated');
@@ -121,6 +123,7 @@ const DrugBuilder: React.FC = () => {
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
     setEditingCode('');
+    setRequestedCode('');
     setHasContent(true);
     setSavedCode('');
     setSavedAction('created');
@@ -156,6 +159,7 @@ const DrugBuilder: React.FC = () => {
         setTrendLinks((c.trendLinks as TrendLink[]) || []);
         setHasContent(true);
         setSavedCode('');
+        setRequestedCode('');
       }
     } catch (err) {
       console.error('Generation error:', err);
@@ -166,6 +170,7 @@ const DrugBuilder: React.FC = () => {
       setBadge(medType);
       setKeyInfo(['']);
       setHasContent(true);
+      setRequestedCode('');
     }
     setGenerating(false);
   };
@@ -181,6 +186,8 @@ const DrugBuilder: React.FC = () => {
       const save = httpsCallable(functions, 'saveMedication');
       const result = await save({
         code: editingCode || undefined,
+        requestedCode: requestedCode.trim() || undefined,
+        medicationName: medName.trim() || title.trim(),
         title: title.trim(),
         description: description.trim(),
         badge,
@@ -255,6 +262,7 @@ const DrugBuilder: React.FC = () => {
     setSickDaysNeeded(false);
     setHasContent(false);
     setEditingCode('');
+    setRequestedCode('');
     setSavedCode('');
     setSavedAction('created');
     setSaveError('');
@@ -431,6 +439,16 @@ const DrugBuilder: React.FC = () => {
                   <option value="REAUTH">Reauthorisation</option>
                 </select>
               </div>
+              <div style={{ minWidth: '150px' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Code</label>
+                <input
+                  type="text"
+                  value={requestedCode}
+                  onChange={e => setRequestedCode(e.target.value.replace(/[^\d]/g, '').slice(0, 3))}
+                  placeholder={badge === 'REAUTH' ? 'e.g. 602' : 'e.g. 601'}
+                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+              </div>
               <div style={{ display: 'flex', alignItems: 'end', paddingBottom: '0.2rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
                   <input
@@ -441,6 +459,10 @@ const DrugBuilder: React.FC = () => {
                 </label>
               </div>
             </div>
+
+            <p style={{ fontSize: '0.82rem', color: '#4c6272', margin: '-0.25rem 0 0' }}>
+              Leave the code blank to auto-pair with an existing family where possible, for example `601` and `602`. Enter a code manually if you need to override it.
+            </p>
 
             {/* Key Information */}
             <div>
