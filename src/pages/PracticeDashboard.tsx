@@ -13,6 +13,8 @@ const PracticeDashboard: React.FC = () => {
   const [practiceName, setPracticeName] = useState('');
   const [selectedMeds, setSelectedMeds] = useState<string[]>([]);
   const [savedMeds, setSavedMeds] = useState<string[]>([]);
+  const [reviewDates, setReviewDates] = useState<Record<string, string>>({});
+  const [savedReviewDates, setSavedReviewDates] = useState<Record<string, string>>({});
   const [linkVisitCount, setLinkVisitCount] = useState(0);
   const [lastAccessedMs, setLastAccessedMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,12 @@ const PracticeDashboard: React.FC = () => {
     return () => unsubscribe();
   }, [navigate]);
 
+  const getDefaultReviewDate = () => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 12);
+    return date.toISOString().slice(0, 10);
+  };
+
   const loadPractice = async () => {
     setLoading(true);
     try {
@@ -45,8 +53,11 @@ const PracticeDashboard: React.FC = () => {
       if (data.found && data.practice) {
         setPracticeName(data.practice.name as string);
         const meds = (data.practice.selected_medications as string[]) || [];
+        const loadedReviewDates = (data.practice.medication_review_dates as Record<string, string>) || {};
         setSelectedMeds(meds);
         setSavedMeds(meds);
+        setReviewDates(loadedReviewDates);
+        setSavedReviewDates(loadedReviewDates);
         setLinkVisitCount((data.practice.link_visit_count as number) || 0);
         setLastAccessedMs((data.practice.last_accessed_ms as number | null) || null);
       } else {
@@ -61,9 +72,22 @@ const PracticeDashboard: React.FC = () => {
 
   const toggleMed = (code: string) => {
     setSaveSuccess(false);
-    setSelectedMeds(prev =>
-      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
-    );
+    setSelectedMeds(prev => {
+      if (prev.includes(code)) {
+        setReviewDates((current) => {
+          const updated = { ...current };
+          delete updated[code];
+          return updated;
+        });
+        return prev.filter(c => c !== code);
+      }
+
+      setReviewDates((current) => ({
+        ...current,
+        [code]: current[code] || savedReviewDates[code] || getDefaultReviewDate(),
+      }));
+      return [...prev, code];
+    });
   };
 
   const toggleAll = () => {
@@ -71,9 +95,24 @@ const PracticeDashboard: React.FC = () => {
     const allCodes = allMedications.map(m => m.code);
     if (selectedMeds.length === allCodes.length) {
       setSelectedMeds([]);
+      setReviewDates({});
     } else {
       setSelectedMeds(allCodes);
+      setReviewDates((current) =>
+        allCodes.reduce<Record<string, string>>((acc, code) => {
+          acc[code] = current[code] || savedReviewDates[code] || getDefaultReviewDate();
+          return acc;
+        }, {}),
+      );
     }
+  };
+
+  const updateReviewDate = (code: string, value: string) => {
+    setSaveSuccess(false);
+    setReviewDates((current) => ({
+      ...current,
+      [code]: value,
+    }));
   };
 
   const handleSave = async () => {
@@ -81,8 +120,14 @@ const PracticeDashboard: React.FC = () => {
     setSaveSuccess(false);
     try {
       const updateMeds = httpsCallable(functions, 'updatePracticeMedications');
-      await updateMeds({ medications: selectedMeds });
+      const result = await updateMeds({
+        medications: selectedMeds,
+        medicationReviewDates: reviewDates,
+      });
+      const data = result.data as { medicationReviewDates?: Record<string, string> };
       setSavedMeds([...selectedMeds]);
+      setSavedReviewDates(data.medicationReviewDates || reviewDates);
+      setReviewDates(data.medicationReviewDates || reviewDates);
       setSaveSuccess(true);
     } catch (err) {
       console.error('Error saving:', err);
@@ -125,8 +170,10 @@ const PracticeDashboard: React.FC = () => {
   const hasChanges = useMemo(() => {
     const selectedSorted = [...selectedMeds].sort();
     const savedSorted = [...savedMeds].sort();
-    return JSON.stringify(selectedSorted) !== JSON.stringify(savedSorted);
-  }, [savedMeds, selectedMeds]);
+    const medsChanged = JSON.stringify(selectedSorted) !== JSON.stringify(savedSorted);
+    const reviewDatesChanged = JSON.stringify(reviewDates) !== JSON.stringify(savedReviewDates);
+    return medsChanged || reviewDatesChanged;
+  }, [reviewDates, savedMeds, savedReviewDates, selectedMeds]);
 
   const allSelected = allMedications.length > 0 && selectedMeds.length === allMedications.length;
   const lastAccessedLabel = lastAccessedMs
@@ -278,6 +325,17 @@ const PracticeDashboard: React.FC = () => {
                     >
                       <Square size={14} /> Remove
                     </button>
+                  </div>
+                  <div style={{ width: '100%', marginTop: '0.75rem' }}>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem', color: '#4c6272' }}>
+                      Review date
+                    </label>
+                    <input
+                      type="date"
+                      value={reviewDates[med.code] || getDefaultReviewDate()}
+                      onChange={(e) => updateReviewDate(med.code, e.target.value)}
+                      style={{ padding: '0.55rem 0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.9rem' }}
+                    />
                   </div>
                 </div>
               ))}
