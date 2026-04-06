@@ -48,7 +48,7 @@ const Demo: React.FC = () => {
         {Object.entries(medicationMap).map(([key, item]) => (
           <div
             key={key}
-            onClick={() => navigate(`/?code=${key}`)}
+            onClick={() => navigate(`/patient?code=${key}`)}
             className="resource-card"
             style={{
               textAlign: 'center',

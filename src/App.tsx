@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useSearchParams } from 'react-router-dom';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle } from 'lucide-react';
 import { validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
@@ -271,12 +271,13 @@ const ResourceView: React.FC = () => {
 
 const ClinicianDemo: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const currentCode = searchParams.get('code');
   const { medicationMap } = useMedicationCatalog();
+  const navigate = useNavigate();
 
   const selectScenario = (code: string) => {
-    setSearchParams({ code });
+    navigate(`/patient?code=${encodeURIComponent(code)}`);
     setIsOpen(false);
   };
 
