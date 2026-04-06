@@ -117,6 +117,33 @@ p {
   width: 100%;
 }
 
+.patient-summary-card {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #eef7ff;
+  border-radius: 12px;
+  border: 1px solid #005eb8;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.patient-summary-icon {
+  background: #005eb8;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 999px;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.patient-summary-text {
+  margin: 0;
+  font-weight: 600;
+  color: #005eb8;
+  font-size: 1.1rem;
+}
+
 .patient-content-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -134,6 +161,71 @@ p {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.patient-medication-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.patient-context-callout {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-radius: 10px;
+  border-left: 4px solid #005eb8;
+}
+
+.patient-context-callout--new {
+  background: #eef7ff;
+}
+
+.patient-context-callout--review {
+  background: #f0f4f5;
+}
+
+.patient-context-title {
+  font-weight: 700;
+  color: #212b32;
+  margin-bottom: 0.25rem;
+}
+
+.patient-context-title--new {
+  color: #005eb8;
+}
+
+.patient-context-copy {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #212b32;
+}
+
+.patient-context-copy--muted {
+  color: #4c6272;
+}
+
+.patient-info-section {
+  margin-top: 2rem;
+}
+
+.patient-info-list {
+  list-style: none;
+  padding: 0;
+}
+
+.patient-info-item {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  align-items: flex-start;
+}
+
+.patient-info-icon {
+  margin-top: 0.2rem;
+}
+
+.patient-info-text {
+  font-size: 1.1rem;
 }
 
 .patient-resources {
@@ -184,6 +276,33 @@ p {
   color: var(--nhs-secondary-text);
 }
 
+.patient-resource-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.patient-resource-meta--trend {
+  gap: 0.75rem;
+}
+
+.patient-resource-chip {
+  background: #005eb8;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  font-weight: 800;
+}
+
+.patient-resource-meta-text {
+  font-weight: 600;
+}
+
+.patient-resource-copy {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
 .patient-resource-arrow {
   position: absolute;
   top: 50%;
@@ -208,6 +327,22 @@ p {
   transform: translateY(-4px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   border-color: var(--nhs-blue);
+}
+
+.patient-empty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.patient-empty-card {
+  text-align: center;
+}
+
+.patient-empty-icon {
+  color: var(--nhs-blue);
+  margin-bottom: 0.5rem;
 }
 
 .resource-card h3 {
@@ -265,6 +400,13 @@ p {
   padding: 1.5rem;
   border-radius: 4px;
   margin-bottom: 2rem;
+}
+
+.sick-days-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
 /* Clinician Demo Mode Styles */
@@ -401,6 +543,16 @@ p {
 }
 
 @media (max-width: 899px) {
+  main {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border-radius: 16px;
+  }
+
   .patient-view .card {
     padding: 1.25rem;
   }
@@ -422,8 +574,99 @@ p {
     align-items: flex-start;
   }
 
+  .patient-summary-card {
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  .patient-summary-icon {
+    padding: 0.4rem;
+  }
+
+  .patient-summary-text {
+    font-size: 1rem;
+  }
+
+  .patient-medication-title {
+    display: block;
+    line-height: 1.2;
+  }
+
+  .patient-context-callout {
+    margin-bottom: 1rem;
+    padding: 0.9rem;
+  }
+
+  .patient-info-section {
+    margin-top: 1.5rem;
+  }
+
+  .patient-info-item {
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .patient-info-text {
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .patient-resources {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+  }
+
+  .patient-resources-heading {
+    font-size: 1.1rem;
+  }
+
+  .patient-resource-list {
+    gap: 0.75rem;
+  }
+
+  .patient-resource-link {
+    padding: 0.95rem 2.75rem 0.95rem 0.95rem;
+    border-radius: 14px;
+    background: #ffffff;
+  }
+
+  .patient-resource-chip {
+    font-size: 0.75rem;
+  }
+
+  .patient-resource-meta-text,
+  .patient-resource-link h3 {
+    font-size: 0.95rem;
+  }
+
+  .patient-resource-copy {
+    font-size: 0.85rem;
+  }
+
+  .patient-empty-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sick-days-callout {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .sick-days-header {
+    align-items: flex-start;
+  }
+
   .patient-view .action-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .demo-fab {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    bottom: 16px;
+    right: 16px;
   }
 }
