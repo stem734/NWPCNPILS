@@ -27,6 +27,7 @@ interface AdminUser {
 }
 
 const AdminDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup'>('practices');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -302,15 +303,15 @@ const AdminDashboard: React.FC = () => {
   if (!authenticated) return null;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '2rem auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-        <div>
-          <h1 style={{ fontSize: '0.75rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <ShieldAlert size={12} color="#005eb8" /> Admin Dashboard
+    <div className="dashboard-shell">
+      <div className="dashboard-header">
+        <div className="dashboard-header-copy">
+          <h1>
+            <ShieldAlert size={22} color="#005eb8" /> Admin Dashboard
           </h1>
-          <p style={{ color: '#4c6272', margin: '0.05rem 0 0', fontSize: '0.65rem' }}>Manage registered practices</p>
+          <p>Manage practices, administrators, and setup links from one place.</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="dashboard-actions">
           <button onClick={() => navigate('/admin/drug-builder')} className="action-button" style={{ backgroundColor: '#005eb8' }}>
             <FlaskConical size={16} /> Drug Builder
           </button>
@@ -323,25 +324,30 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      <div className="dashboard-tabs">
+        <button className={`dashboard-tab${activeTab === 'practices' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('practices')}>
+          Practices
+        </button>
+        <button className={`dashboard-tab${activeTab === 'admins' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('admins')}>
+          Administrators
+        </button>
+        <button className={`dashboard-tab${activeTab === 'setup' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('setup')}>
+          Setup
+        </button>
+      </div>
+
       {adminActionLink && (
-        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginTop: 0 }}>Administrator Link Ready</h2>
-          <p style={{ color: '#4c6272', marginBottom: '1rem' }}>{adminActionMessage}</p>
+        <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
+          <h2 className="dashboard-panel-title">Administrator Link Ready</h2>
+          <p className="dashboard-panel-subtitle" style={{ marginBottom: '1rem' }}>{adminActionMessage}</p>
           <textarea
             readOnly
             value={adminActionLink}
             rows={4}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #d8dde0',
-              borderRadius: '8px',
-              fontSize: '0.9rem',
-              boxSizing: 'border-box',
-              resize: 'vertical',
-            }}
+            style={{ width: '100%', resize: 'vertical' }}
+            className="dashboard-field"
           />
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+          <div className="dashboard-inline-actions" style={{ marginTop: '1rem' }}>
             <button
               onClick={() => navigator.clipboard.writeText(adminActionLink)}
               className="action-button"
@@ -363,43 +369,40 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {showAddForm && (
-        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Add Practice</h2>
+      {showAddForm && activeTab === 'practices' && (
+        <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
+          <div className="dashboard-panel-header">
+            <h2 className="dashboard-panel-title">Add Practice</h2>
             <button onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
               <X size={20} />
             </button>
           </div>
           {addError && (
-            <div style={{ padding: '0.5rem 0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
               {addError}
             </div>
           )}
           <form onSubmit={addPractice} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Organisation Name *</label>
+            <div className="dashboard-field">
+              <label>Organisation Name *</label>
               <input
                 type="text" value={newName} onChange={e => setNewName(e.target.value)} required
                 placeholder="Exact name as in SystmOne"
-                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
               />
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>ODS Code</label>
+            <div className="dashboard-form-grid">
+              <div className="dashboard-field">
+                <label>ODS Code</label>
                 <input
                   type="text" value={newOds} onChange={e => setNewOds(e.target.value)}
                   placeholder="e.g. C84001"
-                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Contact Email *</label>
+              <div className="dashboard-field">
+                <label>Contact Email *</label>
                 <input
                   type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required
                   placeholder="e.g. admin@nhs.net"
-                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -410,34 +413,32 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {showAddAdminForm && (
-        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Add Administrator</h2>
+      {showAddAdminForm && activeTab === 'admins' && (
+        <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
+          <div className="dashboard-panel-header">
+            <h2 className="dashboard-panel-title">Add Administrator</h2>
             <button onClick={() => setShowAddAdminForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
               <X size={20} />
             </button>
           </div>
           {addAdminError && (
-            <div style={{ padding: '0.5rem 0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
               {addAdminError}
             </div>
           )}
           <form onSubmit={addAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Name</label>
+            <div className="dashboard-field">
+              <label>Administrator Name</label>
               <input
                 type="text" value={newAdminName} onChange={e => setNewAdminName(e.target.value)}
                 placeholder="e.g. Jane Smith"
-                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
               />
             </div>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Email *</label>
+            <div className="dashboard-field">
+              <label>Administrator Email *</label>
               <input
                 type="email" value={newAdminEmail} onChange={e => setNewAdminEmail(e.target.value)} required
                 placeholder="e.g. admin@nhs.net"
-                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
               />
             </div>
             <button type="submit" className="action-button" style={{ alignSelf: 'flex-start' }}>
@@ -448,46 +449,43 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {editingPractice && (
-        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Edit Practice</h2>
+        <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #007f3b' }}>
+          <div className="dashboard-panel-header">
+            <h2 className="dashboard-panel-title">Edit Practice</h2>
             <button onClick={() => setEditingPractice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
               <X size={20} />
             </button>
           </div>
           {editError && (
-            <div style={{ padding: '0.5rem 0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
               {editError}
             </div>
           )}
           <form onSubmit={savePracticeEdit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Organisation Name *</label>
+            <div className="dashboard-field">
+              <label>Organisation Name *</label>
               <input
                 type="text" value={editName} onChange={e => setEditName(e.target.value)} required
                 placeholder="Exact name as in SystmOne"
-                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
               />
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>ODS Code</label>
+            <div className="dashboard-form-grid">
+              <div className="dashboard-field">
+                <label>ODS Code</label>
                 <input
                   type="text" value={editOds} onChange={e => setEditOds(e.target.value)}
                   placeholder="e.g. C84001"
-                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Contact Email *</label>
+              <div className="dashboard-field">
+                <label>Contact Email *</label>
                 <input
                   type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} required
                   placeholder="e.g. admin@nhs.net"
-                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-start' }}>
+            <div className="dashboard-inline-actions" style={{ alignSelf: 'flex-start' }}>
               <button type="submit" className="action-button" style={{ backgroundColor: '#007f3b' }}>
                 Save Changes
               </button>
@@ -500,31 +498,29 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {editingAdmin && (
-        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Edit Administrator</h2>
+        <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #007f3b' }}>
+          <div className="dashboard-panel-header">
+            <h2 className="dashboard-panel-title">Edit Administrator</h2>
             <button onClick={() => setEditingAdmin(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
               <X size={20} />
             </button>
           </div>
           {editAdminError && (
-            <div style={{ padding: '0.5rem 0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
               {editAdminError}
             </div>
           )}
           <form onSubmit={saveAdminEdit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Name *</label>
+            <div className="dashboard-field">
+              <label>Administrator Name *</label>
               <input
                 type="text" value={editAdminName} onChange={e => setEditAdminName(e.target.value)} required
-                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
               />
             </div>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Email *</label>
+            <div className="dashboard-field">
+              <label>Administrator Email *</label>
               <input
                 type="email" value={editAdminEmail} onChange={e => setEditAdminEmail(e.target.value)} required
-                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
               />
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
@@ -536,7 +532,7 @@ const AdminDashboard: React.FC = () => {
               />
               Administrator account active
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-start' }}>
+            <div className="dashboard-inline-actions" style={{ alignSelf: 'flex-start' }}>
               <button type="submit" className="action-button" style={{ backgroundColor: '#007f3b' }}>
                 Save Changes
               </button>
@@ -548,11 +544,15 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
+      {activeTab === 'admins' && (
+      <div className="dashboard-panel dashboard-section">
+        <div className="dashboard-panel-header">
+          <div>
+            <h2 className="dashboard-panel-title">
             Administrator Accounts ({adminUsers.length})
-          </h2>
+            </h2>
+            <p className="dashboard-panel-subtitle">Manage who can administer the platform and generate manual setup or reset links.</p>
+          </div>
           {!showAddAdminForm && (
             <button onClick={() => setShowAddAdminForm(true)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Plus size={16} /> Add Administrator
@@ -565,68 +565,53 @@ const AdminDashboard: React.FC = () => {
         ) : adminUsers.length === 0 ? (
           <p style={{ color: '#4c6272' }}>No administrator accounts found yet.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="dashboard-list">
             {adminUsers.map((adminUser) => (
               <div
                 key={adminUser.uid}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1rem',
-                  background: '#f8fafb',
-                  borderRadius: '8px',
-                  border: '1px solid #d8dde0',
-                }}
+                className="dashboard-list-card"
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{adminUser.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#4c6272', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                <div className="dashboard-list-main">
+                  <div className="dashboard-list-title">{adminUser.name}</div>
+                  <div className="dashboard-meta">
                     <span>{adminUser.email}</span>
-                    <span style={{
-                      padding: '0 0.4rem',
-                      borderRadius: '3px',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      background: adminUser.is_active ? '#e8f5e9' : '#fde8e8',
-                      color: adminUser.is_active ? '#007f3b' : '#d5281b',
-                    }}>
+                    <span className={`dashboard-badge ${adminUser.is_active ? 'dashboard-badge--green' : 'dashboard-badge--red'}`}>
                       {adminUser.is_active ? 'ACTIVE' : 'INACTIVE'}
                     </span>
-                    <span style={{
-                      padding: '0 0.4rem',
-                      borderRadius: '3px',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      background: adminUser.role === 'owner' ? '#fff4e5' : '#eef7ff',
-                      color: adminUser.role === 'owner' ? '#8a4b00' : '#005eb8',
-                    }}>
+                    <span className={`dashboard-badge ${adminUser.role === 'owner' ? 'dashboard-badge--amber' : 'dashboard-badge--blue'}`}>
                       {adminUser.role.toUpperCase()}
                     </span>
                   </div>
                 </div>
-                <button onClick={() => openAdminEditForm(adminUser)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                  <Edit2 size={16} /> Edit
-                </button>
-                <button onClick={() => resetAdminPassword(adminUser)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-                  <RefreshCw size={16} /> Reset Password
-                </button>
-                {adminUser.role !== 'owner' && (
-                  <button onClick={() => deleteAdmin(adminUser)} className="action-button" style={{ backgroundColor: '#d5281b' }}>
-                    <Trash2 size={16} /> Remove
+                <div className="dashboard-list-actions">
+                  <button onClick={() => openAdminEditForm(adminUser)} className="dashboard-pill-button dashboard-pill-button--muted">
+                    <Edit2 size={16} /> Edit
                   </button>
-                )}
+                  <button onClick={() => resetAdminPassword(adminUser)} className="dashboard-pill-button dashboard-pill-button--primary">
+                    <RefreshCw size={16} /> Reset Password
+                  </button>
+                  {adminUser.role !== 'owner' && (
+                    <button onClick={() => deleteAdmin(adminUser)} className="dashboard-pill-button dashboard-pill-button--danger">
+                      <Trash2 size={16} /> Remove
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      )}
 
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
+      {activeTab === 'practices' && (
+      <div className="dashboard-panel dashboard-section">
+        <div className="dashboard-panel-header">
+          <div>
+            <h2 className="dashboard-panel-title">
             Registered Practices ({practices.length})
-          </h2>
+            </h2>
+            <p className="dashboard-panel-subtitle">Control which practices can use the service and keep their setup details up to date.</p>
+          </div>
           {!showAddForm && (
             <button onClick={() => setShowAddForm(true)} className="action-button" style={{ backgroundColor: '#007f3b' }}>
               <Plus size={16} /> Add Practice
@@ -639,19 +624,16 @@ const AdminDashboard: React.FC = () => {
         ) : practices.length === 0 ? (
           <p style={{ color: '#4c6272' }}>No practices registered yet. Share the sign-up link with practices.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="dashboard-list">
             {practices.map(practice => (
               <div
                 key={practice.id}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '1rem', background: practice.is_active ? '#f0f9f0' : '#fef7f0',
-                  borderRadius: '8px', border: `1px solid ${practice.is_active ? '#007f3b' : '#d5281b'}20`
-                }}
+                className="dashboard-list-card"
+                style={{ background: practice.is_active ? '#f0f9f0' : '#fef7f0' }}
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '1rem' }}>{practice.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#4c6272', display: 'flex', gap: '1rem', marginTop: '0.25rem' }}>
+                <div className="dashboard-list-main">
+                  <div className="dashboard-list-title">{practice.name}</div>
+                  <div className="dashboard-meta">
                     {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
                     {practice.contact_email && <span>{practice.contact_email}</span>}
                     <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
@@ -660,43 +642,23 @@ const AdminDashboard: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="dashboard-list-actions">
                   {practice.is_active ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#007f3b', fontWeight: 600, fontSize: '0.85rem' }}>
+                    <span className="dashboard-badge dashboard-badge--green">
                       <CheckCircle size={16} /> Active
                     </span>
                   ) : (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#d5281b', fontWeight: 600, fontSize: '0.85rem' }}>
+                    <span className="dashboard-badge dashboard-badge--red">
                       <XCircle size={16} /> Inactive
                     </span>
                   )}
-                  <button
-                    onClick={() => openEditForm(practice)}
-                    style={{
-                      padding: '0.4rem 0.75rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                      fontSize: '0.8rem', fontWeight: 600,
-                      background: '#005eb8', color: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem'
-                    }}
-                  >
+                  <button onClick={() => openEditForm(practice)} className="dashboard-pill-button dashboard-pill-button--primary">
                     <Edit2 size={14} /> Edit
                   </button>
-                  <button
-                    onClick={() => toggleActive(practice)}
-                    style={{
-                      padding: '0.4rem 0.75rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                      fontSize: '0.8rem', fontWeight: 600,
-                      background: practice.is_active ? '#d5281b' : '#007f3b', color: 'white'
-                    }}
-                  >
+                  <button onClick={() => toggleActive(practice)} className={`dashboard-pill-button ${practice.is_active ? 'dashboard-pill-button--danger' : 'dashboard-pill-button--success'}`}>
                     {practice.is_active ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button
-                    onClick={() => deletePractice(practice)}
-                    style={{
-                      padding: '0.4rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                      background: '#f0f4f5', color: '#d5281b', display: 'flex'
-                    }}
-                  >
+                  <button onClick={() => deletePractice(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -705,10 +667,12 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
-      <div className="card">
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Sign-up Link</h2>
-        <p style={{ color: '#4c6272', fontSize: '0.9rem', marginBottom: '1rem' }}>
+      {activeTab === 'setup' && (
+      <div className="dashboard-panel dashboard-section">
+        <h2 className="dashboard-panel-title">Practice Sign-up Link</h2>
+        <p className="dashboard-panel-subtitle" style={{ marginBottom: '1rem' }}>
           Share this link with practices that want to register:
         </p>
         <div style={{
@@ -718,7 +682,11 @@ const AdminDashboard: React.FC = () => {
         }}>
           {window.location.origin}/signup
         </div>
+        <div className="dashboard-banner dashboard-banner--info" style={{ marginTop: '1rem' }}>
+          Use the Administrators tab to create manual setup or reset links after accounts are created.
+        </div>
       </div>
+      )}
     </div>
   );
 };
