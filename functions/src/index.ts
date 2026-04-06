@@ -29,6 +29,15 @@ type MedicationGenerationResponse = {
   sickDaysNeeded: boolean;
 };
 
+type AdminRecord = {
+  email: string;
+  name: string;
+  is_active: boolean;
+  role: 'owner' | 'admin';
+  created_at: Timestamp;
+  updated_at: Timestamp;
+};
+
 const medicationGenerationSchema: ResponseSchema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -99,6 +108,42 @@ const extractMedicationPayload = (raw: string): MedicationGenerationResponse => 
   };
 };
 
+const assertAdmin = async (request: { auth?: { uid?: string; token?: { email?: string } } }): Promise<AdminRecord> => {
+  if (!request.auth?.uid) {
+    throw new HttpsError('unauthenticated', 'Must be logged in as admin');
+  }
+
+  const adminRef = db.collection('admins').doc(request.auth.uid);
+  const adminDoc = await adminRef.get();
+
+  if (adminDoc.exists) {
+    const adminData = adminDoc.data() as AdminRecord;
+    if (!adminData.is_active) {
+      throw new HttpsError('permission-denied', 'Administrator account is inactive');
+    }
+    return adminData;
+  }
+
+  const existingAdmins = await db.collection('admins').limit(1).get();
+  if (!existingAdmins.empty) {
+    throw new HttpsError('permission-denied', 'Administrator access required');
+  }
+
+  const authUser = await adminAuth.getUser(request.auth.uid);
+  const now = Timestamp.now();
+  const bootstrapAdmin: AdminRecord = {
+    email: authUser.email || request.auth.token?.email || '',
+    name: authUser.displayName || authUser.email || 'Primary Administrator',
+    is_active: true,
+    role: 'owner',
+    created_at: now,
+    updated_at: now,
+  };
+
+  await adminRef.set(bootstrapAdmin);
+  return bootstrapAdmin;
+};
+
 /**
  * Validates a practice by organisation name against the practices collection.
  */
@@ -151,10 +196,7 @@ export const validatePractice = onCall(
 export const createPracticeUser = onCall(
   { region: 'europe-west2' },
   async (request): Promise<{ success: boolean; uid?: string; error?: string }> => {
-    // Only authenticated users (admins) can create practice users
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be logged in as admin');
-    }
+    await assertAdmin(request);
 
     const { email, practiceId } = request.data as { email: string; practiceId: string };
 
@@ -192,6 +234,180 @@ export const createPracticeUser = onCall(
     } catch (error) {
       console.error('Error creating practice user:', error);
       const message = error instanceof Error ? error.message : 'Failed to create user';
+      throw new HttpsError('internal', message);
+    }
+  }
+);
+
+export const listAdminUsers = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ admins: Array<Record<string, unknown>> }> => {
+    await assertAdmin(request);
+
+    try {
+      const snapshot = await db.collection('admins').orderBy('email', 'asc').get();
+      const admins = snapshot.docs.map((doc) => ({
+        uid: doc.id,
+        ...doc.data(),
+      }));
+      return { admins };
+    } catch (error) {
+      console.error('Error listing admins:', error);
+      throw new HttpsError('internal', 'Unable to load administrators');
+    }
+  }
+);
+
+export const createAdminUser = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ success: boolean; uid: string }> => {
+    const actingAdmin = await assertAdmin(request);
+    const { email, name } = request.data as { email: string; name?: string };
+
+    if (!email || typeof email !== 'string') {
+      throw new HttpsError('invalid-argument', 'Admin email is required');
+    }
+
+    try {
+      const userRecord = await adminAuth.createUser({
+        email: email.trim(),
+        password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+        emailVerified: false,
+        displayName: typeof name === 'string' && name.trim() ? name.trim() : undefined,
+      });
+
+      const now = Timestamp.now();
+      await db.collection('admins').doc(userRecord.uid).set({
+        email: email.trim(),
+        name: typeof name === 'string' && name.trim() ? name.trim() : email.trim(),
+        is_active: true,
+        role: actingAdmin.role === 'owner' ? 'admin' : 'admin',
+        created_at: now,
+        updated_at: now,
+      } satisfies AdminRecord);
+
+      await adminAuth.generatePasswordResetLink(email.trim());
+
+      return {
+        success: true,
+        uid: userRecord.uid,
+      };
+    } catch (error) {
+      console.error('Error creating admin user:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create administrator';
+      throw new HttpsError('internal', message);
+    }
+  }
+);
+
+export const updateAdminUser = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ success: boolean }> => {
+    const actingAdmin = await assertAdmin(request);
+    const { uid, email, name, isActive } = request.data as {
+      uid: string;
+      email: string;
+      name: string;
+      isActive: boolean;
+    };
+
+    if (!uid || !email || !name) {
+      throw new HttpsError('invalid-argument', 'uid, email, and name are required');
+    }
+
+    const adminRef = db.collection('admins').doc(uid);
+    const adminDoc = await adminRef.get();
+    if (!adminDoc.exists) {
+      throw new HttpsError('not-found', 'Administrator account not found');
+    }
+
+    const targetAdmin = adminDoc.data() as AdminRecord;
+    if (targetAdmin.role === 'owner' && actingAdmin.role !== 'owner') {
+      throw new HttpsError('permission-denied', 'Only the owner can modify the owner account');
+    }
+
+    try {
+      await adminAuth.updateUser(uid, {
+        email: email.trim(),
+        displayName: name.trim(),
+        disabled: !isActive,
+      });
+
+      await adminRef.update({
+        email: email.trim(),
+        name: name.trim(),
+        is_active: Boolean(isActive),
+        updated_at: Timestamp.now(),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating admin user:', error);
+      const message = error instanceof Error ? error.message : 'Failed to update administrator';
+      throw new HttpsError('internal', message);
+    }
+  }
+);
+
+export const sendAdminPasswordReset = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ success: boolean }> => {
+    await assertAdmin(request);
+    const { uid } = request.data as { uid: string };
+
+    if (!uid) {
+      throw new HttpsError('invalid-argument', 'Administrator uid is required');
+    }
+
+    try {
+      const userRecord = await adminAuth.getUser(uid);
+      if (!userRecord.email) {
+        throw new HttpsError('failed-precondition', 'Administrator does not have an email address');
+      }
+
+      await adminAuth.generatePasswordResetLink(userRecord.email);
+      return { success: true };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error sending admin password reset:', error);
+      const message = error instanceof Error ? error.message : 'Failed to send password reset';
+      throw new HttpsError('internal', message);
+    }
+  }
+);
+
+export const deleteAdminUser = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ success: boolean }> => {
+    const actingAdmin = await assertAdmin(request);
+    const { uid } = request.data as { uid: string };
+
+    if (!uid) {
+      throw new HttpsError('invalid-argument', 'Administrator uid is required');
+    }
+
+    if (uid === request.auth?.uid) {
+      throw new HttpsError('failed-precondition', 'You cannot delete your own administrator account');
+    }
+
+    const adminRef = db.collection('admins').doc(uid);
+    const adminDoc = await adminRef.get();
+    if (!adminDoc.exists) {
+      throw new HttpsError('not-found', 'Administrator account not found');
+    }
+
+    const targetAdmin = adminDoc.data() as AdminRecord;
+    if (targetAdmin.role === 'owner' || actingAdmin.role !== 'owner') {
+      throw new HttpsError('permission-denied', 'Only the owner can delete administrator accounts');
+    }
+
+    try {
+      await adminAuth.deleteUser(uid);
+      await adminRef.delete();
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting admin user:', error);
+      const message = error instanceof Error ? error.message : 'Failed to delete administrator';
       throw new HttpsError('internal', message);
     }
   }
@@ -288,9 +504,7 @@ export const updatePracticeMedications = onCall(
 export const generateMedicationContent = onCall(
   { region: 'europe-west2' },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be logged in as admin');
-    }
+    await assertAdmin(request);
 
     if (!geminiKey.value()) {
       throw new HttpsError(
@@ -361,9 +575,8 @@ Rules:
 export const saveMedication = onCall(
   { region: 'europe-west2' },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be logged in as admin');
-    }
+    await assertAdmin(request);
+    const actorUid = request.auth?.uid;
 
     const data = request.data as {
       code?: string;
@@ -406,6 +619,10 @@ export const saveMedication = onCall(
         medicationCode = String(nextFamily * 100 + (badge === 'REAUTH' ? 2 : 1));
       }
 
+      if (!actorUid) {
+        throw new HttpsError('unauthenticated', 'Must be logged in as admin');
+      }
+
       const medDoc = {
         code: medicationCode,
         title: data.title,
@@ -418,7 +635,7 @@ export const saveMedication = onCall(
         sickDaysNeeded: data.sickDaysNeeded || false,
         is_deleted: false,
         updated_at: Timestamp.now(),
-        updated_by: request.auth.uid,
+        updated_by: actorUid,
       };
 
       const medicationRef = db.collection('medications').doc(medicationCode);
@@ -427,7 +644,7 @@ export const saveMedication = onCall(
       await medicationRef.set({
         ...medDoc,
         created_at: existingDoc.exists ? existingDoc.data()?.created_at || Timestamp.now() : Timestamp.now(),
-        created_by: existingDoc.exists ? existingDoc.data()?.created_by || request.auth.uid : request.auth.uid,
+        created_by: existingDoc.exists ? existingDoc.data()?.created_by || actorUid : actorUid,
       }, { merge: true });
 
       return { success: true, code: medicationCode };
@@ -463,13 +680,15 @@ export const listMedications = onCall(
 export const deleteMedication = onCall(
   { region: 'europe-west2' },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be logged in as admin');
-    }
+    await assertAdmin(request);
+    const actorUid = request.auth?.uid;
 
     const { code } = request.data as { code: string };
     if (!code) {
       throw new HttpsError('invalid-argument', 'Medication code is required');
+    }
+    if (!actorUid) {
+      throw new HttpsError('unauthenticated', 'Must be logged in as admin');
     }
 
     try {
@@ -477,7 +696,7 @@ export const deleteMedication = onCall(
         code,
         is_deleted: true,
         deleted_at: Timestamp.now(),
-        deleted_by: request.auth.uid,
+        deleted_by: actorUid,
       }, { merge: true });
       return { success: true };
     } catch (error) {
