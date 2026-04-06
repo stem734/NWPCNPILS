@@ -1,30 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2 } from 'lucide-react';
+import MedicationPreviewModal from '../components/MedicationPreviewModal';
+import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 
 interface TrendLink {
   title: string;
   url: string;
 }
 
-interface SavedMed {
-  code: string;
-  title: string;
-  description: string;
-  badge: string;
-  category: string;
-  keyInfo: string[];
-  nhsLink: string;
-  trendLinks: TrendLink[];
-  sickDaysNeeded: boolean;
-}
-
 const DrugBuilder: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
+  const {
+    medications: existingMeds,
+    loading: loadingMeds,
+    reload: reloadMeds,
+  } = useMedicationCatalog();
 
   // Search / generate
   const [medName, setMedName] = useState('');
@@ -42,22 +37,21 @@ const DrugBuilder: React.FC = () => {
   const [trendLinks, setTrendLinks] = useState<TrendLink[]>([]);
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
   const [hasContent, setHasContent] = useState(false);
+  const [editingCode, setEditingCode] = useState('');
+  const [previewMed, setPreviewMed] = useState<MedicationRecord | null>(null);
 
   // Save state
   const [saving, setSaving] = useState(false);
   const [savedCode, setSavedCode] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [savedAction, setSavedAction] = useState<'created' | 'updated'>('created');
 
-  // Existing custom medications
-  const [existingMeds, setExistingMeds] = useState<SavedMed[]>([]);
-  const [loadingMeds, setLoadingMeds] = useState(true);
   const [deletingCode, setDeletingCode] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAuthenticated(true);
-        loadExistingMeds();
       } else {
         navigate('/admin');
       }
@@ -65,17 +59,55 @@ const DrugBuilder: React.FC = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  const loadExistingMeds = async () => {
-    setLoadingMeds(true);
-    try {
-      const listMeds = httpsCallable(functions, 'listMedications');
-      const result = await listMeds();
-      const data = result.data as { medications: SavedMed[] };
-      setExistingMeds(data.medications || []);
-    } catch {
-      console.error('Error loading medications');
+  const previewDraft = useMemo<MedicationRecord | null>(() => {
+    if (!hasContent) {
+      return null;
     }
-    setLoadingMeds(false);
+
+    return {
+      code: editingCode || '000',
+      title: title.trim() || medName.trim() || 'Medication Preview',
+      description: description.trim(),
+      badge,
+      category: category.trim(),
+      keyInfo: keyInfo.filter((item) => item.trim()),
+      nhsLink: nhsLink.trim(),
+      trendLinks: trendLinks.filter((item) => item.title.trim() && item.url.trim()),
+      sickDaysNeeded,
+      source: editingCode ? 'override' : 'custom',
+      isBuiltIn: false,
+    };
+  }, [badge, category, description, editingCode, hasContent, keyInfo, medName, nhsLink, sickDaysNeeded, title, trendLinks]);
+
+  const getFriendlyMedicationName = (medication: MedicationRecord) => {
+    const [baseTitle] = medication.title.split(' - ');
+    return baseTitle.trim();
+  };
+
+  const startEditingMedication = (medication: MedicationRecord) => {
+    setMedName(getFriendlyMedicationName(medication));
+    setMedType(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
+    setTitle(medication.title);
+    setDescription(medication.description);
+    setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
+    setCategory(medication.category);
+    setKeyInfo(medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
+    setNhsLink(medication.nhsLink || '');
+    setTrendLinks(medication.trendLinks);
+    setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
+    setEditingCode(medication.code);
+    setHasContent(true);
+    setSavedCode('');
+    setSavedAction('updated');
+    setSaveError('');
+    setGenError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const sourceLabel = (medication: MedicationRecord) => {
+    if (medication.source === 'built-in') return 'Built in';
+    if (medication.source === 'override') return 'Built-in override';
+    return 'Custom';
   };
 
   const handleGenerate = async () => {
@@ -98,10 +130,12 @@ const DrugBuilder: React.FC = () => {
         setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
         setTrendLinks((c.trendLinks as TrendLink[]) || []);
         setHasContent(true);
+        setSavedCode('');
       }
     } catch (err) {
       console.error('Generation error:', err);
-      setGenError('AI generation failed. You can fill in the fields manually below.');
+      const message = err instanceof Error ? err.message : 'AI generation failed.';
+      setGenError(message);
       // Still show the editor so they can fill manually
       setTitle(medName);
       setBadge(medType);
@@ -121,6 +155,7 @@ const DrugBuilder: React.FC = () => {
     try {
       const save = httpsCallable(functions, 'saveMedication');
       const result = await save({
+        code: editingCode || undefined,
         title: title.trim(),
         description: description.trim(),
         badge,
@@ -132,23 +167,32 @@ const DrugBuilder: React.FC = () => {
       });
       const data = result.data as { success: boolean; code: string };
       if (data.success) {
+        setSavedAction(editingCode ? 'updated' : 'created');
         setSavedCode(data.code);
-        loadExistingMeds();
+        await reloadMeds();
       }
     } catch (err) {
       console.error('Save error:', err);
-      setSaveError('Failed to save medication. Please try again.');
+      const message = err instanceof Error ? err.message : 'Failed to save medication. Please try again.';
+      setSaveError(message);
     }
     setSaving(false);
   };
 
-  const handleDelete = async (code: string) => {
-    if (!confirm(`Delete medication ${code}? This cannot be undone.`)) return;
-    setDeletingCode(code);
+  const handleDelete = async (medication: MedicationRecord) => {
+    const deleteMessage = medication.isBuiltIn
+      ? `Hide medication ${medication.code}? It will be removed from the app until you restore it in Firestore.`
+      : `Delete medication ${medication.code}? This cannot be undone from the builder.`;
+
+    if (!confirm(deleteMessage)) return;
+    setDeletingCode(medication.code);
     try {
       const del = httpsCallable(functions, 'deleteMedication');
-      await del({ code });
-      loadExistingMeds();
+      await del({ code: medication.code });
+      await reloadMeds();
+      if (editingCode === medication.code) {
+        resetForm();
+      }
     } catch {
       console.error('Delete error');
     }
@@ -175,6 +219,7 @@ const DrugBuilder: React.FC = () => {
 
   const resetForm = () => {
     setMedName('');
+    setMedType('NEW');
     setTitle('');
     setDescription('');
     setBadge('NEW');
@@ -184,7 +229,9 @@ const DrugBuilder: React.FC = () => {
     setTrendLinks([]);
     setSickDaysNeeded(false);
     setHasContent(false);
+    setEditingCode('');
     setSavedCode('');
+    setSavedAction('created');
     setSaveError('');
     setGenError('');
   };
@@ -201,9 +248,11 @@ const DrugBuilder: React.FC = () => {
       <div style={{ maxWidth: '600px', margin: '2rem auto' }}>
         <div className="card" style={{ textAlign: 'center' }}>
           <CheckCircle size={64} color="#007f3b" style={{ marginBottom: '1rem' }} />
-          <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>Medication Created</h1>
+          <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>
+            Medication {savedAction === 'created' ? 'Created' : 'Updated'}
+          </h1>
           <p style={{ color: '#4c6272', marginBottom: '1.5rem' }}>
-            <strong>{title}</strong> has been saved successfully.
+            <strong>{title}</strong> has been {savedAction === 'created' ? 'created' : 'updated'} successfully.
           </p>
 
           <div style={{
@@ -251,6 +300,8 @@ const DrugBuilder: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '800px', margin: '2rem auto' }}>
+      {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
         <button
           onClick={() => navigate('/admin/dashboard')}
@@ -260,13 +311,17 @@ const DrugBuilder: React.FC = () => {
         </button>
         <div>
           <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Drug Builder</h1>
-          <p style={{ color: '#4c6272', margin: '0.25rem 0 0' }}>Create new medication information blocks with AI assistance</p>
+          <p style={{ color: '#4c6272', margin: '0.25rem 0 0' }}>
+            Create, preview, edit, and retire medication information blocks with AI assistance
+          </p>
         </div>
       </div>
 
       {/* Step 1: Search and Generate */}
       <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Medication Search</h2>
+        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
+          1. {editingCode ? `Editing ${editingCode}` : 'Medication Search'}
+        </h2>
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -309,7 +364,9 @@ const DrugBuilder: React.FC = () => {
       {/* Step 2: Editor */}
       {hasContent && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>2. Edit Content</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
+            2. {editingCode ? `Edit Medication ${editingCode}` : 'Edit Content'}
+          </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
@@ -437,29 +494,37 @@ const DrugBuilder: React.FC = () => {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => previewDraft && setPreviewMed(previewDraft)}
+              disabled={!previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0}
+              className="action-button"
+              style={{ backgroundColor: '#005eb8', opacity: !previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0 ? 0.6 : 1 }}
+            >
+              <Eye size={16} /> Preview
+            </button>
             <button
               onClick={handleSave}
               disabled={saving}
               className="action-button"
               style={{ backgroundColor: '#007f3b', opacity: saving ? 0.6 : 1 }}
             >
-              <Save size={16} /> {saving ? 'Saving...' : 'Save Medication'}
+              <Save size={16} /> {saving ? 'Saving...' : editingCode ? 'Save Changes' : 'Save Medication'}
             </button>
             <button onClick={resetForm} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-              Reset
+              {editingCode ? 'Cancel Edit' : 'Reset'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Existing custom medications */}
+      {/* Existing medications */}
       <div className="card">
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Custom Medications</h2>
+        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>3. Medication Catalogue</h2>
         {loadingMeds ? (
           <p style={{ color: '#4c6272' }}>Loading...</p>
         ) : existingMeds.length === 0 ? (
-          <p style={{ color: '#4c6272' }}>No custom medications created yet. Use the search above to create your first one.</p>
+          <p style={{ color: '#4c6272' }}>No medications available. Use the search above to create your first one.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {existingMeds.map(med => (
@@ -480,7 +545,7 @@ const DrugBuilder: React.FC = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{med.title}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#4c6272', display: 'flex', gap: '0.75rem', marginTop: '0.15rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#4c6272', display: 'flex', gap: '0.75rem', marginTop: '0.15rem', flexWrap: 'wrap' }}>
                     <span>{med.category}</span>
                     <span style={{
                       padding: '0 0.4rem', borderRadius: '3px', fontSize: '0.7rem', fontWeight: 700,
@@ -489,8 +554,40 @@ const DrugBuilder: React.FC = () => {
                     }}>
                       {med.badge}
                     </span>
+                    <span style={{
+                      padding: '0 0.4rem',
+                      borderRadius: '3px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      background: med.source === 'custom' ? '#fff4e5' : med.source === 'override' ? '#efe6ff' : '#f0f4f5',
+                      color: med.source === 'custom' ? '#8a4b00' : med.source === 'override' ? '#5c2d91' : '#4c6272',
+                    }}>
+                      {sourceLabel(med)}
+                    </span>
                   </div>
                 </div>
+                <button
+                  onClick={() => setPreviewMed(med)}
+                  title="Preview patient view"
+                  style={{
+                    background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8',
+                    borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                  }}
+                >
+                  <Eye size={14} /> Preview
+                </button>
+                <button
+                  onClick={() => startEditingMedication(med)}
+                  title="Edit medication"
+                  style={{
+                    background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272',
+                    borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                  }}
+                >
+                  <Edit2 size={14} /> Edit
+                </button>
                 <button
                   onClick={() => copyCode(med.code)}
                   title="Copy SystmOne code"
@@ -503,7 +600,7 @@ const DrugBuilder: React.FC = () => {
                   <Copy size={14} /> Copy
                 </button>
                 <button
-                  onClick={() => handleDelete(med.code)}
+                  onClick={() => handleDelete(med)}
                   disabled={deletingCode === med.code}
                   style={{
                     background: '#fde8e8', border: 'none', color: '#d5281b',
