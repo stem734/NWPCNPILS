@@ -18,20 +18,39 @@ interface Practice {
   link_visit_count?: number;
 }
 
+interface AdminUser {
+  uid: string;
+  email: string;
+  name: string;
+  is_active: boolean;
+  role: 'owner' | 'admin';
+}
+
 const AdminDashboard: React.FC = () => {
   const [practices, setPractices] = useState<Practice[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddAdminForm, setShowAddAdminForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newOds, setNewOds] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [addError, setAddError] = useState('');
+  const [newAdminName, setNewAdminName] = useState('');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [addAdminError, setAddAdminError] = useState('');
   const [editingPractice, setEditingPractice] = useState<Practice | null>(null);
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [editName, setEditName] = useState('');
   const [editOds, setEditOds] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editError, setEditError] = useState('');
+  const [editAdminName, setEditAdminName] = useState('');
+  const [editAdminEmail, setEditAdminEmail] = useState('');
+  const [editAdminActive, setEditAdminActive] = useState(true);
+  const [editAdminError, setEditAdminError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,6 +58,7 @@ const AdminDashboard: React.FC = () => {
       if (user) {
         setAuthenticated(true);
         loadPractices();
+        loadAdmins();
       } else {
         navigate('/admin');
       }
@@ -59,6 +79,19 @@ const AdminDashboard: React.FC = () => {
       console.error('Error loading practices:', error);
     }
     setLoading(false);
+  };
+
+  const loadAdmins = async () => {
+    setLoadingAdmins(true);
+    try {
+      const listAdmins = httpsCallable(functions, 'listAdminUsers');
+      const result = await listAdmins();
+      const data = result.data as { admins: AdminUser[] };
+      setAdminUsers((data.admins || []).sort((a, b) => a.email.localeCompare(b.email)));
+    } catch (error) {
+      console.error('Error loading admins:', error);
+    }
+    setLoadingAdmins(false);
   };
 
   const toggleActive = async (practice: Practice) => {
@@ -179,6 +212,84 @@ const AdminDashboard: React.FC = () => {
     navigate('/admin');
   };
 
+  const addAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddAdminError('');
+
+    if (!newAdminEmail.trim()) {
+      setAddAdminError('Administrator email is required');
+      return;
+    }
+
+    try {
+      const createAdmin = httpsCallable(functions, 'createAdminUser');
+      await createAdmin({
+        email: newAdminEmail.trim(),
+        name: newAdminName.trim(),
+      });
+      setNewAdminName('');
+      setNewAdminEmail('');
+      setShowAddAdminForm(false);
+      loadAdmins();
+    } catch (error) {
+      console.error('Error adding admin:', error);
+      setAddAdminError(error instanceof Error ? error.message : 'Failed to add administrator');
+    }
+  };
+
+  const openAdminEditForm = (adminUser: AdminUser) => {
+    setEditingAdmin(adminUser);
+    setEditAdminName(adminUser.name);
+    setEditAdminEmail(adminUser.email);
+    setEditAdminActive(adminUser.is_active);
+    setEditAdminError('');
+  };
+
+  const saveAdminEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditAdminError('');
+
+    if (!editingAdmin) return;
+
+    try {
+      const updateAdmin = httpsCallable(functions, 'updateAdminUser');
+      await updateAdmin({
+        uid: editingAdmin.uid,
+        email: editAdminEmail.trim(),
+        name: editAdminName.trim(),
+        isActive: editAdminActive,
+      });
+      setEditingAdmin(null);
+      loadAdmins();
+    } catch (error) {
+      console.error('Error updating admin:', error);
+      setEditAdminError(error instanceof Error ? error.message : 'Failed to update administrator');
+    }
+  };
+
+  const resetAdminPassword = async (adminUser: AdminUser) => {
+    try {
+      const resetAdmin = httpsCallable(functions, 'sendAdminPasswordReset');
+      await resetAdmin({ uid: adminUser.uid });
+      alert(`Password reset email prepared for ${adminUser.email}.`);
+    } catch (error) {
+      console.error('Error sending reset:', error);
+      alert(error instanceof Error ? error.message : 'Failed to send password reset');
+    }
+  };
+
+  const deleteAdmin = async (adminUser: AdminUser) => {
+    if (!confirm(`Remove administrator "${adminUser.email}"?`)) return;
+    try {
+      const removeAdmin = httpsCallable(functions, 'deleteAdminUser');
+      await removeAdmin({ uid: adminUser.uid });
+      loadAdmins();
+    } catch (error) {
+      console.error('Error deleting admin:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove administrator');
+    }
+  };
+
   if (!authenticated) return null;
 
   return (
@@ -250,6 +361,43 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      {showAddAdminForm && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Add Administrator</h2>
+            <button onClick={() => setShowAddAdminForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
+              <X size={20} />
+            </button>
+          </div>
+          {addAdminError && (
+            <div style={{ padding: '0.5rem 0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+              {addAdminError}
+            </div>
+          )}
+          <form onSubmit={addAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Name</label>
+              <input
+                type="text" value={newAdminName} onChange={e => setNewAdminName(e.target.value)}
+                placeholder="e.g. Jane Smith"
+                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Email *</label>
+              <input
+                type="email" value={newAdminEmail} onChange={e => setNewAdminEmail(e.target.value)} required
+                placeholder="e.g. admin@nhs.net"
+                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <button type="submit" className="action-button" style={{ alignSelf: 'flex-start' }}>
+              <Plus size={16} /> Add Administrator
+            </button>
+          </form>
+        </div>
+      )}
+
       {editingPractice && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -301,6 +449,129 @@ const AdminDashboard: React.FC = () => {
           </form>
         </div>
       )}
+
+      {editingAdmin && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Edit Administrator</h2>
+            <button onClick={() => setEditingAdmin(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
+              <X size={20} />
+            </button>
+          </div>
+          {editAdminError && (
+            <div style={{ padding: '0.5rem 0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+              {editAdminError}
+            </div>
+          )}
+          <form onSubmit={saveAdminEdit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Name *</label>
+              <input
+                type="text" value={editAdminName} onChange={e => setEditAdminName(e.target.value)} required
+                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Administrator Email *</label>
+              <input
+                type="email" value={editAdminEmail} onChange={e => setEditAdminEmail(e.target.value)} required
+                style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+              <input
+                type="checkbox"
+                checked={editAdminActive}
+                onChange={e => setEditAdminActive(e.target.checked)}
+                style={{ width: '18px', height: '18px' }}
+              />
+              Administrator account active
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-start' }}>
+              <button type="submit" className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                Save Changes
+              </button>
+              <button type="button" onClick={() => setEditingAdmin(null)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
+            Administrator Accounts ({adminUsers.length})
+          </h2>
+          {!showAddAdminForm && (
+            <button onClick={() => setShowAddAdminForm(true)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Plus size={16} /> Add Administrator
+            </button>
+          )}
+        </div>
+
+        {loadingAdmins ? (
+          <p style={{ color: '#4c6272' }}>Loading administrators...</p>
+        ) : adminUsers.length === 0 ? (
+          <p style={{ color: '#4c6272' }}>No administrator accounts found yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {adminUsers.map((adminUser) => (
+              <div
+                key={adminUser.uid}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  padding: '1rem',
+                  background: '#f8fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #d8dde0',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{adminUser.name}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#4c6272', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                    <span>{adminUser.email}</span>
+                    <span style={{
+                      padding: '0 0.4rem',
+                      borderRadius: '3px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      background: adminUser.is_active ? '#e8f5e9' : '#fde8e8',
+                      color: adminUser.is_active ? '#007f3b' : '#d5281b',
+                    }}>
+                      {adminUser.is_active ? 'ACTIVE' : 'INACTIVE'}
+                    </span>
+                    <span style={{
+                      padding: '0 0.4rem',
+                      borderRadius: '3px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      background: adminUser.role === 'owner' ? '#fff4e5' : '#eef7ff',
+                      color: adminUser.role === 'owner' ? '#8a4b00' : '#005eb8',
+                    }}>
+                      {adminUser.role.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => openAdminEditForm(adminUser)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                  <Edit2 size={16} /> Edit
+                </button>
+                <button onClick={() => resetAdminPassword(adminUser)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+                  <RefreshCw size={16} /> Reset Password
+                </button>
+                {adminUser.role !== 'owner' && (
+                  <button onClick={() => deleteAdmin(adminUser)} className="action-button" style={{ backgroundColor: '#d5281b' }}>
+                    <Trash2 size={16} /> Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
