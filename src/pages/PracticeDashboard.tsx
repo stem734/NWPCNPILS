@@ -55,10 +55,14 @@ const PracticeDashboard: React.FC = () => {
         setPracticeName(data.practice.name as string);
         const meds = (data.practice.selected_medications as string[]) || [];
         const loadedReviewDates = (data.practice.medication_review_dates as Record<string, string>) || {};
+        const hydratedReviewDates = meds.reduce<Record<string, string>>((acc, code) => {
+          acc[code] = loadedReviewDates[code] || getDefaultReviewDate();
+          return acc;
+        }, {});
         setSelectedMeds(meds);
         setSavedMeds(meds);
-        setReviewDates(loadedReviewDates);
-        setSavedReviewDates(loadedReviewDates);
+        setReviewDates(hydratedReviewDates);
+        setSavedReviewDates(hydratedReviewDates);
         setLinkVisitCount((data.practice.link_visit_count as number) || 0);
         setLastAccessedMs((data.practice.last_accessed_ms as number | null) || null);
       } else {
