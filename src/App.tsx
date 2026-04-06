@@ -23,6 +23,21 @@ const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
 const getValidationCacheKey = (orgName: string) =>
   `practice-validation:${orgName.trim().toLowerCase()}`;
 
+const GROUP_COPY: Record<'NEW' | 'REAUTH' | 'GENERAL', { title: string; description: string }> = {
+  NEW: {
+    title: 'New Medications',
+    description: 'These medicines are newly starting and should be read first.',
+  },
+  REAUTH: {
+    title: 'Annual Reviews',
+    description: 'These medicines are already established and are shown as routine yearly reauthorisations.',
+  },
+  GENERAL: {
+    title: 'Medication Information',
+    description: 'These medicines include general information to help you manage your treatment safely.',
+  },
+};
+
 const sortMedicationGroups = <
   T extends {
     id: string;
@@ -129,20 +144,18 @@ const ResourceView: React.FC = () => {
     return sortMedicationGroups(items);
   }, [rawCode, orgParam, codesParam, isAuthorised, allMeds]);
 
-  const hasMixedBadges = useMemo(() => {
-    const badgeSet = new Set(contents.map((content) => content.badge));
-    return badgeSet.has('NEW') && badgeSet.has('REAUTH');
+  const groupedContents = useMemo(() => {
+    const groups = new Map<'NEW' | 'REAUTH' | 'GENERAL', typeof contents>();
+
+    contents.forEach((content) => {
+      const existing = groups.get(content.badge) ?? [];
+      groups.set(content.badge, [...existing, content]);
+    });
+
+    return Array.from(groups.entries()).sort(
+      ([leftBadge], [rightBadge]) => MEDICATION_BADGE_ORDER[leftBadge] - MEDICATION_BADGE_ORDER[rightBadge],
+    );
   }, [contents]);
-
-  const firstNewIndex = useMemo(
-    () => contents.findIndex((content) => content.badge === 'NEW'),
-    [contents],
-  );
-
-  const firstReauthIndex = useMemo(
-    () => contents.findIndex((content) => content.badge === 'REAUTH'),
-    [contents],
-  );
 
   // Show loading while validating
   if (isValidating && orgParam) {
@@ -207,118 +220,95 @@ const ResourceView: React.FC = () => {
         </div>
       )}
 
-      <div className={`patient-content-grid${contents.length === 1 ? ' patient-content-grid--single' : ''}`}>
-        {contents.map((content, index) => (
-          <article key={content.id} className="patient-content-panel">
-            {hasMixedBadges && index === firstNewIndex && (
-              <div className="patient-group-heading">
-                <div className="patient-group-eyebrow">New Medications</div>
-                <p className="patient-group-copy">
-                  These medicines are newly starting and should be read first.
-                </p>
-              </div>
-            )}
+      {groupedContents.map(([badge, items]) => (
+        <section key={badge} className="patient-section">
+          <div className="patient-group-heading">
+            <div className="patient-group-eyebrow">{GROUP_COPY[badge].title}</div>
+            <p className="patient-group-copy">{GROUP_COPY[badge].description}</p>
+          </div>
 
-            {hasMixedBadges && index === firstReauthIndex && (
-              <div className="patient-group-heading">
-                <div className="patient-group-eyebrow">Annual Reviews</div>
-                <p className="patient-group-copy">
-                  These medicines are already established and are shown as routine yearly reauthorisations.
-                </p>
-              </div>
-            )}
-            <div className="card patient-card">
-              <span className={`badge badge-${content.badge.toLowerCase()}`}>
-                {content.badge === 'NEW' ? 'NEW MEDICATION' : content.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
-              </span>
-
-              {content.badge === 'NEW' && (
-                <div className="patient-context-callout patient-context-callout--new">
-                  <div className="patient-context-title patient-context-title--new">Beginning Your Treatment</div>
-                  <p className="patient-context-copy">
-                    You are starting a new course of treatment. This information will help you understand your medication and how to take it safely.
-                  </p>
-                </div>
-              )}
-
-              {content.badge === 'REAUTH' && (
-                <div className="patient-context-callout patient-context-callout--review">
-                  <div className="patient-context-title">Annual Treatment Reminder</div>
-                  <p className="patient-context-copy patient-context-copy--muted">
-                    As you have been taking this medication for 12 months or more, we are sending this as a routine review reminder of safe management.
-                  </p>
-                </div>
-              )}
-
-              <h1 className="patient-medication-title">
-                {content.title}
-              </h1>
-              <p>{content.description}</p>
-
-              <div className="patient-info-section">
-                <h2>Key Information</h2>
-                <ul className="patient-info-list">
-                  {content.keyInfo.map((info, i) => (
-                    <li key={i} className="patient-info-item">
-                      <div className="patient-info-icon">
-                        <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} />
-                      </div>
-                      <span className="patient-info-text">{info}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {content.sickDaysNeeded && (
-                <div className="sick-days-callout">
-                  <div className="sick-days-header">
-                    <ShieldAlert size={28} color="#d5281b" />
-                    <h2 style={{ margin: 0, color: '#212b32' }}>Sick Day Rules Apply</h2>
+          <div className={`patient-content-grid${items.length === 1 ? ' patient-content-grid--single' : ''}`}>
+            {items.map((content) => (
+              <article key={content.id} className="patient-content-panel">
+                <div className="card patient-card">
+                  <div className="patient-card-meta">
+                    <span className={`badge badge-${content.badge.toLowerCase()}`}>
+                      {content.badge === 'NEW' ? 'START' : content.badge === 'REAUTH' ? 'REVIEW' : 'INFO'}
+                    </span>
+                    <span className="patient-code-chip">Code {content.id}</span>
                   </div>
-                  <p style={{ marginBottom: '1rem', color: '#212b32' }}>
-                    If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
-                    Click the resources below to learn about "Sick Day Rules".
-                  </p>
-                  <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
-                    View Sick Day Guide <ExternalLink size={18} />
-                  </a>
-                </div>
-              )}
 
-              <div className="patient-resources">
-                <h2 className="patient-resources-heading">
-                  Trusted Resources for {content.title.split('-')[0].trim()}
-                </h2>
-                <div className="patient-resource-list">
-                {content.nhsLink && (
-                  <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
-                    <div className="patient-resource-meta">
-                      <div className="patient-resource-chip">NHS</div>
-                      <span className="patient-resource-meta-text">Official Guidance</span>
-                    </div>
-                    <h3>Read NHS.UK</h3>
-                    <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
-                    <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
-                  </a>
-                )}
+                  <h1 className="patient-medication-title">
+                    {content.title}
+                  </h1>
+                  <p>{content.description}</p>
 
-                {content.trendLinks.map((link, i) => (
-                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
-                    <div className="patient-resource-meta patient-resource-meta--trend">
-                      <FlaskConical size={24} color="#007f3b" />
-                      <span className="patient-resource-meta-text">Trend Diabetes</span>
+                  <div className="patient-info-section">
+                    <h2>Key Information</h2>
+                    <ul className="patient-info-list">
+                      {content.keyInfo.map((info, i) => (
+                        <li key={i} className="patient-info-item">
+                          <div className="patient-info-icon">
+                            <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} />
+                          </div>
+                          <span className="patient-info-text">{info}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {content.sickDaysNeeded && (
+                    <div className="sick-days-callout">
+                      <div className="sick-days-header">
+                        <ShieldAlert size={28} color="#d5281b" />
+                        <h2 style={{ margin: 0, color: '#212b32' }}>Sick Day Rules Apply</h2>
+                      </div>
+                      <p style={{ marginBottom: '1rem', color: '#212b32' }}>
+                        If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
+                        Click the resources below to learn about "Sick Day Rules".
+                      </p>
+                      <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
+                        View Sick Day Guide <ExternalLink size={18} />
+                      </a>
                     </div>
-                    <h3>{link.title}</h3>
-                    <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
-                    <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
-                  </a>
-                ))}
+                  )}
+
+                  <div className="patient-resources">
+                    <h2 className="patient-resources-heading">
+                      Trusted Resources for {content.title.split('-')[0].trim()}
+                    </h2>
+                    <div className="patient-resource-list">
+                    {content.nhsLink && (
+                      <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                        <div className="patient-resource-meta">
+                          <div className="patient-resource-chip">NHS</div>
+                          <span className="patient-resource-meta-text">Official Guidance</span>
+                        </div>
+                        <h3>Read NHS.UK</h3>
+                        <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
+                        <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+                      </a>
+                    )}
+
+                    {content.trendLinks.map((link, i) => (
+                      <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                        <div className="patient-resource-meta patient-resource-meta--trend">
+                          <FlaskConical size={24} color="#007f3b" />
+                          <span className="patient-resource-meta-text">Trend Diabetes</span>
+                        </div>
+                        <h3>{link.title}</h3>
+                        <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
+                        <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+                      </a>
+                    ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 };
