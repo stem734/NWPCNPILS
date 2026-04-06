@@ -110,7 +110,7 @@ const ResourceView: React.FC = () => {
   // Show loading while validating
   if (isValidating && orgParam) {
     return (
-      <div className="card" style={{ textAlign: 'center' }}>
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '1rem' }}>
           <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>
             <FlaskConical size={64} color="#005eb8" />
@@ -124,7 +124,7 @@ const ResourceView: React.FC = () => {
   // Show auth error - practice not signed up
   if (orgParam && isAuthorised === false) {
     return (
-      <div className="card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
+      <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} />
         <h1>Practice Not Registered</h1>
         <p style={{ color: '#d5281b', marginBottom: '1rem' }}>{authError}</p>
@@ -137,16 +137,16 @@ const ResourceView: React.FC = () => {
 
   if (contents.length === 0) {
     return (
-      <div className="card" style={{ textAlign: 'center' }}>
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
         <FlaskConical size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
         <h1>MyMedInfo</h1>
         <p style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '1rem' }}>Clear, trusted medication information</p>
         <p>Please use the link provided by your GP or scan the QR code to find information about your specific medication.</p>
         {!orgParam && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '2rem' }}>
+          <div className="patient-empty-grid">
             {Object.entries(allMeds).map(([key, item]) => (
-              <a key={key} href={`?code=${key}`} className="resource-card" style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--nhs-blue)', marginBottom: '0.5rem' }}>{getMedicationIcon(key)}</div>
+              <a key={key} href={`?code=${key}`} className="resource-card patient-empty-card" style={{ textAlign: 'center' }}>
+                <div className="patient-empty-icon">{getMedicationIcon(key)}</div>
                 <h3>{item.title}</h3>
                 <span className={`badge badge-${item.badge.toLowerCase()}`}>{item.badge}</span>
               </a>
@@ -160,11 +160,11 @@ const ResourceView: React.FC = () => {
   return (
     <div className="animation-container patient-view">
       {contents.length > 1 && (
-        <div className="patient-summary" style={{ marginBottom: '2rem', padding: '1.25rem', background: '#eef7ff', borderRadius: '12px', border: '1px solid #005eb8', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ background: '#005eb8', color: 'white', padding: '0.5rem', borderRadius: '50%', display: 'flex' }}>
+        <div className="patient-summary patient-summary-card">
+          <div className="patient-summary-icon">
             <Info size={20} />
           </div>
-          <p style={{ margin: 0, fontWeight: 600, color: '#005eb8', fontSize: '1.1rem' }}>
+          <p className="patient-summary-text">
             Consultation Summary: We found {contents.length} medication guides for you.
           </p>
         </div>
@@ -179,37 +179,37 @@ const ResourceView: React.FC = () => {
               </span>
 
               {content.badge === 'NEW' && (
-                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
-                  <div style={{ fontWeight: 700, color: '#005eb8', marginBottom: '0.25rem' }}>Beginning Your Treatment</div>
-                  <p style={{ margin: 0, fontSize: '0.95rem', color: '#212b32' }}>
+                <div className="patient-context-callout patient-context-callout--new">
+                  <div className="patient-context-title patient-context-title--new">Beginning Your Treatment</div>
+                  <p className="patient-context-copy">
                     You are starting a new course of treatment. This information will help you understand your medication and how to take it safely.
                   </p>
                 </div>
               )}
 
               {content.badge === 'REAUTH' && (
-                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f0f4f5', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
-                  <div style={{ fontWeight: 700, color: '#212b32', marginBottom: '0.25rem' }}>Annual Treatment Reminder</div>
-                  <p style={{ margin: 0, fontSize: '0.95rem', color: '#4c6272' }}>
+                <div className="patient-context-callout patient-context-callout--review">
+                  <div className="patient-context-title">Annual Treatment Reminder</div>
+                  <p className="patient-context-copy patient-context-copy--muted">
                     As you have been taking this medication for 12 months or more, we are sending this as a routine review reminder of safe management.
                   </p>
                 </div>
               )}
 
-              <h1 style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <h1 className="patient-medication-title">
                 {content.title}
               </h1>
               <p>{content.description}</p>
 
-              <div style={{ marginTop: '2rem' }}>
+              <div className="patient-info-section">
                 <h2>Key Information</h2>
-                <ul style={{ listStyleType: 'none', padding: 0 }}>
+                <ul className="patient-info-list">
                   {content.keyInfo.map((info, i) => (
-                    <li key={i} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', alignItems: 'flex-start' }}>
-                      <div style={{ marginTop: '0.2rem' }}>
+                    <li key={i} className="patient-info-item">
+                      <div className="patient-info-icon">
                         <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} />
                       </div>
-                      <span style={{ fontSize: '1.1rem' }}>{info}</span>
+                      <span className="patient-info-text">{info}</span>
                     </li>
                   ))}
                 </ul>
@@ -217,7 +217,7 @@ const ResourceView: React.FC = () => {
 
               {content.sickDaysNeeded && (
                 <div className="sick-days-callout">
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div className="sick-days-header">
                     <ShieldAlert size={28} color="#d5281b" />
                     <h2 style={{ margin: 0, color: '#212b32' }}>Sick Day Rules Apply</h2>
                   </div>
@@ -238,24 +238,24 @@ const ResourceView: React.FC = () => {
                 <div className="patient-resource-list">
                 {content.nhsLink && (
                   <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <div style={{ background: '#005eb8', color: 'white', padding: '0.2rem 0.5rem', fontWeight: 800 }}>NHS</div>
-                      <span style={{ fontWeight: 600 }}>Official Guidance</span>
+                    <div className="patient-resource-meta">
+                      <div className="patient-resource-chip">NHS</div>
+                      <span className="patient-resource-meta-text">Official Guidance</span>
                     </div>
                     <h3>Read NHS.UK</h3>
-                    <p style={{ fontSize: '0.9rem', marginBottom: 0 }}>Read the comprehensive medical guide from the NHS website.</p>
+                    <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
                     <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                   </a>
                 )}
 
                 {content.trendLinks.map((link, i) => (
                   <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    <div className="patient-resource-meta patient-resource-meta--trend">
                       <FlaskConical size={24} color="#007f3b" />
-                      <span style={{ fontWeight: 600 }}>Trend Diabetes</span>
+                      <span className="patient-resource-meta-text">Trend Diabetes</span>
                     </div>
                     <h3>{link.title}</h3>
-                    <p style={{ fontSize: '0.9rem', marginBottom: 0 }}>Specific leaflet for living well with your medication.</p>
+                    <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
                     <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                   </a>
                 ))}
