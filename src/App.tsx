@@ -14,9 +14,29 @@ import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
+const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
+  NEW: 0,
+  REAUTH: 1,
+  GENERAL: 2,
+};
 
 const getValidationCacheKey = (orgName: string) =>
   `practice-validation:${orgName.trim().toLowerCase()}`;
+
+const sortMedicationGroups = <
+  T extends {
+    id: string;
+    badge: 'NEW' | 'REAUTH' | 'GENERAL';
+  },
+>(items: T[]) =>
+  [...items].sort((left, right) => {
+    const badgeDiff = MEDICATION_BADGE_ORDER[left.badge] - MEDICATION_BADGE_ORDER[right.badge];
+    if (badgeDiff !== 0) {
+      return badgeDiff;
+    }
+
+    return Number.parseInt(left.id, 10) - Number.parseInt(right.id, 10);
+  });
 
 const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -94,18 +114,35 @@ const ResourceView: React.FC = () => {
     // Use codes param if present (from SystmOne: ?org=NAME&codes=101,102,601)
     if (codesParam) {
       const codes = codesParam.split(',').map(c => c.trim()).filter(Boolean);
-      return codes
+      const items = codes
         .map(code => allMeds[code] ? { id: code, icon: getMedicationIcon(code), ...allMeds[code] } : null)
         .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
+      return sortMedicationGroups(items);
     }
 
     // Fallback: extract from code/med param (demo mode: ?code=101)
     const codes = rawCode.match(/\d0[12]/g) || [];
     const uniqueCodes = Array.from(new Set(codes));
-    return uniqueCodes
+    const items = uniqueCodes
       .map(code => allMeds[code] ? { id: code, icon: getMedicationIcon(code), ...allMeds[code] } : null)
       .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
+    return sortMedicationGroups(items);
   }, [rawCode, orgParam, codesParam, isAuthorised, allMeds]);
+
+  const hasMixedBadges = useMemo(() => {
+    const badgeSet = new Set(contents.map((content) => content.badge));
+    return badgeSet.has('NEW') && badgeSet.has('REAUTH');
+  }, [contents]);
+
+  const firstNewIndex = useMemo(
+    () => contents.findIndex((content) => content.badge === 'NEW'),
+    [contents],
+  );
+
+  const firstReauthIndex = useMemo(
+    () => contents.findIndex((content) => content.badge === 'REAUTH'),
+    [contents],
+  );
 
   // Show loading while validating
   if (isValidating && orgParam) {
@@ -171,8 +208,25 @@ const ResourceView: React.FC = () => {
       )}
 
       <div className="patient-content-grid">
-        {contents.map((content) => (
+        {contents.map((content, index) => (
           <article key={content.id} className="patient-content-panel">
+            {hasMixedBadges && index === firstNewIndex && (
+              <div className="patient-group-heading">
+                <div className="patient-group-eyebrow">New Medications</div>
+                <p className="patient-group-copy">
+                  These medicines are newly starting and should be read first.
+                </p>
+              </div>
+            )}
+
+            {hasMixedBadges && index === firstReauthIndex && (
+              <div className="patient-group-heading">
+                <div className="patient-group-eyebrow">Annual Reviews</div>
+                <p className="patient-group-copy">
+                  These medicines are already established and are shown as routine yearly reauthorisations.
+                </p>
+              </div>
+            )}
             <div className="card patient-card">
               <span className={`badge badge-${content.badge.toLowerCase()}`}>
                 {content.badge === 'NEW' ? 'NEW MEDICATION' : content.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
