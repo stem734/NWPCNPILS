@@ -4,7 +4,7 @@ This guide covers setting up and deploying Cloud Functions for protocol validati
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - Firebase CLI (`npm install -g firebase-tools`)
 - Firebase project created (nwpcnpils)
 - Google Cloud Console access
