@@ -270,7 +270,7 @@ const DrugBuilder: React.FC = () => {
   // Success screen after saving
   if (savedCode) {
     return (
-      <div style={{ maxWidth: '600px', margin: '2rem auto' }}>
+      <div className="dashboard-shell" style={{ maxWidth: '700px' }}>
         <div className="card" style={{ textAlign: 'center' }}>
           <CheckCircle size={64} color="#007f3b" style={{ marginBottom: '1rem' }} />
           <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>
@@ -324,10 +324,11 @@ const DrugBuilder: React.FC = () => {
   }
 
   return (
-    <div style={{ maxWidth: '800px', margin: '2rem auto' }}>
+    <div className="dashboard-shell">
       {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+      <div className="dashboard-header">
+        <div className="dashboard-header-copy" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
         <button
           onClick={() => navigate('/admin/dashboard')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#005eb8', display: 'flex' }}
@@ -335,11 +336,12 @@ const DrugBuilder: React.FC = () => {
           <ArrowLeft size={24} />
         </button>
         <div>
-          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Drug Builder</h1>
-          <p style={{ color: '#4c6272', margin: '0.25rem 0 0' }}>
+          <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Drug Builder</h1>
+          <p style={{ margin: '0.25rem 0 0' }}>
             Create, preview, edit, and retire medication information blocks with AI assistance
           </p>
         </div>
+      </div>
       </div>
 
       {/* Step 1: Search and Generate */}
