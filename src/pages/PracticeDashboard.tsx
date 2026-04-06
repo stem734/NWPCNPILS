@@ -10,6 +10,7 @@ import { useMedicationCatalog } from '../medicationCatalog';
 import { getMedicationIcon } from '../medicationIcons';
 
 const PracticeDashboard: React.FC = () => {
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'due' | 'overdue'>('all');
   const [practiceName, setPracticeName] = useState('');
   const [selectedMeds, setSelectedMeds] = useState<string[]>([]);
   const [savedMeds, setSavedMeds] = useState<string[]>([]);
@@ -148,6 +149,46 @@ const PracticeDashboard: React.FC = () => {
     [allMedications, selectedMedicationSet],
   );
 
+  const getReviewState = (code: string) => {
+    const value = reviewDates[code];
+    if (!value) return 'due' as const;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dueDate = new Date(`${value}T00:00:00`);
+    const diffMs = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'overdue' as const;
+    if (diffDays <= 30) return 'due' as const;
+    return 'ok' as const;
+  };
+
+  const filteredActiveMedications = useMemo(() => {
+    if (reviewFilter === 'all') return activeMedications;
+    if (reviewFilter === 'overdue') {
+      return activeMedications.filter((med) => getReviewState(med.code) === 'overdue');
+    }
+    return activeMedications.filter((med) => {
+      const state = getReviewState(med.code);
+      return state === 'due' || state === 'overdue';
+    });
+  }, [activeMedications, reviewFilter, reviewDates]);
+
+  const dueCount = useMemo(
+    () => activeMedications.filter((med) => {
+      const state = getReviewState(med.code);
+      return state === 'due' || state === 'overdue';
+    }).length,
+    [activeMedications, reviewDates],
+  );
+
+  const overdueCount = useMemo(
+    () => activeMedications.filter((med) => getReviewState(med.code) === 'overdue').length,
+    [activeMedications, reviewDates],
+  );
+
   const availableMedications = useMemo(() => {
     const query = librarySearch.trim().toLowerCase();
     return allMedications.filter((med) => {
@@ -257,6 +298,13 @@ const PracticeDashboard: React.FC = () => {
             These are the medication guides currently available to your patients.
           </p>
         </div>
+        <div className="dashboard-stat-card">
+          <div className="dashboard-stat-label">Due for review</div>
+          <div className="dashboard-stat-value">{dueCount}</div>
+          <p className="dashboard-stat-copy">
+            Includes overdue items and anything due within the next 30 days.
+          </p>
+        </div>
       </div>
 
       {saveSuccess && (
@@ -290,13 +338,41 @@ const PracticeDashboard: React.FC = () => {
             </div>
           </div>
 
+          <div className="dashboard-chip-row" style={{ marginBottom: '1rem' }}>
+            <button
+              type="button"
+              className={`dashboard-chip${reviewFilter === 'all' ? ' dashboard-chip--active' : ''}`}
+              onClick={() => setReviewFilter('all')}
+            >
+              All ({activeMedications.length})
+            </button>
+            <button
+              type="button"
+              className={`dashboard-chip${reviewFilter === 'due' ? ' dashboard-chip--active' : ''}`}
+              onClick={() => setReviewFilter('due')}
+            >
+              Due soon ({dueCount})
+            </button>
+            <button
+              type="button"
+              className={`dashboard-chip${reviewFilter === 'overdue' ? ' dashboard-chip--active' : ''}`}
+              onClick={() => setReviewFilter('overdue')}
+            >
+              Overdue ({overdueCount})
+            </button>
+          </div>
+
           {activeMedications.length === 0 ? (
             <div className="dashboard-banner dashboard-banner--info" style={{ marginBottom: '1rem' }}>
               No medication blocks are live yet. Use the library below to select what patients should see.
             </div>
+          ) : filteredActiveMedications.length === 0 ? (
+            <div className="dashboard-banner dashboard-banner--info" style={{ marginBottom: '1rem' }}>
+              No active medications match this review filter.
+            </div>
           ) : (
             <div className="dashboard-list" style={{ marginBottom: '1rem' }}>
-              {activeMedications.map((med) => (
+              {filteredActiveMedications.map((med) => (
                 <div key={med.code} className="dashboard-list-card dashboard-list-card--selected">
                   <div style={{ color: '#005eb8', flexShrink: 0 }}>{getMedicationIcon(med.code)}</div>
                   <div className="dashboard-list-main">
@@ -310,6 +386,19 @@ const PracticeDashboard: React.FC = () => {
                         {med.badge}
                       </span>
                       <span className="dashboard-badge dashboard-badge--amber">{med.category}</span>
+                      <span className={`dashboard-badge ${
+                        getReviewState(med.code) === 'overdue'
+                          ? 'dashboard-badge--red'
+                          : getReviewState(med.code) === 'due'
+                            ? 'dashboard-badge--amber'
+                            : 'dashboard-badge--green'
+                      }`}>
+                        {getReviewState(med.code) === 'overdue'
+                          ? 'OVERDUE'
+                          : getReviewState(med.code) === 'due'
+                            ? 'DUE SOON'
+                            : 'ON TRACK'}
+                      </span>
                     </div>
                   </div>
                   <div className="dashboard-list-side">
