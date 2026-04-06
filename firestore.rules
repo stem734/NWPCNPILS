@@ -1,28 +1,41 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Practices collection
-    match /practices/{document=**} {
-      // Authenticated admins can read and write
-      allow read, write: if request.auth != null;
-      // Anyone can create (sign-up form) but not read/update/delete
-      allow create: if true;
+
+    // Helper: is the requesting user an active admin?
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.is_active == true;
     }
 
-    // Medications collection: anyone can read (patient view), admin can write
+    // Practices collection
+    // - Anyone can create (sign-up form)
+    // - Only admins can read, update, or delete
+    match /practices/{document=**} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Medications collection
+    // - Anyone can read (patient-facing view uses public URLs)
+    // - Only admins can write; all writes should go through Cloud Functions,
+    //   but this rule prevents any authenticated non-admin from writing directly.
     match /medications/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // Administrators collection: admin only
+    // Administrators collection
+    // - Only admins can read or write (managed via Cloud Functions)
     match /admins/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
 
-    // Protocols collection: admin only
+    // Protocols collection
+    // - Only admins can read or write
     match /protocols/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
   }
 }
