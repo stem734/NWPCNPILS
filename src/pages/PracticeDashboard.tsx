@@ -3,7 +3,7 @@ import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, FlaskConical, CheckCircle, Save, CheckSquare, Square, Eye } from 'lucide-react';
+import { LogOut, FlaskConical, CheckCircle, Save, CheckSquare, Square, Eye, Star } from 'lucide-react';
 import type { MedContent } from '../medicationData';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import { useMedicationCatalog } from '../medicationCatalog';
@@ -18,6 +18,8 @@ const PracticeDashboard: React.FC = () => {
   const [savedReviewDates, setSavedReviewDates] = useState<Record<string, string>>({});
   const [linkVisitCount, setLinkVisitCount] = useState(0);
   const [lastAccessedMs, setLastAccessedMs] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [ratingTotal, setRatingTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -64,6 +66,8 @@ const PracticeDashboard: React.FC = () => {
         setReviewDates(hydratedReviewDates);
         setSavedReviewDates(hydratedReviewDates);
         setLinkVisitCount((data.practice.link_visit_count as number) || 0);
+        setRatingCount((data.practice.patient_rating_count as number) || 0);
+        setRatingTotal((data.practice.patient_rating_total as number) || 0);
         setLastAccessedMs((data.practice.last_accessed_ms as number | null) || null);
       } else {
         setError('No practice linked to this account. Contact your administrator.');
@@ -296,6 +300,16 @@ const PracticeDashboard: React.FC = () => {
           <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#212b32' }}>{lastAccessedLabel}</div>
           <p className="dashboard-stat-copy">
             This updates when a patient opens a valid link for your practice.
+          </p>
+        </div>
+        <div className="dashboard-stat-card">
+          <div className="dashboard-stat-label">Patient Rating</div>
+          <div className="dashboard-stat-value" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {ratingCount > 0 ? (ratingTotal / ratingCount).toFixed(1) : 'No ratings'}
+            {ratingCount > 0 && <Star size={24} fill="#fbc02d" color="#fbc02d" style={{ marginTop: '-3px' }} />}
+          </div>
+          <p className="dashboard-stat-copy">
+            Based on {ratingCount} patient {ratingCount === 1 ? 'review' : 'reviews'}.
           </p>
         </div>
         <div className="dashboard-stat-card">

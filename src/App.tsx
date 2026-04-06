@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle } from 'lucide-react';
+import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle, Star } from 'lucide-react';
 import { validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -13,7 +13,8 @@ import Demo from './pages/Demo';
 import HeaderNav from './components/HeaderNav';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
-
+import { functions } from './firebase';
+import { httpsCallable } from 'firebase/functions';
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   NEW: 0,
@@ -64,6 +65,24 @@ const ResourceView: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const { medicationMap: allMeds } = useMedicationCatalog();
+
+  const [rating, setRating] = useState<number>(0);
+  const [hasRated, setHasRated] = useState<boolean>(false);
+  const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
+
+  const handleRating = async (value: number) => {
+    if (hasRated || !orgParam) return;
+    setRating(value);
+    setIsSubmittingRating(true);
+    try {
+      const submitRating = httpsCallable(functions, 'submitPatientRating');
+      await submitRating({ orgName: orgParam, rating: value });
+      setHasRated(true);
+    } catch (err) {
+      console.error('Failed to submit rating:', err);
+    }
+    setIsSubmittingRating(false);
+  };
 
   // Validate organisation against Firestore
   useEffect(() => {
@@ -309,6 +328,64 @@ const ResourceView: React.FC = () => {
           </div>
         </section>
       ))}
+
+      {orgParam && isAuthorised && contents.length > 0 && (
+        <div className="card" style={{ marginTop: '2rem', textAlign: 'center', padding: '2rem 1rem' }}>
+          <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#212b32' }}>Did you find this information useful?</h2>
+          {hasRated ? (
+            <div style={{ color: '#007f3b', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '1rem' }}>Thank you for your feedback!</div>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  onClick={() => handleRating(star)}
+                  disabled={isSubmittingRating}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: isSubmittingRating ? 'default' : 'pointer',
+                    padding: '0.5rem',
+                    opacity: isSubmittingRating ? 0.5 : 1,
+                    transition: 'transform 0.2s',
+                    outline: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSubmittingRating) {
+                      const buttons = e.currentTarget.parentElement?.querySelectorAll('button');
+                      if (buttons) {
+                        for (let i = 0; i < 5; i++) {
+                          const svg = buttons[i].querySelector('svg');
+                          if (svg) svg.style.fill = i <= star - 1 ? '#fbc02d' : 'none';
+                          if (svg) svg.style.stroke = i <= star - 1 ? '#fbc02d' : '#8A99A8';
+                        }
+                      }
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSubmittingRating) {
+                      const buttons = e.currentTarget.parentElement?.querySelectorAll('button');
+                      if (buttons) {
+                        for (let i = 0; i < 5; i++) {
+                          const svg = buttons[i].querySelector('svg');
+                          if (svg) svg.style.fill = i <= rating - 1 ? '#fbc02d' : 'none';
+                          if (svg) svg.style.stroke = i <= rating - 1 ? '#fbc02d' : '#8A99A8';
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <Star
+                    size={36}
+                    color={star <= rating ? '#fbc02d' : '#8A99A8'}
+                    fill={star <= rating ? '#fbc02d' : 'none'}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

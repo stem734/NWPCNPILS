@@ -118,7 +118,7 @@ const extractMedicationPayload = (raw: string): MedicationGenerationResponse => 
       parsed = JSON.parse(singleLine);
     } catch (fallbackErr) {
       console.error('Failed to parse AI JSON:', raw);
-      throw new Error(`AI generated invalid schema: ${err instanceof Error ? err.message : 'Parse error'}`);
+      throw new Error(`AI response was likely truncated. Please try again. (Details: ${err instanceof Error ? err.message : 'Parse error'})`);
     }
   }
 
@@ -312,6 +312,45 @@ export const validatePractice = onCall(
       if (error instanceof HttpsError) throw error;
       console.error('Error validating practice:', error);
       throw new HttpsError('internal', 'Unable to validate practice');
+    }
+  }
+);
+
+/**
+ * Submit a patient rating for a practice.
+ */
+export const submitPatientRating = onCall(
+  { region: 'europe-west2', maxInstances: 100 },
+  async (request): Promise<{ success: boolean; error?: string }> => {
+    const { orgName, rating } = request.data as { orgName: string; rating: number };
+
+    if (!orgName || typeof orgName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Organisation name is required');
+    }
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      throw new HttpsError('invalid-argument', 'Rating must be a number between 1 and 5');
+    }
+
+    try {
+      const practicesRef = db.collection('practices');
+      const snapshot = await practicesRef
+        .where('name_lowercase', '==', orgName.toLowerCase().trim())
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return { success: false, error: 'Practice not found' };
+      }
+
+      await snapshot.docs[0].ref.update({
+        patient_rating_count: FieldValue.increment(1),
+        patient_rating_total: FieldValue.increment(rating),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      throw new HttpsError('internal', 'Unable to submit rating');
     }
   }
 );
@@ -575,6 +614,8 @@ export const getMyPractice = onCall(
           selected_medications: data.selected_medications || [],
           medication_review_dates: data.medication_review_dates || {},
           link_visit_count: typeof data.link_visit_count === 'number' ? data.link_visit_count : 0,
+          patient_rating_count: typeof data.patient_rating_count === 'number' ? data.patient_rating_count : 0,
+          patient_rating_total: typeof data.patient_rating_total === 'number' ? data.patient_rating_total : 0,
           last_accessed_ms: data.last_accessed && typeof data.last_accessed.toMillis === 'function'
             ? data.last_accessed.toMillis()
             : null,
@@ -675,7 +716,7 @@ export const generateMedicationContent = onCall(
         generationConfig: {
           temperature: 0.4,
           topP: 0.9,
-          maxOutputTokens: 800,
+          maxOutputTokens: 2048,
           responseMimeType: 'application/json',
           responseSchema: medicationGenerationSchema,
         },
