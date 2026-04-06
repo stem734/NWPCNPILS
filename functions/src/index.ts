@@ -639,9 +639,10 @@ Rules:
 - Return JSON only.
 - Make the content suitable for UK patients in plain English.
 - title should include the medication name and whether it is starting treatment or reauthorisation.
+- Keep the title clean and concise. Do not repeat example medicines or suffix explanations in the title.
 - Do not include internal codes or admin-only terminology in the title or description.
-- If the medication is a drug family or class rather than a single brand or generic medicine, make the title more recognisable by adding examples in plain English.
-- When helpful, mention recognisable examples or naming patterns in the description, for example "such as gliclazide or glimepiride" or "many names end in -gliflozin".
+- If the medication is a drug family or class rather than a single brand or generic medicine, make the title more recognisable with patient-friendly wording, but keep examples out of the title.
+- Put recognisable examples or naming patterns in the description only, for example "such as gliclazide or glimepiride" or "many names end in -gliflozin".
 - Prefer patient-friendly wording over abstract class labels on their own.
 - description should be 2 to 3 short sentences.
 - keyInfo should contain 3 to 5 short bullet-style points.
