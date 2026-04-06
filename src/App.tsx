@@ -235,7 +235,6 @@ const ResourceView: React.FC = () => {
                     <span className={`badge badge-${content.badge.toLowerCase()}`}>
                       {content.badge === 'NEW' ? 'START' : content.badge === 'REAUTH' ? 'REVIEW' : 'INFO'}
                     </span>
-                    <span className="patient-code-chip">Code {content.id}</span>
                   </div>
 
                   <h1 className="patient-medication-title">
