@@ -5,8 +5,12 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineString } from 'firebase-functions/params';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import type { ResponseSchema } from '@google/generative-ai';
+import { Resend } from 'resend';
 
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
+const resendApiKey = defineString('RESEND_API_KEY', { default: '' });
+const resendFromEmail = defineString('RESEND_FROM_EMAIL', { default: '' });
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://mymedinfo.vercel.app' });
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const BUILT_IN_MAX_FAMILY = 5;
 
@@ -142,6 +146,97 @@ const assertAdmin = async (request: { auth?: { uid?: string; token?: { email?: s
 
   await adminRef.set(bootstrapAdmin);
   return bootstrapAdmin;
+};
+
+const getAdminActionCodeSettings = () => ({
+  url: `${appBaseUrl.value().replace(/\/$/, '')}/admin`,
+  handleCodeInApp: false,
+});
+
+const sendTransactionalEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}) => {
+  if (!resendApiKey.value() || !resendFromEmail.value()) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Transactional email is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL to functions/.env.',
+    );
+  }
+
+  const resend = new Resend(resendApiKey.value());
+  await resend.emails.send({
+    from: resendFromEmail.value(),
+    to,
+    subject,
+    html,
+    text,
+  });
+};
+
+const sendAdminWelcomeEmail = async ({
+  email,
+  name,
+  resetLink,
+}: {
+  email: string;
+  name: string;
+  resetLink: string;
+}) => {
+  await sendTransactionalEmail({
+    to: email,
+    subject: 'Set up your MyMedInfo administrator account',
+    text: `Hello ${name},\n\nYour MyMedInfo administrator account has been created. Set your password using this secure link:\n${resetLink}\n\nAfter setting your password, sign in at ${appBaseUrl.value().replace(/\/$/, '')}/admin\n`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #212b32;">
+        <h2 style="color: #005eb8;">Welcome to MyMedInfo</h2>
+        <p>Hello ${name},</p>
+        <p>Your MyMedInfo administrator account has been created. Use the button below to set your password.</p>
+        <p style="margin: 24px 0;">
+          <a href="${resetLink}" style="background: #005eb8; color: white; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: 700;">Set Your Password</a>
+        </p>
+        <p>If the button does not work, copy and paste this link into your browser:</p>
+        <p><a href="${resetLink}">${resetLink}</a></p>
+        <p>After setting your password, sign in at <a href="${appBaseUrl.value().replace(/\/$/, '')}/admin">${appBaseUrl.value().replace(/\/$/, '')}/admin</a>.</p>
+      </div>
+    `,
+  });
+};
+
+const sendAdminPasswordResetEmail = async ({
+  email,
+  name,
+  resetLink,
+}: {
+  email: string;
+  name: string;
+  resetLink: string;
+}) => {
+  await sendTransactionalEmail({
+    to: email,
+    subject: 'Reset your MyMedInfo administrator password',
+    text: `Hello ${name},\n\nUse this secure link to reset your MyMedInfo administrator password:\n${resetLink}\n\nIf you did not request this, you can ignore this email.\n`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #212b32;">
+        <h2 style="color: #005eb8;">Reset your MyMedInfo password</h2>
+        <p>Hello ${name},</p>
+        <p>Use the button below to reset your MyMedInfo administrator password.</p>
+        <p style="margin: 24px 0;">
+          <a href="${resetLink}" style="background: #005eb8; color: white; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: 700;">Reset Password</a>
+        </p>
+        <p>If the button does not work, copy and paste this link into your browser:</p>
+        <p><a href="${resetLink}">${resetLink}</a></p>
+        <p>If you did not request this, you can ignore this email.</p>
+      </div>
+    `,
+  });
 };
 
 /**
@@ -286,7 +381,12 @@ export const createAdminUser = onCall(
         updated_at: now,
       } satisfies AdminRecord);
 
-      await adminAuth.generatePasswordResetLink(email.trim());
+      const resetLink = await adminAuth.generatePasswordResetLink(email.trim(), getAdminActionCodeSettings());
+      await sendAdminWelcomeEmail({
+        email: email.trim(),
+        name: typeof name === 'string' && name.trim() ? name.trim() : email.trim(),
+        resetLink,
+      });
 
       return {
         success: true,
@@ -365,7 +465,12 @@ export const sendAdminPasswordReset = onCall(
         throw new HttpsError('failed-precondition', 'Administrator does not have an email address');
       }
 
-      await adminAuth.generatePasswordResetLink(userRecord.email);
+      const resetLink = await adminAuth.generatePasswordResetLink(userRecord.email, getAdminActionCodeSettings());
+      await sendAdminPasswordResetEmail({
+        email: userRecord.email,
+        name: userRecord.displayName || userRecord.email,
+        resetLink,
+      });
       return { success: true };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
