@@ -7,6 +7,7 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import type { ResponseSchema } from '@google/generative-ai';
 
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 initializeApp();
 const db = getFirestore();
@@ -307,7 +308,7 @@ export const generateMedicationContent = onCall(
     try {
       const genAI = new GoogleGenerativeAI(geminiKey.value());
       const model = genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: GEMINI_MODEL,
         generationConfig: {
           temperature: 0.4,
           topP: 0.9,
