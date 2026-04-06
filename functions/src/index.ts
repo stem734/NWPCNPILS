@@ -33,6 +33,14 @@ type MedicationGenerationResponse = {
   sickDaysNeeded: boolean;
 };
 
+const addMonths = (date: Date, months: number) => {
+  const copy = new Date(date);
+  copy.setMonth(copy.getMonth() + months);
+  return copy;
+};
+
+const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
+
 const normaliseMedicationFamilyName = (value: string) =>
   value
     .toLowerCase()
@@ -549,6 +557,7 @@ export const getMyPractice = onCall(
           ods_code: data.ods_code,
           is_active: data.is_active,
           selected_medications: data.selected_medications || [],
+          medication_review_dates: data.medication_review_dates || {},
           link_visit_count: typeof data.link_visit_count === 'number' ? data.link_visit_count : 0,
           last_accessed_ms: data.last_accessed && typeof data.last_accessed.toMillis === 'function'
             ? data.last_accessed.toMillis()
@@ -567,12 +576,15 @@ export const getMyPractice = onCall(
  */
 export const updatePracticeMedications = onCall(
   { region: 'europe-west2' },
-  async (request): Promise<{ success: boolean }> => {
+  async (request): Promise<{ success: boolean; medicationReviewDates: Record<string, string> }> => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be logged in');
     }
 
-    const { medications } = request.data as { medications: string[] };
+    const { medications, medicationReviewDates } = request.data as {
+      medications: string[];
+      medicationReviewDates?: Record<string, string>;
+    };
 
     if (!Array.isArray(medications)) {
       throw new HttpsError('invalid-argument', 'medications must be an array');
@@ -589,12 +601,27 @@ export const updatePracticeMedications = onCall(
         throw new HttpsError('not-found', 'No practice linked to this account');
       }
 
+      const practiceDoc = snapshot.docs[0];
+      const existingData = practiceDoc.data();
+      const existingReviewDates = existingData.medication_review_dates && typeof existingData.medication_review_dates === 'object'
+        ? existingData.medication_review_dates as Record<string, string>
+        : {};
+
+      const nextReviewDates = medications.reduce<Record<string, string>>((acc, code) => {
+        const requestedDate = medicationReviewDates?.[code];
+        const existingDate = existingReviewDates[code];
+        const fallbackDate = toDateKey(addMonths(new Date(), 12));
+        acc[code] = typeof requestedDate === 'string' && requestedDate.trim() ? requestedDate : existingDate || fallbackDate;
+        return acc;
+      }, {});
+
       await snapshot.docs[0].ref.update({
         selected_medications: medications,
+        medication_review_dates: nextReviewDates,
         updated_at: Timestamp.now(),
       });
 
-      return { success: true };
+      return { success: true, medicationReviewDates: nextReviewDates };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error updating medications:', error);
