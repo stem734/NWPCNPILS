@@ -33,6 +33,15 @@ type MedicationGenerationResponse = {
   sickDaysNeeded: boolean;
 };
 
+const normaliseMedicationFamilyName = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/\b(starting treatment|reauthorisation|first initiation|annual review|review)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 type AdminRecord = {
   email: string;
   name: string;
@@ -685,6 +694,8 @@ export const saveMedication = onCall(
 
     const data = request.data as {
       code?: string;
+      requestedCode?: string;
+      medicationName?: string;
       title: string;
       description: string;
       badge: string;
@@ -701,27 +712,70 @@ export const saveMedication = onCall(
 
     try {
       const badge = data.badge === 'REAUTH' ? 'REAUTH' : 'NEW';
-      const requestedCode = typeof data.code === 'string' ? data.code.trim() : '';
+      const existingCode = typeof data.code === 'string' ? data.code.trim() : '';
+      const requestedCode = typeof data.requestedCode === 'string' ? data.requestedCode.trim() : '';
+      const familyName = normaliseMedicationFamilyName(
+        typeof data.medicationName === 'string' && data.medicationName.trim()
+          ? data.medicationName
+          : data.title,
+      );
 
-      let medicationCode = requestedCode;
+      let medicationCode = existingCode;
 
       if (!medicationCode) {
-        // Allocate the next custom family in x01 / x02 format, where
-        // x01 = starting treatment and x02 = yearly reauthorisation.
         const snapshot = await db.collection('medications').get();
-        const highestFamilyInFirestore = snapshot.docs.reduce((maxFamily, doc) => {
-          const docCode = doc.data().code;
-          const parsedCode = Number.parseInt(typeof docCode === 'string' ? docCode : '', 10);
+        const matchingFamilyCode = snapshot.docs.find((doc) => {
+          const docData = doc.data();
+          const docTitle = typeof docData.title === 'string' ? docData.title : '';
+          const docCode = typeof docData.code === 'string' ? docData.code : '';
+          const docFamilyName = normaliseMedicationFamilyName(docTitle);
 
-          if (Number.isNaN(parsedCode)) {
-            return maxFamily;
+          if (!docCode || !docFamilyName || docFamilyName !== familyName) {
+            return false;
           }
 
-          return Math.max(maxFamily, Math.floor(parsedCode / 100));
-        }, BUILT_IN_MAX_FAMILY);
+          return badge === 'REAUTH' ? docCode.endsWith('01') : docCode.endsWith('02');
+        })?.data().code;
 
-        const nextFamily = highestFamilyInFirestore + 1;
-        medicationCode = String(nextFamily * 100 + (badge === 'REAUTH' ? 2 : 1));
+        if (typeof matchingFamilyCode === 'string' && matchingFamilyCode.length >= 3) {
+          const familyBase = Number.parseInt(matchingFamilyCode.slice(0, -2), 10);
+          if (!Number.isNaN(familyBase)) {
+            medicationCode = String(familyBase * 100 + (badge === 'REAUTH' ? 2 : 1));
+          }
+        }
+
+        if (!medicationCode && requestedCode) {
+          medicationCode = requestedCode;
+        }
+
+        if (!medicationCode) {
+          // Allocate the next custom family in x01 / x02 format, where
+          // x01 = starting treatment and x02 = yearly reauthorisation.
+          const highestFamilyInFirestore = snapshot.docs.reduce((maxFamily, doc) => {
+            const docCode = doc.data().code;
+            const parsedCode = Number.parseInt(typeof docCode === 'string' ? docCode : '', 10);
+
+            if (Number.isNaN(parsedCode)) {
+              return maxFamily;
+            }
+
+            return Math.max(maxFamily, Math.floor(parsedCode / 100));
+          }, BUILT_IN_MAX_FAMILY);
+
+          const nextFamily = highestFamilyInFirestore + 1;
+          medicationCode = String(nextFamily * 100 + (badge === 'REAUTH' ? 2 : 1));
+        }
+      }
+
+      if (requestedCode) {
+        medicationCode = requestedCode;
+      }
+
+      if (requestedCode && requestedCode !== existingCode) {
+        const requestedCodeDoc = await db.collection('medications').doc(requestedCode).get();
+        if (requestedCodeDoc.exists) {
+          throw new HttpsError('already-exists', `Code ${requestedCode} is already in use`);
+        }
       }
 
       if (!actorUid) {
@@ -751,6 +805,10 @@ export const saveMedication = onCall(
         created_at: existingDoc.exists ? existingDoc.data()?.created_at || Timestamp.now() : Timestamp.now(),
         created_by: existingDoc.exists ? existingDoc.data()?.created_by || actorUid : actorUid,
       }, { merge: true });
+
+      if (existingCode && requestedCode && requestedCode !== existingCode) {
+        await db.collection('medications').doc(existingCode).delete();
+      }
 
       return { success: true, code: medicationCode };
     } catch (error) {
