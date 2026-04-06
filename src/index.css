@@ -151,6 +151,10 @@ p {
   align-items: start;
 }
 
+.patient-section {
+  margin-bottom: 2rem;
+}
+
 .patient-content-panel {
   display: flex;
   flex-direction: column;
@@ -186,45 +190,29 @@ p {
   color: #4c6272;
 }
 
+.patient-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.patient-code-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #f0f4f5;
+  color: #4c6272;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .patient-medication-title {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.patient-context-callout {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border-radius: 10px;
-  border-left: 4px solid #005eb8;
-}
-
-.patient-context-callout--new {
-  background: #eef7ff;
-}
-
-.patient-context-callout--review {
-  background: #f0f4f5;
-}
-
-.patient-context-title {
-  font-weight: 700;
-  color: #212b32;
-  margin-bottom: 0.25rem;
-}
-
-.patient-context-title--new {
-  color: #005eb8;
-}
-
-.patient-context-copy {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #212b32;
-}
-
-.patient-context-copy--muted {
-  color: #4c6272;
 }
 
 .patient-info-section {
@@ -1016,9 +1004,8 @@ p {
     font-size: 0.86rem;
   }
 
-  .patient-context-callout {
-    margin-bottom: 1rem;
-    padding: 0.9rem;
+  .patient-card-meta {
+    margin-bottom: 0.85rem;
   }
 
   .patient-info-section {
