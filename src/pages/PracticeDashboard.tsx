@@ -312,30 +312,32 @@ const PracticeDashboard: React.FC = () => {
                       <span className="dashboard-badge dashboard-badge--amber">{med.category}</span>
                     </div>
                   </div>
-                  <div className="dashboard-list-actions">
-                    <button
-                      onClick={() => setPreviewMed(med)}
-                      className="dashboard-pill-button"
-                    >
-                      <Eye size={14} /> Preview
-                    </button>
-                    <button
-                      onClick={() => toggleMed(med.code)}
-                      className="dashboard-pill-button dashboard-pill-button--danger"
-                    >
-                      <Square size={14} /> Remove
-                    </button>
-                  </div>
-                  <div style={{ width: '100%', marginTop: '0.75rem' }}>
-                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem', color: '#4c6272' }}>
+                  <div className="dashboard-list-side">
+                    <div className="dashboard-list-actions">
+                      <button
+                        onClick={() => setPreviewMed(med)}
+                        className="dashboard-pill-button"
+                      >
+                        <Eye size={14} /> Preview
+                      </button>
+                      <button
+                        onClick={() => toggleMed(med.code)}
+                        className="dashboard-pill-button dashboard-pill-button--danger"
+                      >
+                        <Square size={14} /> Remove
+                      </button>
+                    </div>
+                    <div className="dashboard-date-field">
+                      <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem', color: '#4c6272' }}>
                       Review date
-                    </label>
-                    <input
-                      type="date"
-                      value={reviewDates[med.code] || getDefaultReviewDate()}
-                      onChange={(e) => updateReviewDate(med.code, e.target.value)}
-                      style={{ padding: '0.55rem 0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.9rem' }}
-                    />
+                      </label>
+                      <input
+                        type="date"
+                        value={reviewDates[med.code] || getDefaultReviewDate()}
+                        onChange={(e) => updateReviewDate(med.code, e.target.value)}
+                        style={{ width: '100%', padding: '0.55rem 0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.9rem' }}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
