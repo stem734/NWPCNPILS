@@ -386,43 +386,49 @@ const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
   );
 };
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const location = useLocation();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
 
   return (
+    <div className="app-container">
+      <a href="#main-content" className="sr-only">Skip to content</a>
+      <header>
+        <div className="header-content">
+          <img src="/MyMedinfo.png" alt="MyMedInfo" style={{ height: 'auto', width: '80px', marginBottom: '0' }} />
+        </div>
+      </header>
+
+      <main id="main-content">
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/demo" element={<Demo />} />
+          <Route path="/patient" element={<ResourceView />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/signup" element={<PracticeSignup />} />
+          <Route path="/admin/drug-builder" element={<DrugBuilder />} />
+          <Route path="/practice" element={<PracticeLogin />} />
+          <Route path="/practice/dashboard" element={<PracticeDashboard />} />
+        </Routes>
+      </main>
+
+      <footer className="footer">
+        <p>© {new Date().getFullYear()} Nottingham West Primary Care Network - MyMedInfo</p>
+        <p>
+          This information is for guidance only. Always follow the specific advice from your GP or clinical team.
+        </p>
+      </footer>
+
+      <ClinicianDemo show={showClinicianDemo} />
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
     <BrowserRouter>
-      <div className="app-container">
-        <a href="#main-content" className="sr-only">Skip to content</a>
-        <header>
-          <div className="header-content">
-            <img src="/MyMedinfo.png" alt="MyMedInfo" style={{ height: 'auto', width: '80px', marginBottom: '0' }} />
-          </div>
-        </header>
-
-        <main id="main-content">
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/demo" element={<Demo />} />
-            <Route path="/patient" element={<ResourceView />} />
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/signup" element={<PracticeSignup />} />
-            <Route path="/admin/drug-builder" element={<DrugBuilder />} />
-            <Route path="/practice" element={<PracticeLogin />} />
-            <Route path="/practice/dashboard" element={<PracticeDashboard />} />
-          </Routes>
-        </main>
-
-        <footer className="footer">
-          <p>© {new Date().getFullYear()} Nottingham West Primary Care Network - MyMedInfo</p>
-          <p>
-            This information is for guidance only. Always follow the specific advice from your GP or clinical team.
-          </p>
-        </footer>
-
-        <ClinicianDemo show={showClinicianDemo} />
-      </div>
+      <AppContent />
     </BrowserRouter>
   );
 };
