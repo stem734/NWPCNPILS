@@ -104,7 +104,23 @@ const medicationGenerationSchema: ResponseSchema = {
 };
 
 const extractMedicationPayload = (raw: string): MedicationGenerationResponse => {
-  const parsed = JSON.parse(raw) as Partial<MedicationGenerationResponse>;
+  let parsed: Partial<MedicationGenerationResponse>;
+  try {
+    let cleaned = raw.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+    }
+    parsed = JSON.parse(cleaned);
+  } catch (err) {
+    try {
+      // Fallback: strip all newlines which often cause unterminated string errors in generated JSON
+      const singleLine = raw.trim().replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').replace(/\n/g, ' ');
+      parsed = JSON.parse(singleLine);
+    } catch (fallbackErr) {
+      console.error('Failed to parse AI JSON:', raw);
+      throw new Error(`AI generated invalid schema: ${err instanceof Error ? err.message : 'Parse error'}`);
+    }
+  }
 
   return {
     title: typeof parsed.title === 'string' ? parsed.title.trim() : '',
@@ -672,7 +688,8 @@ Medication name: ${medicationName.trim()}
 Card type: ${medType === 'NEW' ? 'Starting treatment' : 'Yearly reauthorisation review'}
 
 Rules:
-- Return JSON only.
+- Return JSON only. Ensure the output is strictly valid and well-formed JSON.
+- Do NOT use unescaped newlines or line breaks inside string values.
 - Make the content suitable for UK patients in plain English.
 - Aim for an average UK reading age of about 9 to 11 years old.
 - Use short sentences, everyday words, and short paragraphs.
