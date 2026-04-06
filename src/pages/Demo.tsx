@@ -1,23 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Pill, Monitor, Droplets, Thermometer, FlaskConical } from 'lucide-react';
-import { MED_MAP } from '../medicationData';
+import { ArrowLeft } from 'lucide-react';
+import { useMedicationCatalog } from '../medicationCatalog';
+import { getMedicationIcon } from '../medicationIcons';
 
 const Demo: React.FC = () => {
   const navigate = useNavigate();
-
-  const ICON_MAP: Record<string, React.ReactNode> = {
-    '101': <Pill size={20} />,
-    '102': <Monitor size={20} />,
-    '201': <Droplets size={20} />,
-    '202': <Droplets size={20} />,
-    '301': <Droplets size={20} />,
-    '302': <Droplets size={20} />,
-    '401': <Thermometer size={20} />,
-    '402': <Thermometer size={20} />,
-    '501': <FlaskConical size={20} />,
-    '502': <FlaskConical size={20} />,
-  };
+  const { medicationMap } = useMedicationCatalog();
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
@@ -56,7 +45,7 @@ const Demo: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        {Object.entries(MED_MAP).map(([key, item]) => (
+        {Object.entries(medicationMap).map(([key, item]) => (
           <div
             key={key}
             onClick={() => navigate(`/?code=${key}`)}
@@ -81,7 +70,7 @@ const Demo: React.FC = () => {
             }}
           >
             <div style={{ color: '#005eb8', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
-              {ICON_MAP[key] || <Pill size={32} />}
+              {getMedicationIcon(key, 32)}
             </div>
             <h3 style={{ fontSize: '1rem', color: '#212b32', marginBottom: '0.5rem', margin: '0 0 0.5rem 0' }}>
               {item.title}

@@ -1,150 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth, functions, db } from '../firebase';
+import { auth, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { collection, getDocs } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Pill, Droplets, Thermometer, FlaskConical, Monitor, CheckCircle, Save, Eye, X, ExternalLink, Info, ShieldAlert, CheckSquare, Square } from 'lucide-react';
-import { MEDICATIONS } from '../medicationData';
+import { LogOut, FlaskConical, CheckCircle, Save, CheckSquare, Square, Eye } from 'lucide-react';
 import type { MedContent } from '../medicationData';
-
-const ICON_MAP: Record<string, React.ReactNode> = {
-  '101': <Pill size={20} />,
-  '102': <Monitor size={20} />,
-  '201': <Droplets size={20} />,
-  '202': <Droplets size={20} />,
-  '301': <Droplets size={20} />,
-  '302': <Droplets size={20} />,
-  '401': <Thermometer size={20} />,
-  '402': <Thermometer size={20} />,
-  '501': <FlaskConical size={20} />,
-  '502': <FlaskConical size={20} />,
-};
-
-const PreviewModal: React.FC<{ med: MedContent; onClose: () => void }> = ({ med, onClose }) => {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.5)', zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1rem',
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: 'white', borderRadius: '12px', maxWidth: '700px', width: '100%',
-          maxHeight: '85vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        }}
-      >
-        <div style={{
-          position: 'sticky', top: 0, background: 'white', padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid #d8dde0', display: 'flex', justifyContent: 'space-between',
-          alignItems: 'center', borderRadius: '12px 12px 0 0', zIndex: 1,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Eye size={20} color="#005eb8" />
-            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#005eb8' }}>Patient Preview</span>
-          </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272', padding: '0.25rem' }}
-          >
-            <X size={22} />
-          </button>
-        </div>
-
-        <div style={{ padding: '1.5rem' }}>
-          <span style={{
-            display: 'inline-block', padding: '0.2rem 0.75rem', borderRadius: '4px', fontSize: '0.75rem',
-            fontWeight: 700, marginBottom: '1rem', letterSpacing: '0.05em',
-            background: med.badge === 'NEW' ? '#005eb8' : med.badge === 'REAUTH' ? '#007f3b' : '#4c6272',
-            color: 'white',
-          }}>
-            {med.badge === 'NEW' ? 'NEW MEDICATION' : med.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
-          </span>
-
-          {med.badge === 'NEW' && (
-            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
-              <div style={{ fontWeight: 700, color: '#005eb8', marginBottom: '0.25rem' }}>Beginning Your Treatment</div>
-              <p style={{ margin: 0, fontSize: '0.95rem', color: '#212b32' }}>
-                You are starting a new course of treatment. This information will help you understand your medication and how to take it safely.
-              </p>
-            </div>
-          )}
-
-          {med.badge === 'REAUTH' && (
-            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f0f4f5', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
-              <div style={{ fontWeight: 700, color: '#212b32', marginBottom: '0.25rem' }}>Annual Treatment Reminder</div>
-              <p style={{ margin: 0, fontSize: '0.95rem', color: '#4c6272' }}>
-                As you have been taking this medication for 12 months or more, we are sending this as a routine review reminder of safe management.
-              </p>
-            </div>
-          )}
-
-          <h2 style={{ fontSize: '1.3rem', margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ color: '#005eb8' }}>{ICON_MAP[med.code]}</span>
-            {med.title}
-          </h2>
-          <p style={{ color: '#212b32', fontSize: '1rem', lineHeight: 1.6 }}>{med.description}</p>
-
-          <div style={{ marginTop: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Key Information</h3>
-            <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
-              {med.keyInfo.map((info, i) => (
-                <li key={i} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'flex-start' }}>
-                  <Info size={20} color="#005eb8" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
-                  <span style={{ fontSize: '0.95rem' }}>{info}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {med.sickDaysNeeded && (
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#fde8e8', borderRadius: '8px', borderLeft: '4px solid #d5281b' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.25rem' }}>
-                <ShieldAlert size={20} color="#d5281b" />
-                <strong style={{ color: '#d5281b' }}>Sick Day Rules Apply</strong>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#212b32' }}>
-                If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
-              </p>
-            </div>
-          )}
-
-          <div style={{ marginTop: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Linked Resources</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {med.nhsLink && (
-                <a href={med.nhsLink} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#eef7ff', borderRadius: '8px', textDecoration: 'none', color: 'inherit' }}>
-                  <div style={{ background: '#005eb8', color: 'white', padding: '0.15rem 0.4rem', fontWeight: 800, fontSize: '0.7rem', borderRadius: '2px' }}>NHS</div>
-                  <span style={{ flex: 1, fontSize: '0.9rem' }}>Official NHS Guidance</span>
-                  <ExternalLink size={16} color="#005eb8" />
-                </a>
-              )}
-              {med.trendLinks.map((link, i) => (
-                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#f0f9f0', borderRadius: '8px', textDecoration: 'none', color: 'inherit' }}>
-                  <FlaskConical size={16} color="#007f3b" />
-                  <span style={{ flex: 1, fontSize: '0.9rem' }}>{link.title}</span>
-                  <ExternalLink size={16} color="#007f3b" />
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          padding: '1rem 1.5rem', background: '#f8fafb', borderTop: '1px solid #d8dde0',
-          borderRadius: '0 0 12px 12px', fontSize: '0.8rem', color: '#4c6272', textAlign: 'center',
-        }}>
-          This is a preview of what patients will see when they access this medication block.
-        </div>
-      </div>
-    </div>
-  );
-};
+import MedicationPreviewModal from '../components/MedicationPreviewModal';
+import { useMedicationCatalog } from '../medicationCatalog';
+import { getMedicationIcon } from '../medicationIcons';
 
 const PracticeDashboard: React.FC = () => {
   const [practiceName, setPracticeName] = useState('');
@@ -157,30 +20,19 @@ const PracticeDashboard: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
   const [previewMed, setPreviewMed] = useState<MedContent | null>(null);
-  const [allMedications, setAllMedications] = useState<MedContent[]>(MEDICATIONS);
+  const { medications: allMedications, loading: loadingMedications } = useMedicationCatalog();
   const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         loadPractice();
-        loadCustomMeds();
       } else {
         navigate('/practice');
       }
     });
     return () => unsubscribe();
   }, [navigate]);
-
-  const loadCustomMeds = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'medications'));
-      const custom: MedContent[] = snapshot.docs.map(doc => doc.data() as MedContent);
-      setAllMedications([...MEDICATIONS, ...custom]);
-    } catch {
-      // Custom meds not critical
-    }
-  };
 
   const loadPractice = async () => {
     setLoading(true);
@@ -244,7 +96,7 @@ const PracticeDashboard: React.FC = () => {
   };
 
   const hasChanges = JSON.stringify(selectedMeds.sort()) !== JSON.stringify(savedMeds.sort());
-  const allSelected = selectedMeds.length === allMedications.length;
+  const allSelected = allMedications.length > 0 && selectedMeds.length === allMedications.length;
   const lastAccessedLabel = lastAccessedMs
     ? new Date(lastAccessedMs).toLocaleString('en-GB', {
         day: 'numeric',
@@ -255,7 +107,7 @@ const PracticeDashboard: React.FC = () => {
       })
     : 'No patient visits yet';
 
-  if (loading) {
+  if (loading || loadingMedications) {
     return (
       <div style={{ maxWidth: '800px', margin: '2rem auto' }}>
         <div className="card" style={{ textAlign: 'center' }}>
@@ -289,7 +141,7 @@ const PracticeDashboard: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '800px', margin: '2rem auto' }}>
-      {previewMed && <PreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
+      {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
@@ -399,7 +251,7 @@ const PracticeDashboard: React.FC = () => {
                       onClick={() => toggleMed(med.code)}
                       style={{ color: isSelected ? '#005eb8' : '#4c6272', flexShrink: 0, cursor: 'pointer' }}
                     >
-                      {ICON_MAP[med.code]}
+                      {getMedicationIcon(med.code)}
                     </div>
                     <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => toggleMed(med.code)}>
                       <div style={{ fontWeight: 600, fontSize: '0.95rem', color: isSelected ? '#003087' : '#212b32' }}>

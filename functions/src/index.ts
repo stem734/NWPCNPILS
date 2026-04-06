@@ -8,6 +8,7 @@ import type { ResponseSchema } from '@google/generative-ai';
 
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
 const GEMINI_MODEL = 'gemini-2.5-flash';
+const BUILT_IN_MAX_FAMILY = 5;
 
 initializeApp();
 const db = getFirestore();
@@ -365,6 +366,7 @@ export const saveMedication = onCall(
     }
 
     const data = request.data as {
+      code?: string;
       title: string;
       description: string;
       badge: string;
@@ -380,17 +382,32 @@ export const saveMedication = onCall(
     }
 
     try {
-      // Allocate the next custom family in x01 / x02 format, where
-      // x01 = starting treatment and x02 = yearly reauthorisation.
-      const snapshot = await db.collection('medications').orderBy('code', 'desc').limit(1).get();
       const badge = data.badge === 'REAUTH' ? 'REAUTH' : 'NEW';
-      const nextFamily = snapshot.empty
-        ? 6
-        : Math.floor(parseInt(snapshot.docs[0].data().code, 10) / 100) + 1;
-      const nextCode = String(nextFamily * 100 + (badge === 'REAUTH' ? 2 : 1));
+      const requestedCode = typeof data.code === 'string' ? data.code.trim() : '';
+
+      let medicationCode = requestedCode;
+
+      if (!medicationCode) {
+        // Allocate the next custom family in x01 / x02 format, where
+        // x01 = starting treatment and x02 = yearly reauthorisation.
+        const snapshot = await db.collection('medications').get();
+        const highestFamilyInFirestore = snapshot.docs.reduce((maxFamily, doc) => {
+          const docCode = doc.data().code;
+          const parsedCode = Number.parseInt(typeof docCode === 'string' ? docCode : '', 10);
+
+          if (Number.isNaN(parsedCode)) {
+            return maxFamily;
+          }
+
+          return Math.max(maxFamily, Math.floor(parsedCode / 100));
+        }, BUILT_IN_MAX_FAMILY);
+
+        const nextFamily = highestFamilyInFirestore + 1;
+        medicationCode = String(nextFamily * 100 + (badge === 'REAUTH' ? 2 : 1));
+      }
 
       const medDoc = {
-        code: nextCode,
+        code: medicationCode,
         title: data.title,
         description: data.description,
         badge,
@@ -399,13 +416,21 @@ export const saveMedication = onCall(
         nhsLink: data.nhsLink || '',
         trendLinks: data.trendLinks || [],
         sickDaysNeeded: data.sickDaysNeeded || false,
-        created_at: Timestamp.now(),
-        created_by: request.auth.uid,
+        is_deleted: false,
+        updated_at: Timestamp.now(),
+        updated_by: request.auth.uid,
       };
 
-      await db.collection('medications').doc(nextCode).set(medDoc);
+      const medicationRef = db.collection('medications').doc(medicationCode);
+      const existingDoc = await medicationRef.get();
 
-      return { success: true, code: nextCode };
+      await medicationRef.set({
+        ...medDoc,
+        created_at: existingDoc.exists ? existingDoc.data()?.created_at || Timestamp.now() : Timestamp.now(),
+        created_by: existingDoc.exists ? existingDoc.data()?.created_by || request.auth.uid : request.auth.uid,
+      }, { merge: true });
+
+      return { success: true, code: medicationCode };
     } catch (error) {
       console.error('Error saving medication:', error);
       throw new HttpsError('internal', 'Failed to save medication');
@@ -421,7 +446,9 @@ export const listMedications = onCall(
   async () => {
     try {
       const snapshot = await db.collection('medications').orderBy('code', 'asc').get();
-      const medications = snapshot.docs.map(doc => doc.data());
+      const medications = snapshot.docs
+        .map(doc => doc.data())
+        .filter((medication) => !medication.is_deleted);
       return { medications };
     } catch (error) {
       console.error('Error listing medications:', error);
@@ -446,7 +473,12 @@ export const deleteMedication = onCall(
     }
 
     try {
-      await db.collection('medications').doc(code).delete();
+      await db.collection('medications').doc(code).set({
+        code,
+        is_deleted: true,
+        deleted_at: Timestamp.now(),
+        deleted_by: request.auth.uid,
+      }, { merge: true });
       return { success: true };
     } catch (error) {
       console.error('Error deleting medication:', error);

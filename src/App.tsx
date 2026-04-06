@@ -1,11 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
-import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, Droplets, Pill, Thermometer, AlertCircle } from 'lucide-react';
+import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle } from 'lucide-react';
 import { validateOrganisation } from './protocolService';
-import { MED_MAP } from './medicationData';
-import type { MedContent } from './medicationData';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import PracticeSignup from './pages/PracticeSignup';
@@ -14,19 +10,8 @@ import PracticeDashboard from './pages/PracticeDashboard';
 import DrugBuilder from './pages/DrugBuilder';
 import Landing from './pages/Landing';
 import Demo from './pages/Demo';
-
-const ICON_MAP: Record<string, React.ReactNode> = {
-  '101': <Pill size={20} />,
-  '102': <Monitor size={20} />,
-  '201': <Droplets size={20} />,
-  '202': <Droplets size={20} />,
-  '301': <Droplets size={20} />,
-  '302': <Droplets size={20} />,
-  '401': <Thermometer size={20} />,
-  '402': <Thermometer size={20} />,
-  '501': <FlaskConical size={20} />,
-  '502': <FlaskConical size={20} />,
-};
+import { useMedicationCatalog } from './medicationCatalog';
+import { getMedicationIcon } from './medicationIcons';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -42,31 +27,7 @@ const ResourceView: React.FC = () => {
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  const [customMeds, setCustomMeds] = useState<Record<string, MedContent>>({});
-
-  // Load custom medications from Firestore
-  useEffect(() => {
-    const loadCustomMeds = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, 'medications'));
-        const meds: Record<string, MedContent> = {};
-        snapshot.docs.forEach(doc => {
-          const data = doc.data() as MedContent;
-          meds[data.code] = data;
-        });
-        setCustomMeds(meds);
-      } catch {
-        // Custom meds not critical, built-ins still work
-      }
-    };
-    loadCustomMeds();
-  }, []);
-
-  // Merged medication map: built-in + custom
-  const allMeds: Record<string, MedContent> = useMemo(
-    () => ({ ...MED_MAP, ...customMeds }),
-    [customMeds]
-  );
+  const { medicationMap: allMeds } = useMedicationCatalog();
 
   // Validate organisation against Firestore
   useEffect(() => {
@@ -134,7 +95,7 @@ const ResourceView: React.FC = () => {
     if (codesParam) {
       const codes = codesParam.split(',').map(c => c.trim()).filter(Boolean);
       return codes
-        .map(code => allMeds[code] ? { id: code, icon: ICON_MAP[code], ...allMeds[code] } : null)
+        .map(code => allMeds[code] ? { id: code, icon: getMedicationIcon(code), ...allMeds[code] } : null)
         .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
     }
 
@@ -142,7 +103,7 @@ const ResourceView: React.FC = () => {
     const codes = rawCode.match(/\d0[12]/g) || [];
     const uniqueCodes = Array.from(new Set(codes));
     return uniqueCodes
-      .map(code => allMeds[code] ? { id: code, icon: ICON_MAP[code], ...allMeds[code] } : null)
+      .map(code => allMeds[code] ? { id: code, icon: getMedicationIcon(code), ...allMeds[code] } : null)
       .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
   }, [rawCode, orgParam, codesParam, isAuthorised, allMeds]);
 
@@ -185,7 +146,7 @@ const ResourceView: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '2rem' }}>
             {Object.entries(allMeds).map(([key, item]) => (
               <a key={key} href={`?code=${key}`} className="resource-card" style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--nhs-blue)', marginBottom: '0.5rem' }}>{ICON_MAP[key] || <Pill size={20} />}</div>
+                <div style={{ color: 'var(--nhs-blue)', marginBottom: '0.5rem' }}>{getMedicationIcon(key)}</div>
                 <h3>{item.title}</h3>
                 <span className={`badge badge-${item.badge.toLowerCase()}`}>{item.badge}</span>
               </a>
@@ -312,6 +273,7 @@ const ClinicianDemo: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const currentCode = searchParams.get('code');
+  const { medicationMap } = useMedicationCatalog();
 
   const selectScenario = (code: string) => {
     setSearchParams({ code });
@@ -340,14 +302,14 @@ const ClinicianDemo: React.FC = () => {
               <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
                 Select a scenario to demonstrate how the portal appears to patients based on different SystmOne protocols.
               </p>
-              {Object.entries(MED_MAP).map(([code, med]) => (
+              {Object.entries(medicationMap).map(([code, med]) => (
                 <button
                   key={code}
                   className={`scenario-card ${currentCode === code ? 'active' : ''}`}
                   onClick={() => selectScenario(code)}
                 >
                   <div className="scenario-icon">
-                    {ICON_MAP[code]}
+                    {getMedicationIcon(code)}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, color: '#212b32' }}>{med.title}</div>
