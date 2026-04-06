@@ -207,7 +207,7 @@ const ResourceView: React.FC = () => {
         </div>
       )}
 
-      <div className="patient-content-grid">
+      <div className={`patient-content-grid${contents.length === 1 ? ' patient-content-grid--single' : ''}`}>
         {contents.map((content, index) => (
           <article key={content.id} className="patient-content-panel">
             {hasMixedBadges && index === firstNewIndex && (

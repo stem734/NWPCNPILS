@@ -563,6 +563,10 @@ p {
   .patient-content-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .patient-content-grid--single {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 899px) {
