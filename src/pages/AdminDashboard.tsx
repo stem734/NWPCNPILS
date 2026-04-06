@@ -5,6 +5,7 @@ import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2 } from 'lucide-react';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Practice {
   id: string;
@@ -30,6 +31,8 @@ const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup'>('practices');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [practiceSearch, setPracticeSearch] = useState('');
+  const [practiceStatusFilter, setPracticeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = useState(true);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -54,6 +57,13 @@ const AdminDashboard: React.FC = () => {
   const [editAdminError, setEditAdminError] = useState('');
   const [adminActionLink, setAdminActionLink] = useState('');
   const [adminActionMessage, setAdminActionMessage] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    isDangerous: boolean;
+    onConfirm: () => void;
+  } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -108,14 +118,22 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const deletePractice = async (practice: Practice) => {
-    if (!confirm(`Are you sure you want to remove "${practice.name}"?`)) return;
-    try {
-      await deleteDoc(doc(db, 'practices', practice.id));
-      loadPractices();
-    } catch (error) {
-      console.error('Error deleting practice:', error);
-    }
+  const deletePractice = (practice: Practice) => {
+    setConfirmDialog({
+      title: 'Remove Practice',
+      message: `Are you sure you want to remove "${practice.name}"? This action cannot be undone.`,
+      confirmLabel: 'Remove',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'practices', practice.id));
+          loadPractices();
+        } catch (error) {
+          console.error('Error deleting practice:', error);
+        }
+        setConfirmDialog(null);
+      },
+    });
   };
 
   const addPractice = async (e: React.FormEvent) => {
@@ -288,21 +306,40 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const deleteAdmin = async (adminUser: AdminUser) => {
-    if (!confirm(`Remove administrator "${adminUser.email}"?`)) return;
-    try {
-      const removeAdmin = httpsCallable(functions, 'deleteAdminUser');
-      await removeAdmin({ uid: adminUser.uid });
-      loadAdmins();
-    } catch (error) {
-      console.error('Error deleting admin:', error);
-      alert(error instanceof Error ? error.message : 'Failed to remove administrator');
-    }
+  const deleteAdmin = (adminUser: AdminUser) => {
+    setConfirmDialog({
+      title: 'Remove Administrator',
+      message: `Remove administrator "${adminUser.email}"? This action cannot be undone.`,
+      confirmLabel: 'Remove',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          const removeAdmin = httpsCallable(functions, 'deleteAdminUser');
+          await removeAdmin({ uid: adminUser.uid });
+          loadAdmins();
+        } catch (error) {
+          console.error('Error deleting admin:', error);
+          alert(error instanceof Error ? error.message : 'Failed to remove administrator');
+        }
+        setConfirmDialog(null);
+      },
+    });
   };
 
   if (!authenticated) return null;
 
   return (
+    <>
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          isDangerous={confirmDialog.isDangerous}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     <div className="dashboard-shell">
       <div className="dashboard-header">
         <div className="dashboard-header-copy">
@@ -624,8 +661,48 @@ const AdminDashboard: React.FC = () => {
         ) : practices.length === 0 ? (
           <p style={{ color: '#4c6272' }}>No practices registered yet. Share the sign-up link with practices.</p>
         ) : (
-          <div className="dashboard-list">
-            {practices.map(practice => (
+          <>
+            <div className="dashboard-toolbar" style={{ marginBottom: '1rem' }}>
+              <div className="dashboard-search">
+                <input
+                  type="text"
+                  value={practiceSearch}
+                  onChange={(e) => setPracticeSearch(e.target.value)}
+                  placeholder="Search by name, ODS code, or email"
+                  style={{ width: '100%', padding: '0.75rem 0.9rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem' }}
+                />
+              </div>
+              <div className="dashboard-chip-row">
+                <button
+                  className={`dashboard-chip${practiceStatusFilter === 'all' ? ' dashboard-chip--active' : ''}`}
+                  onClick={() => setPracticeStatusFilter('all')}
+                >
+                  All
+                </button>
+                <button
+                  className={`dashboard-chip${practiceStatusFilter === 'active' ? ' dashboard-chip--active' : ''}`}
+                  onClick={() => setPracticeStatusFilter('active')}
+                >
+                  Active
+                </button>
+                <button
+                  className={`dashboard-chip${practiceStatusFilter === 'inactive' ? ' dashboard-chip--active' : ''}`}
+                  onClick={() => setPracticeStatusFilter('inactive')}
+                >
+                  Inactive
+                </button>
+              </div>
+            </div>
+            <div className="dashboard-list">
+              {practices
+                .filter(p => {
+                  const matchesSearch = practiceSearch === '' || [p.name, p.ods_code || '', p.contact_email || ''].some(field =>
+                    field.toLowerCase().includes(practiceSearch.toLowerCase())
+                  );
+                  const matchesStatus = practiceStatusFilter === 'all' || (practiceStatusFilter === 'active' ? p.is_active : !p.is_active);
+                  return matchesSearch && matchesStatus;
+                })
+                .map(practice => (
               <div
                 key={practice.id}
                 className="dashboard-list-card"
@@ -688,6 +765,7 @@ const AdminDashboard: React.FC = () => {
       </div>
       )}
     </div>
+    </>
   );
 };
 

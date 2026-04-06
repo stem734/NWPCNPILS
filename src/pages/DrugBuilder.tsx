@@ -5,6 +5,7 @@ import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 
 interface TrendLink {
@@ -36,6 +37,7 @@ const DrugBuilder: React.FC = () => {
   const [nhsLink, setNhsLink] = useState('');
   const [trendLinks, setTrendLinks] = useState<TrendLink[]>([]);
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
+  const [reviewMonths, setReviewMonths] = useState(12);
   const [hasContent, setHasContent] = useState(false);
   const [editingCode, setEditingCode] = useState('');
   const [requestedCode, setRequestedCode] = useState('');
@@ -48,6 +50,13 @@ const DrugBuilder: React.FC = () => {
   const [savedAction, setSavedAction] = useState<'created' | 'updated'>('created');
 
   const [deletingCode, setDeletingCode] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    isDangerous: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -75,10 +84,11 @@ const DrugBuilder: React.FC = () => {
       nhsLink: nhsLink.trim(),
       trendLinks: trendLinks.filter((item) => item.title.trim() && item.url.trim()),
       sickDaysNeeded,
+      reviewMonths,
       source: editingCode ? 'override' : 'custom',
       isBuiltIn: false,
     };
-  }, [badge, category, description, editingCode, hasContent, keyInfo, medName, nhsLink, sickDaysNeeded, title, trendLinks]);
+  }, [badge, category, description, editingCode, hasContent, keyInfo, medName, nhsLink, reviewMonths, sickDaysNeeded, title, trendLinks]);
 
   const getFriendlyMedicationName = (medication: MedicationRecord) => {
     const [baseTitle] = medication.title.split(' - ');
@@ -96,6 +106,7 @@ const DrugBuilder: React.FC = () => {
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
+    setReviewMonths(medication.reviewMonths || 12);
     setEditingCode(medication.code);
     setRequestedCode(medication.code);
     setHasContent(true);
@@ -122,6 +133,7 @@ const DrugBuilder: React.FC = () => {
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
+    setReviewMonths(medication.reviewMonths || 12);
     setEditingCode('');
     setRequestedCode('');
     setHasContent(true);
@@ -156,6 +168,7 @@ const DrugBuilder: React.FC = () => {
         setKeyInfo((c.keyInfo as string[]) || ['']);
         setNhsLink((c.nhsLink as string) || '');
         setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
+        setReviewMonths((c.reviewMonths as number) || 12);
         setTrendLinks((c.trendLinks as TrendLink[]) || []);
         setHasContent(true);
         setSavedCode('');
@@ -196,6 +209,7 @@ const DrugBuilder: React.FC = () => {
         nhsLink: nhsLink.trim(),
         trendLinks: trendLinks.filter(l => l.title.trim() && l.url.trim()),
         sickDaysNeeded,
+        reviewMonths,
       });
       const data = result.data as { success: boolean; code: string };
       if (data.success) {
@@ -211,24 +225,34 @@ const DrugBuilder: React.FC = () => {
     setSaving(false);
   };
 
-  const handleDelete = async (medication: MedicationRecord) => {
-    const deleteMessage = medication.isBuiltIn
+  const handleDelete = (medication: MedicationRecord) => {
+    const isBuiltIn = medication.isBuiltIn;
+    const deleteTitle = isBuiltIn ? 'Hide Medication?' : 'Delete Medication?';
+    const deleteMessage = isBuiltIn
       ? `Hide medication ${medication.code}? It will be removed from the app until you restore it in Firestore.`
       : `Delete medication ${medication.code}? This cannot be undone from the builder.`;
 
-    if (!confirm(deleteMessage)) return;
-    setDeletingCode(medication.code);
-    try {
-      const del = httpsCallable(functions, 'deleteMedication');
-      await del({ code: medication.code });
-      await reloadMeds();
-      if (editingCode === medication.code) {
-        resetForm();
-      }
-    } catch {
-      console.error('Delete error');
-    }
-    setDeletingCode('');
+    setConfirmDialog({
+      title: deleteTitle,
+      message: deleteMessage,
+      confirmLabel: isBuiltIn ? 'Hide' : 'Delete',
+      isDangerous: true,
+      onConfirm: async () => {
+        setDeletingCode(medication.code);
+        try {
+          const del = httpsCallable(functions, 'deleteMedication');
+          await del({ code: medication.code });
+          await reloadMeds();
+          if (editingCode === medication.code) {
+            resetForm();
+          }
+        } catch {
+          console.error('Delete error');
+        }
+        setDeletingCode('');
+        setConfirmDialog(null);
+      },
+    });
   };
 
   const updateKeyInfo = (index: number, value: string) => {
@@ -260,6 +284,7 @@ const DrugBuilder: React.FC = () => {
     setNhsLink('');
     setTrendLinks([]);
     setSickDaysNeeded(false);
+    setReviewMonths(12);
     setHasContent(false);
     setEditingCode('');
     setRequestedCode('');
@@ -278,6 +303,17 @@ const DrugBuilder: React.FC = () => {
   // Success screen after saving
   if (savedCode) {
     return (
+      <>
+        {confirmDialog && (
+          <ConfirmDialog
+            title={confirmDialog.title}
+            message={confirmDialog.message}
+            confirmLabel={confirmDialog.confirmLabel}
+            isDangerous={confirmDialog.isDangerous}
+            onConfirm={confirmDialog.onConfirm}
+            onCancel={() => setConfirmDialog(null)}
+          />
+        )}
       <div className="dashboard-shell" style={{ maxWidth: '700px' }}>
         <div className="card" style={{ textAlign: 'center' }}>
           <CheckCircle size={64} color="#007f3b" style={{ marginBottom: '1rem' }} />
@@ -328,10 +364,22 @@ const DrugBuilder: React.FC = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          isDangerous={confirmDialog.isDangerous}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     <div className="dashboard-shell">
       {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
 
@@ -446,6 +494,18 @@ const DrugBuilder: React.FC = () => {
                   value={requestedCode}
                   onChange={e => setRequestedCode(e.target.value.replace(/[^\d]/g, '').slice(0, 3))}
                   placeholder={badge === 'REAUTH' ? 'e.g. 602' : 'e.g. 601'}
+                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ minWidth: '150px' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Review Period (months)</label>
+                <input
+                  type="number"
+                  value={reviewMonths}
+                  onChange={e => setReviewMonths(Math.max(1, parseInt(e.target.value) || 12))}
+                  min="1"
+                  max="60"
+                  placeholder="e.g. 12"
                   style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
@@ -613,6 +673,16 @@ const DrugBuilder: React.FC = () => {
                     }}>
                       {sourceLabel(med)}
                     </span>
+                    <span style={{
+                      padding: '0 0.4rem',
+                      borderRadius: '3px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      background: '#eef7ff',
+                      color: '#005eb8',
+                    }}>
+                      Review: {med.reviewMonths || 12}mo
+                    </span>
                   </div>
                 </div>
                 <button
@@ -675,6 +745,7 @@ const DrugBuilder: React.FC = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

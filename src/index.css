@@ -64,19 +64,82 @@ body {
 header {
   background-color: #ffffff;
   color: var(--nhs-text);
-  padding: 1.5rem 2rem;
+  padding: 1rem 2rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid #e0e0e0;
 }
 
 .header-content {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.header-nav a,
+.header-nav button {
+  color: var(--nhs-blue);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  transition: opacity 0.2s;
+}
+
+.header-nav a:hover,
+.header-nav button:hover {
+  opacity: 0.8;
+}
+
+.header-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--nhs-text);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-nav-link:hover {
+  background: #f0f4f5;
+  border-color: var(--nhs-border);
+}
+
+.header-nav-link--active {
+  background: #eef7ff;
+  border-color: #005eb8;
+  color: var(--nhs-blue);
+}
+
+.header-nav-link--signout {
+  color: var(--nhs-red);
+}
+
+.header-nav-link--signout:hover {
+  background: #fde8e8;
+  border-color: var(--nhs-red);
 }
 
 .nhs-logo {
@@ -181,6 +244,21 @@ p {
 
 .patient-section {
   margin-bottom: 2rem;
+}
+
+.patient-section:nth-child(3) {
+  border-left: 5px solid #005eb8;
+  padding-left: 1.5rem;
+}
+
+.patient-section:nth-child(4) {
+  border-left: 5px solid #007f3b;
+  padding-left: 1.5rem;
+}
+
+.patient-section:nth-child(5) {
+  border-left: 5px solid #4c6272;
+  padding-left: 1.5rem;
 }
 
 .patient-content-panel {
@@ -391,21 +469,23 @@ p {
 
 .badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  padding: 0.35rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
   margin-bottom: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .badge-new {
-  background-color: #e3f2fd;
-  color: #1976d2;
+  background-color: #005eb8;
+  color: white;
 }
 
 .badge-reauth {
-  background-color: #f3e5f5;
-  color: #7b1fa2;
+  background-color: #007f3b;
+  color: white;
 }
 
 .footer {

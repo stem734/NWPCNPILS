@@ -10,6 +10,7 @@ import PracticeDashboard from './pages/PracticeDashboard';
 import DrugBuilder from './pages/DrugBuilder';
 import Landing from './pages/Landing';
 import Demo from './pages/Demo';
+import HeaderNav from './components/HeaderNav';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 
@@ -215,7 +216,7 @@ const ResourceView: React.FC = () => {
             <Info size={20} aria-hidden="true" />
           </div>
           <p className="patient-summary-text">
-            Consultation Summary: We found {contents.length} medication guides for you.
+            Your GP has shared {contents.length} medication guide{contents.length !== 1 ? 's' : ''} with you.
           </p>
         </div>
       )}
@@ -283,7 +284,7 @@ const ResourceView: React.FC = () => {
                           <div className="patient-resource-chip">NHS</div>
                           <span className="patient-resource-meta-text">Official Guidance</span>
                         </div>
-                        <h3>Read NHS.UK</h3>
+                        <h3>Read NHS.UK <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
                         <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
                         <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                       </a>
@@ -295,7 +296,7 @@ const ResourceView: React.FC = () => {
                           <FlaskConical size={24} color="#007f3b" />
                           <span className="patient-resource-meta-text">Trend Diabetes</span>
                         </div>
-                        <h3>{link.title}</h3>
+                        <h3>{link.title} <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
                         <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
                         <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                       </a>
@@ -396,6 +397,7 @@ const AppContent: React.FC = () => {
       <header>
         <div className="header-content">
           <img src="/MyMedinfo.png" alt="MyMedInfo" style={{ height: 'auto', width: '80px', marginBottom: '0' }} />
+          <HeaderNav />
         </div>
       </header>
 
