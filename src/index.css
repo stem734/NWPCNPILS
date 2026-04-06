@@ -163,6 +163,29 @@ p {
   flex-direction: column;
 }
 
+.patient-group-heading {
+  margin-bottom: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
+  border: 1px solid #c8def6;
+}
+
+.patient-group-eyebrow {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #005eb8;
+  margin-bottom: 0.2rem;
+}
+
+.patient-group-copy {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #4c6272;
+}
+
 .patient-medication-title {
   display: flex;
   align-items: center;
@@ -591,6 +614,16 @@ p {
   .patient-medication-title {
     display: block;
     line-height: 1.2;
+  }
+
+  .patient-group-heading {
+    margin-bottom: 0.75rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 14px;
+  }
+
+  .patient-group-copy {
+    font-size: 0.86rem;
   }
 
   .patient-context-callout {
