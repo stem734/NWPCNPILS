@@ -3,7 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 
@@ -99,6 +99,31 @@ const DrugBuilder: React.FC = () => {
     setHasContent(true);
     setSavedCode('');
     setSavedAction('updated');
+    setSaveError('');
+    setGenError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const duplicateMedication = (medication: MedicationRecord) => {
+    const friendlyName = getFriendlyMedicationName(medication);
+    const duplicateTitle = medication.title.includes(' - ')
+      ? medication.title.replace(friendlyName, `${friendlyName} Copy`)
+      : `${medication.title} Copy`;
+
+    setMedName(`${friendlyName} Copy`);
+    setMedType(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
+    setTitle(duplicateTitle);
+    setDescription(medication.description);
+    setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
+    setCategory(medication.category);
+    setKeyInfo(medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
+    setNhsLink(medication.nhsLink || '');
+    setTrendLinks(medication.trendLinks);
+    setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
+    setEditingCode('');
+    setHasContent(true);
+    setSavedCode('');
+    setSavedAction('created');
     setSaveError('');
     setGenError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -587,6 +612,17 @@ const DrugBuilder: React.FC = () => {
                   }}
                 >
                   <Edit2 size={14} /> Edit
+                </button>
+                <button
+                  onClick={() => duplicateMedication(med)}
+                  title="Duplicate medication"
+                  style={{
+                    background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b',
+                    borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                  }}
+                >
+                  <CopyPlus size={14} /> Duplicate
                 </button>
                 <button
                   onClick={() => copyCode(med.code)}
