@@ -96,7 +96,7 @@ const DrugBuilder: React.FC = () => {
         setKeyInfo((c.keyInfo as string[]) || ['']);
         setNhsLink((c.nhsLink as string) || '');
         setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
-        setTrendLinks([]);
+        setTrendLinks((c.trendLinks as TrendLink[]) || []);
         setHasContent(true);
       }
     } catch (err) {
