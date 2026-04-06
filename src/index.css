@@ -656,6 +656,19 @@ p {
   justify-content: flex-end;
 }
 
+.dashboard-list-side {
+  width: 240px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.dashboard-date-field {
+  width: 100%;
+}
+
 .dashboard-inline-actions {
   display: flex;
   gap: 0.5rem;
@@ -935,6 +948,10 @@ p {
 
   .dashboard-list-actions,
   .dashboard-inline-actions {
+    width: 100%;
+  }
+
+  .dashboard-list-side {
     width: 100%;
   }
 
