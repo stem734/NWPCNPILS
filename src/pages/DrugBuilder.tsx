@@ -38,6 +38,7 @@ const DrugBuilder: React.FC = () => {
   const [trendLinks, setTrendLinks] = useState<TrendLink[]>([]);
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
   const [reviewMonths, setReviewMonths] = useState(12);
+  const [contentReviewDate, setContentReviewDate] = useState('');
   const [hasContent, setHasContent] = useState(false);
   const [editingCode, setEditingCode] = useState('');
   const [requestedCode, setRequestedCode] = useState('');
@@ -85,10 +86,11 @@ const DrugBuilder: React.FC = () => {
       trendLinks: trendLinks.filter((item) => item.title.trim() && item.url.trim()),
       sickDaysNeeded,
       reviewMonths,
+      contentReviewDate,
       source: editingCode ? 'override' : 'custom',
       isBuiltIn: false,
     };
-  }, [badge, category, description, editingCode, hasContent, keyInfo, medName, nhsLink, reviewMonths, sickDaysNeeded, title, trendLinks]);
+  }, [badge, category, description, editingCode, hasContent, keyInfo, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
 
   const getFriendlyMedicationName = (medication: MedicationRecord) => {
     const [baseTitle] = medication.title.split(' - ');
@@ -107,6 +109,7 @@ const DrugBuilder: React.FC = () => {
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
     setReviewMonths(medication.reviewMonths || 12);
+    setContentReviewDate(medication.contentReviewDate || '');
     setEditingCode(medication.code);
     setRequestedCode(medication.code);
     setHasContent(true);
@@ -134,6 +137,7 @@ const DrugBuilder: React.FC = () => {
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
     setReviewMonths(medication.reviewMonths || 12);
+    setContentReviewDate(medication.contentReviewDate || '');
     setEditingCode('');
     setRequestedCode('');
     setHasContent(true);
@@ -169,6 +173,11 @@ const DrugBuilder: React.FC = () => {
         setNhsLink((c.nhsLink as string) || '');
         setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
         setReviewMonths((c.reviewMonths as number) || 12);
+        
+        let targetDate = new Date();
+        targetDate.setMonth(targetDate.getMonth() + 12);
+        setContentReviewDate(targetDate.toISOString().slice(0, 10));
+
         setTrendLinks((c.trendLinks as TrendLink[]) || []);
         setHasContent(true);
         setSavedCode('');
@@ -210,6 +219,7 @@ const DrugBuilder: React.FC = () => {
         trendLinks: trendLinks.filter(l => l.title.trim() && l.url.trim()),
         sickDaysNeeded,
         reviewMonths,
+        contentReviewDate,
       });
       const data = result.data as { success: boolean; code: string };
       if (data.success) {
@@ -285,6 +295,7 @@ const DrugBuilder: React.FC = () => {
     setTrendLinks([]);
     setSickDaysNeeded(false);
     setReviewMonths(12);
+    setContentReviewDate('');
     setHasContent(false);
     setEditingCode('');
     setRequestedCode('');
@@ -509,6 +520,15 @@ const DrugBuilder: React.FC = () => {
                   style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
               </div>
+              <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Content Review Date</label>
+                <input
+                  type="date"
+                  value={contentReviewDate}
+                  onChange={e => setContentReviewDate(e.target.value)}
+                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+              </div>
               <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'end', paddingBottom: '0.2rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
                   <input
@@ -659,25 +679,19 @@ const DrugBuilder: React.FC = () => {
                     }}>
                       {med.badge}
                     </span>
-                    <span style={{
-                      padding: '0 0.4rem',
-                      borderRadius: '3px',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      background: med.source === 'custom' ? '#fff4e5' : med.source === 'override' ? '#efe6ff' : '#f0f4f5',
-                      color: med.source === 'custom' ? '#8a4b00' : med.source === 'override' ? '#5c2d91' : '#4c6272',
-                    }}>
+                    <span className={`dashboard-badge ${med.source === 'custom' ? 'dashboard-badge--amber' : med.source === 'override' ? 'dashboard-badge--purple' : 'dashboard-badge--muted'}`}>
                       {sourceLabel(med)}
                     </span>
-                    <span style={{
-                      padding: '0 0.4rem',
-                      borderRadius: '3px',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      background: '#eef7ff',
-                      color: '#005eb8',
-                    }}>
+                    <span className="dashboard-badge dashboard-badge--blue">
                       Review: {med.reviewMonths || 12}mo
+                    </span>
+                    <span className={`dashboard-badge ${
+                      !med.contentReviewDate ? 'dashboard-badge--muted' :
+                      new Date(`${med.contentReviewDate}T00:00:00`).getTime() < Date.now() ? 'dashboard-badge--red' :
+                      new Date(`${med.contentReviewDate}T00:00:00`).getTime() < Date.now() + 30 * 24 * 60 * 60 * 1000 ? 'dashboard-badge--amber' :
+                      'dashboard-badge--green'
+                    }`}>
+                      {med.contentReviewDate ? `Content review: ${med.contentReviewDate}` : 'No review set'}
                     </span>
                   </div>
                 </div>

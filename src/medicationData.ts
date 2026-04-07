@@ -5,6 +5,7 @@ export interface MedContent {
   badge: 'NEW' | 'REAUTH' | 'GENERAL';
   category: string;
   reviewMonths?: number;
+  contentReviewDate?: string;
   nhsLink?: string;
   trendLinks: { title: string; url: string }[];
   keyInfo: string[];

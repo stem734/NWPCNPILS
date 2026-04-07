@@ -789,6 +789,7 @@ export const saveMedication = onCall(
       nhsLink: string;
       trendLinks: { title: string; url: string }[];
       sickDaysNeeded: boolean;
+      contentReviewDate?: string;
     };
 
     if (!data.title || !data.description || !data.category) {
@@ -877,6 +878,7 @@ export const saveMedication = onCall(
         nhsLink: data.nhsLink || '',
         trendLinks: data.trendLinks || [],
         sickDaysNeeded: data.sickDaysNeeded || false,
+        contentReviewDate: data.contentReviewDate || '',
         is_deleted: false,
         updated_at: Timestamp.now(),
         updated_by: actorUid,
