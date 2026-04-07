@@ -27,14 +27,26 @@ interface AdminUser {
   role: 'owner' | 'admin';
 }
 
+interface AuditLog {
+  id: string;
+  action: 'created' | 'updated' | 'deleted';
+  actorUid: string;
+  code: string;
+  timestampMs: number;
+  previous_state: any;
+  new_state: any;
+}
+
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup'>('practices');
+  const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup' | 'audit'>('practices');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [practiceSearch, setPracticeSearch] = useState('');
   const [practiceStatusFilter, setPracticeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = useState(true);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
+  const [loadingAudits, setLoadingAudits] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
@@ -72,6 +84,7 @@ const AdminDashboard: React.FC = () => {
         setAuthenticated(true);
         loadPractices();
         loadAdmins();
+        loadAudits();
       } else {
         navigate('/admin');
       }
@@ -105,6 +118,19 @@ const AdminDashboard: React.FC = () => {
       console.error('Error loading admins:', error);
     }
     setLoadingAdmins(false);
+  };
+
+  const loadAudits = async () => {
+    setLoadingAudits(true);
+    try {
+      const listAudits = httpsCallable(functions, 'listMedicationAudits');
+      const result = await listAudits();
+      const data = result.data as { audits: AuditLog[] };
+      setAuditLogs(data.audits || []);
+    } catch (error) {
+      console.error('Error loading audits:', error);
+    }
+    setLoadingAudits(false);
   };
 
   const toggleActive = async (practice: Practice) => {
@@ -370,6 +396,9 @@ const AdminDashboard: React.FC = () => {
         </button>
         <button className={`dashboard-tab${activeTab === 'setup' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('setup')}>
           Setup
+        </button>
+        <button className={`dashboard-tab${activeTab === 'audit' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('audit')}>
+          Audit Log
         </button>
       </div>
 
@@ -763,6 +792,66 @@ const AdminDashboard: React.FC = () => {
         <div className="dashboard-banner dashboard-banner--info" style={{ marginTop: '1rem' }}>
           Use the Administrators tab to create manual setup or reset links after accounts are created.
         </div>
+      </div>
+      )}
+
+      {activeTab === 'audit' && (
+      <div className="dashboard-panel dashboard-section">
+        <div className="dashboard-panel-header">
+          <div>
+            <h2 className="dashboard-panel-title">
+            Medication Audit Log ({auditLogs.length})
+            </h2>
+            <p className="dashboard-panel-subtitle">History of changes to medication cards.</p>
+          </div>
+          <button onClick={loadAudits} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+            <RefreshCw size={16} /> Refresh
+          </button>
+        </div>
+
+        {loadingAudits ? (
+          <p style={{ color: '#4c6272' }}>Loading audit logs...</p>
+        ) : auditLogs.length === 0 ? (
+          <p style={{ color: '#4c6272' }}>No audit history found.</p>
+        ) : (
+          <div className="dashboard-list">
+            {auditLogs.map((audit) => {
+              const actorEmail = adminUsers.find(a => a.uid === audit.actorUid)?.email || audit.actorUid;
+              const dateObj = new Date(audit.timestampMs);
+              const isDeleted = audit.action === 'deleted';
+              const isCreated = audit.action === 'created';
+              
+              const title = audit.new_state?.title || audit.previous_state?.title || 'Unknown Card';
+
+              return (
+              <div
+                key={audit.id}
+                className="dashboard-list-card"
+              >
+                <div style={{
+                  padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem',
+                  fontWeight: 800, fontFamily: 'monospace', background: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8'), color: 'white',
+                  minWidth: '40px', textAlign: 'center',
+                }}>
+                  {audit.code || '???'}
+                </div>
+                <div className="dashboard-list-main" style={{ marginLeft: '1rem' }}>
+                  <div className="dashboard-list-title">{title}</div>
+                  <div className="dashboard-meta" style={{ marginTop: '0.25rem' }}>
+                    <span style={{ 
+                      fontWeight: 700, 
+                      color: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8')
+                     }}>
+                      {audit.action.toUpperCase()}
+                    </span>
+                    <span>by {actorEmail}</span>
+                    <span>{dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString()}</span>
+                  </div>
+                </div>
+              </div>
+            )})}
+          </div>
+        )}
       </div>
       )}
     </div>

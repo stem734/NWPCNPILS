@@ -887,11 +887,24 @@ export const saveMedication = onCall(
       const medicationRef = db.collection('medications').doc(medicationCode);
       const existingDoc = await medicationRef.get();
 
-      await medicationRef.set({
+      const action = existingDoc.exists ? 'updated' : 'created';
+      
+      const finalDoc = {
         ...medDoc,
         created_at: existingDoc.exists ? existingDoc.data()?.created_at || Timestamp.now() : Timestamp.now(),
         created_by: existingDoc.exists ? existingDoc.data()?.created_by || actorUid : actorUid,
-      }, { merge: true });
+      };
+
+      await medicationRef.set(finalDoc, { merge: true });
+
+      // Basic Audit System
+      await medicationRef.collection('audit').add({
+        action,
+        actorUid,
+        timestamp: Timestamp.now(),
+        previous_state: existingDoc.exists ? existingDoc.data() : null,
+        new_state: finalDoc,
+      });
 
       if (existingCode && requestedCode && requestedCode !== existingCode) {
         await db.collection('medications').doc(existingCode).delete();
@@ -942,12 +955,27 @@ export const deleteMedication = onCall(
     }
 
     try {
-      await db.collection('medications').doc(code).set({
+      const medicationRef = db.collection('medications').doc(code);
+      const existingDoc = await medicationRef.get();
+      
+      const updateData = {
         code,
         is_deleted: true,
         deleted_at: Timestamp.now(),
         deleted_by: actorUid,
-      }, { merge: true });
+      };
+      
+      await medicationRef.set(updateData, { merge: true });
+
+      // Basic Audit System
+      await medicationRef.collection('audit').add({
+        action: 'deleted',
+        actorUid,
+        timestamp: Timestamp.now(),
+        previous_state: existingDoc.exists ? existingDoc.data() : null,
+        new_state: updateData,
+      });
+
       return { success: true };
     } catch (error) {
       console.error('Error deleting medication:', error);
@@ -966,3 +994,40 @@ export const healthCheck = onCall({ region: 'europe-west2' }, async () => {
     apiKeyLoaded: true // MVP: Not checking Gemini key
   };
 });
+
+/**
+ * List recent medication audit logs
+ */
+export const listMedicationAudits = onCall(
+  { region: 'europe-west2' },
+  async (request) => {
+    await assertAdmin(request);
+    try {
+      // Use collectionGroup to query across all medication audit subcollections
+      const snapshot = await db.collectionGroup('audit')
+        .orderBy('timestamp', 'desc')
+        .limit(100)
+        .get();
+      
+      const audits = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let code = data.new_state?.code || data.previous_state?.code;
+        // Optionally, parse the doc ref to get the medication code exactly
+        if (!code) {
+          code = doc.ref.parent.parent?.id;
+        }
+        return {
+          id: doc.id,
+          code,
+          ...data,
+          timestampMs: data.timestamp ? data.timestamp.toMillis() : Date.now(),
+        };
+      });
+      
+      return { audits };
+    } catch (error) {
+      console.error('Error listing audits:', error);
+      throw new HttpsError('internal', 'Failed to list audit logs');
+    }
+  }
+);
