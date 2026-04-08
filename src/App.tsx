@@ -474,7 +474,7 @@ const AppContent: React.FC = () => {
       <header>
         <div className="header-content">
           <div className="header-logo-wrap">
-            <img src="/MyMedInfo.jpeg" alt="MyMedInfo" style={{ height: '60px', width: 'auto', display: 'block' }} />
+            <img src="/MyMedInfo.jpeg" alt="MyMedInfo" style={{ height: '52px', width: 'auto', display: 'block' }} />
           </div>
           <HeaderNav />
         </div>
