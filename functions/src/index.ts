@@ -898,9 +898,10 @@ export const saveMedication = onCall(
       await medicationRef.set(finalDoc, { merge: true });
 
       // Basic Audit System
-      await medicationRef.collection('audit').add({
+      await db.collection('audit_log').add({
         action,
         actorUid,
+        code: medicationCode,
         timestamp: Timestamp.now(),
         previous_state: existingDoc.exists ? existingDoc.data() : null,
         new_state: finalDoc,
@@ -968,9 +969,10 @@ export const deleteMedication = onCall(
       await medicationRef.set(updateData, { merge: true });
 
       // Basic Audit System
-      await medicationRef.collection('audit').add({
+      await db.collection('audit_log').add({
         action: 'deleted',
         actorUid,
+        code,
         timestamp: Timestamp.now(),
         previous_state: existingDoc.exists ? existingDoc.data() : null,
         new_state: updateData,
@@ -1003,22 +1005,15 @@ export const listMedicationAudits = onCall(
   async (request) => {
     await assertAdmin(request);
     try {
-      // Use collectionGroup to query across all medication audit subcollections
-      const snapshot = await db.collectionGroup('audit')
+      const snapshot = await db.collection('audit_log')
         .orderBy('timestamp', 'desc')
         .limit(100)
         .get();
-      
+
       const audits = snapshot.docs.map(doc => {
         const data = doc.data();
-        let code = data.new_state?.code || data.previous_state?.code;
-        // Optionally, parse the doc ref to get the medication code exactly
-        if (!code) {
-          code = doc.ref.parent.parent?.id;
-        }
         return {
           id: doc.id,
-          code,
           ...data,
           timestampMs: data.timestamp ? data.timestamp.toMillis() : Date.now(),
         };
