@@ -198,6 +198,28 @@ p {
   font-size: 1.125rem;
 }
 
+/* Patient view overrides — compact NHS card style */
+.patient-view .card {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.patient-view h1.patient-medication-title {
+  font-size: 1.25rem;
+  margin-bottom: 0.35rem;
+  color: var(--nhs-text);
+}
+
+.patient-view h2 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.patient-view p {
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
 .resource-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -238,12 +260,12 @@ p {
 .patient-content-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 1rem;
   align-items: start;
 }
 
 .patient-section {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .patient-section:nth-child(3) {
@@ -274,9 +296,9 @@ p {
 }
 
 .patient-group-heading {
-  margin-bottom: 0.9rem;
-  padding: 0.9rem 1rem;
-  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.875rem;
+  border-radius: 8px;
   background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
   border: 1px solid #c8def6;
 }
@@ -301,7 +323,7 @@ p {
   align-items: center;
   gap: 0.6rem;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .patient-code-chip {
@@ -322,7 +344,7 @@ p {
 }
 
 .patient-info-section {
-  margin-top: 2rem;
+  margin-top: 0.75rem;
 }
 
 .patient-info-list {
@@ -332,8 +354,8 @@ p {
 
 .patient-info-item {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
   align-items: flex-start;
 }
 
@@ -342,35 +364,37 @@ p {
 }
 
 .patient-info-text {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .patient-resources {
   display: flex;
   flex-direction: column;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--nhs-border);
 }
 
 .patient-resources-heading {
-  font-size: 1.35rem;
-  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.6rem;
   color: var(--nhs-blue);
+  font-weight: 700;
 }
 
 .patient-resource-list {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.5rem;
 }
 
 .patient-resource-link {
   position: relative;
   display: block;
-  padding: 1rem 3.25rem 1rem 1rem;
+  padding: 0.75rem 2.75rem 0.75rem 0.875rem;
   border: 1px solid var(--nhs-border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #f8fafb;
   text-decoration: none;
   color: inherit;
@@ -385,8 +409,8 @@ p {
 
 .patient-resource-link h3 {
   color: var(--nhs-blue);
-  margin-bottom: 0.35rem;
-  font-size: 1rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
 }
 
 .patient-resource-link p {
@@ -396,8 +420,8 @@ p {
 .patient-resource-meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
 }
 
 .patient-resource-meta--trend {
@@ -469,12 +493,12 @@ p {
 
 .badge {
   display: inline-block;
-  padding: 0.35rem 1rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 700;
-  margin-bottom: 1rem;
-  letter-spacing: 0.05em;
+  margin-bottom: 0;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -882,10 +906,10 @@ p {
 
 .sick-days-callout {
   background-color: #fce4e4;
-  border-left: 5px solid #d5281b;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
+  border-left: 4px solid #d5281b;
+  padding: 0.875rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
 }
 
 .sick-days-header {
@@ -1147,49 +1171,49 @@ p {
   }
 
   .patient-info-section {
-    margin-top: 1.5rem;
+    margin-top: 0.75rem;
   }
 
   .patient-info-item {
-    gap: 0.6rem;
-    margin-bottom: 0.9rem;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .patient-info-text {
-    font-size: 0.98rem;
-    line-height: 1.55;
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
 
   .patient-resources {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
   }
 
   .patient-resources-heading {
-    font-size: 1.1rem;
+    font-size: 0.9rem;
   }
 
   .patient-resource-list {
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .patient-resource-link {
-    padding: 0.95rem 2.75rem 0.95rem 0.95rem;
-    border-radius: 14px;
+    padding: 0.65rem 2.5rem 0.65rem 0.75rem;
+    border-radius: 8px;
     background: #ffffff;
   }
 
   .patient-resource-chip {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
   }
 
   .patient-resource-meta-text,
   .patient-resource-link h3 {
-    font-size: 0.95rem;
+    font-size: 0.875rem;
   }
 
   .patient-resource-copy {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
 
   .patient-empty-grid {

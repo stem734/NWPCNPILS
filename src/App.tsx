@@ -28,11 +28,11 @@ const getValidationCacheKey = (orgName: string) =>
 const GROUP_COPY: Record<'NEW' | 'REAUTH' | 'GENERAL', { title: string; description: string }> = {
   NEW: {
     title: 'New Medications',
-    description: 'These medicines are newly starting and should be read first.',
+    description: 'You have been newly prescribed these medicines. Please read this information carefully so you know what to expect and how to take them safely.',
   },
   REAUTH: {
     title: 'Annual Reviews',
-    description: 'These medicines are already established and are shown as routine yearly reauthorisations.',
+    description: 'You are already prescribed these medicines. They are included here as a reminder and as part of your routine annual review.',
   },
   GENERAL: {
     title: 'Medication Information',
