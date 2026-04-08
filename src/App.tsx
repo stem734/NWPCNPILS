@@ -473,7 +473,9 @@ const AppContent: React.FC = () => {
       <a href="#main-content" className="sr-only">Skip to content</a>
       <header>
         <div className="header-content">
-          <img src="/MyMedInfo.jpeg" alt="MyMedInfo" style={{ height: '44px', width: 'auto', marginBottom: '0', display: 'block' }} />
+          <div className="header-logo-wrap">
+            <img src="/MyMedInfo.jpeg" alt="MyMedInfo" style={{ height: '60px', width: 'auto', display: 'block' }} />
+          </div>
           <HeaderNav />
         </div>
       </header>
