@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2 } from 'lucide-react';
+import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Practice {
@@ -51,6 +51,20 @@ interface LoginAuditEntry {
   createdAtMs: number;
 }
 
+interface LoginAuditGroup {
+  key: string;
+  actorName: string;
+  email: string;
+  actorType: 'admin' | 'practice';
+  portal: 'admin' | 'practice';
+  adminRole?: 'owner' | 'admin' | null;
+  actorId?: string | null;
+  latestCreatedAtMs: number;
+  latestIpAddress: string;
+  latestUserAgent: string;
+  entries: LoginAuditEntry[];
+}
+
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup' | 'audit'>('practices');
   const [practices, setPractices] = useState<Practice[]>([]);
@@ -63,6 +77,7 @@ const AdminDashboard: React.FC = () => {
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [loadingAudits, setLoadingAudits] = useState(true);
   const [loadingLoginAudit, setLoadingLoginAudit] = useState(true);
+  const [expandedLoginAudit, setExpandedLoginAudit] = useState<Record<string, boolean>>({});
   const [authenticated, setAuthenticated] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
@@ -161,6 +176,53 @@ const AdminDashboard: React.FC = () => {
       console.error('Error loading login audit:', error);
     }
     setLoadingLoginAudit(false);
+  };
+
+  const groupedLoginAudit = useMemo<LoginAuditGroup[]>(() => {
+    const groups = new Map<string, LoginAuditGroup>();
+
+    loginAudit.forEach((entry) => {
+      const groupKey = `${entry.actorType}:${entry.portal}:${entry.email || entry.uid}`;
+      const existing = groups.get(groupKey);
+
+      if (existing) {
+        existing.entries.push(entry);
+        if (entry.createdAtMs > existing.latestCreatedAtMs) {
+          existing.latestCreatedAtMs = entry.createdAtMs;
+          existing.latestIpAddress = entry.ipAddress;
+          existing.latestUserAgent = entry.userAgent;
+        }
+        return;
+      }
+
+      groups.set(groupKey, {
+        key: groupKey,
+        actorName: entry.actorName,
+        email: entry.email,
+        actorType: entry.actorType,
+        portal: entry.portal,
+        adminRole: entry.adminRole,
+        actorId: entry.actorId,
+        latestCreatedAtMs: entry.createdAtMs,
+        latestIpAddress: entry.ipAddress,
+        latestUserAgent: entry.userAgent,
+        entries: [entry],
+      });
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        entries: [...group.entries].sort((left, right) => right.createdAtMs - left.createdAtMs),
+      }))
+      .sort((left, right) => right.latestCreatedAtMs - left.latestCreatedAtMs);
+  }, [loginAudit]);
+
+  const toggleLoginAuditGroup = (key: string) => {
+    setExpandedLoginAudit((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
   };
 
   const toggleActive = async (practice: Practice) => {
@@ -831,9 +893,9 @@ const AdminDashboard: React.FC = () => {
           <div className="dashboard-panel-header">
             <div>
               <h2 className="dashboard-panel-title">
-              Recent Login Audit ({loginAudit.length})
+              Recent Login Audit ({groupedLoginAudit.length})
               </h2>
-              <p className="dashboard-panel-subtitle">Successful sign-ins for administrator and practice accounts.</p>
+              <p className="dashboard-panel-subtitle">Successful sign-ins grouped by user so repeated logins stay tidy.</p>
             </div>
             <button onClick={loadLoginAudit} className="action-button" style={{ backgroundColor: '#4c6272' }}>
               <RefreshCw size={16} /> Refresh Logins
@@ -846,32 +908,66 @@ const AdminDashboard: React.FC = () => {
 
           {loadingLoginAudit ? (
             <p style={{ color: '#4c6272' }}>Loading login audit...</p>
-          ) : loginAudit.length === 0 ? (
+          ) : groupedLoginAudit.length === 0 ? (
             <p style={{ color: '#4c6272' }}>No successful sign-ins recorded yet.</p>
           ) : (
             <div className="dashboard-list" style={{ marginBottom: '1rem' }}>
-              {loginAudit.map((entry) => (
-                <div key={entry.id} className="dashboard-list-card">
-                  <div className="dashboard-list-main">
-                    <div className="dashboard-list-title">{entry.actorName}</div>
-                    <div className="dashboard-meta">
-                      <span>{entry.email}</span>
-                      <span className={`dashboard-badge ${entry.actorType === 'admin' ? 'dashboard-badge--blue' : 'dashboard-badge--green'}`}>
-                        {entry.actorType.toUpperCase()}
-                      </span>
-                      <span className="dashboard-badge dashboard-badge--amber">{entry.portal.toUpperCase()} PORTAL</span>
-                      {entry.adminRole && (
-                        <span className="dashboard-badge dashboard-badge--muted">{entry.adminRole.toUpperCase()}</span>
+              {groupedLoginAudit.map((group) => {
+                const isExpanded = Boolean(expandedLoginAudit[group.key]);
+
+                return (
+                  <div key={group.key} className="dashboard-list-card">
+                    <div className="dashboard-list-main">
+                      <div className="dashboard-panel-header" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+                        <div>
+                          <div className="dashboard-list-title">{group.actorName}</div>
+                          <div className="dashboard-meta">
+                            <span>{group.email}</span>
+                            <span className={`dashboard-badge ${group.actorType === 'admin' ? 'dashboard-badge--blue' : 'dashboard-badge--green'}`}>
+                              {group.actorType.toUpperCase()}
+                            </span>
+                            <span className="dashboard-badge dashboard-badge--amber">{group.portal.toUpperCase()} PORTAL</span>
+                            {group.adminRole && (
+                              <span className="dashboard-badge dashboard-badge--muted">{group.adminRole.toUpperCase()}</span>
+                            )}
+                            <span>{group.entries.length} login{group.entries.length === 1 ? '' : 's'}</span>
+                            <span>Last: {new Date(group.latestCreatedAtMs).toLocaleString('en-GB')}</span>
+                          </div>
+                          <div className="dashboard-meta" style={{ marginTop: '0.35rem' }}>
+                            <span>Latest IP: {group.latestIpAddress || 'Unavailable'}</span>
+                            <span title={group.latestUserAgent}>Latest browser: {group.latestUserAgent ? group.latestUserAgent.slice(0, 90) : 'Unavailable'}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => toggleLoginAuditGroup(group.key)}
+                          className="dashboard-pill-button dashboard-pill-button--muted"
+                          style={{ flexShrink: 0 }}
+                        >
+                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          {isExpanded ? 'Hide history' : 'View history'}
+                        </button>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="dashboard-audit-history">
+                          {group.entries.map((entry, index) => (
+                            <div key={entry.id} className="dashboard-audit-history-row">
+                              <div className="dashboard-meta" style={{ margin: 0 }}>
+                                <span>{index === 0 ? 'Latest login' : `Previous login ${index}`}</span>
+                                <span>{new Date(entry.createdAtMs).toLocaleString('en-GB')}</span>
+                                <span>IP: {entry.ipAddress || 'Unavailable'}</span>
+                              </div>
+                              <div className="dashboard-meta" style={{ marginTop: '0.25rem' }}>
+                                <span title={entry.userAgent}>Browser: {entry.userAgent || 'Unavailable'}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
-                      <span>{new Date(entry.createdAtMs).toLocaleString('en-GB')}</span>
-                    </div>
-                    <div className="dashboard-meta" style={{ marginTop: '0.35rem' }}>
-                      <span>IP: {entry.ipAddress || 'Unavailable'}</span>
-                      <span title={entry.userAgent}>Browser: {entry.userAgent ? entry.userAgent.slice(0, 90) : 'Unavailable'}</span>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
