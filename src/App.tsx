@@ -467,18 +467,23 @@ const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
 const AppContent: React.FC = () => {
   const location = useLocation();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
+  const showGlobalHeader = location.pathname.startsWith('/admin/dashboard')
+    || location.pathname.startsWith('/admin/drug-builder')
+    || location.pathname.startsWith('/practice/dashboard');
 
   return (
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
-      <header>
-        <div className="header-content">
-          <div className="header-logo-wrap">
-            <img src="/MyMedInfo.jpeg" alt="MyMedInfo" style={{ height: '52px', width: 'auto', display: 'block' }} />
+      {showGlobalHeader && (
+        <header>
+          <div className="header-content">
+            <div className="header-logo-wrap">
+              <img src="/MyMedInfo.jpeg" alt="MyMedInfo" style={{ height: '52px', width: 'auto', display: 'block' }} />
+            </div>
+            <HeaderNav />
           </div>
-          <HeaderNav />
-        </div>
-      </header>
+        </header>
+      )}
 
       <main id="main-content">
         <Routes>
