@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { FlaskConical } from 'lucide-react';
 
@@ -19,6 +20,12 @@ const PracticeLogin: React.FC = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      try {
+        const recordLoginAudit = httpsCallable(functions, 'recordLoginAudit');
+        await recordLoginAudit({ portal: 'practice', userAgent: navigator.userAgent });
+      } catch (auditError) {
+        console.warn('Login audit failed:', auditError);
+      }
       navigate('/practice/dashboard');
     } catch {
       setError('Invalid email or password');

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 
@@ -18,6 +19,12 @@ const AdminLogin: React.FC = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      try {
+        const recordLoginAudit = httpsCallable(functions, 'recordLoginAudit');
+        await recordLoginAudit({ portal: 'admin', userAgent: navigator.userAgent });
+      } catch (auditError) {
+        console.warn('Login audit failed:', auditError);
+      }
       navigate('/admin/dashboard');
     } catch {
       setError('Invalid email or password');
