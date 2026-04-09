@@ -67,6 +67,7 @@ interface LoginAuditGroup {
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup' | 'audit'>('practices');
+  const [auditTab, setAuditTab] = useState<'login' | 'medication'>('login');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -889,6 +890,22 @@ const AdminDashboard: React.FC = () => {
 
       {activeTab === 'audit' && (
       <>
+        <div className="dashboard-tabs" style={{ marginBottom: '1rem' }}>
+          <button
+            className={`dashboard-tab${auditTab === 'login' ? ' dashboard-tab--active' : ''}`}
+            onClick={() => setAuditTab('login')}
+          >
+            Login Audit
+          </button>
+          <button
+            className={`dashboard-tab${auditTab === 'medication' ? ' dashboard-tab--active' : ''}`}
+            onClick={() => setAuditTab('medication')}
+          >
+            Medication Audit
+          </button>
+        </div>
+
+        {auditTab === 'login' && (
         <div className="dashboard-panel dashboard-section">
           <div className="dashboard-panel-header">
             <div>
@@ -971,7 +988,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
+        )}
 
+        {auditTab === 'medication' && (
         <div className="dashboard-panel dashboard-section">
           <div className="dashboard-panel-header">
             <div>
@@ -1028,6 +1047,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
+        )}
       </>
       )}
     </div>
