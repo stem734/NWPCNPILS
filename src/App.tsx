@@ -10,7 +10,6 @@ import PracticeDashboard from './pages/PracticeDashboard';
 import DrugBuilder from './pages/DrugBuilder';
 import Landing from './pages/Landing';
 import Demo from './pages/Demo';
-import HeaderNav from './components/HeaderNav';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { functions } from './firebase';
@@ -467,24 +466,10 @@ const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
 const AppContent: React.FC = () => {
   const location = useLocation();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
-  const showGlobalHeader = location.pathname.startsWith('/admin/dashboard')
-    || location.pathname.startsWith('/admin/drug-builder')
-    || location.pathname.startsWith('/practice/dashboard');
 
   return (
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
-      {showGlobalHeader && (
-        <header>
-          <div className="header-content">
-            <div className="header-logo-wrap">
-              <img src="/MyMedInfo.jpeg" alt="MyMedInfo" style={{ height: '52px', width: 'auto', display: 'block' }} />
-            </div>
-            <HeaderNav />
-          </div>
-        </header>
-      )}
-
       <main id="main-content">
         <Routes>
           <Route path="/" element={<Landing />} />
