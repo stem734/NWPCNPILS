@@ -1232,13 +1232,29 @@ p {
     font-size: 0.875rem;
   }
 
-  .patient-resource-copy {
-    font-size: 0.82rem;
-  }
+.patient-resource-copy {
+  font-size: 0.82rem;
+}
 
-  .patient-empty-grid {
-    grid-template-columns: 1fr;
-  }
+.dashboard-audit-history {
+  margin-top: 1rem;
+  border-top: 1px solid var(--nhs-border);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-audit-history-row {
+  padding: 0.85rem 1rem;
+  background: #f8fafb;
+  border: 1px solid var(--nhs-border);
+  border-radius: 10px;
+}
+
+.patient-empty-grid {
+  grid-template-columns: 1fr;
+}
 
   .sick-days-callout {
     padding: 1rem;
