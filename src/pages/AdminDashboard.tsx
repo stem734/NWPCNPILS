@@ -37,16 +37,32 @@ interface AuditLog {
   new_state: any;
 }
 
+interface LoginAuditEntry {
+  id: string;
+  uid: string;
+  email: string;
+  actorType: 'admin' | 'practice';
+  actorName: string;
+  actorId?: string | null;
+  adminRole?: 'owner' | 'admin' | null;
+  portal: 'admin' | 'practice';
+  userAgent: string;
+  ipAddress: string;
+  createdAtMs: number;
+}
+
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup' | 'audit'>('practices');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [loginAudit, setLoginAudit] = useState<LoginAuditEntry[]>([]);
   const [practiceSearch, setPracticeSearch] = useState('');
   const [practiceStatusFilter, setPracticeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = useState(true);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [loadingAudits, setLoadingAudits] = useState(true);
+  const [loadingLoginAudit, setLoadingLoginAudit] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
@@ -85,6 +101,7 @@ const AdminDashboard: React.FC = () => {
         loadPractices();
         loadAdmins();
         loadAudits();
+        loadLoginAudit();
       } else {
         navigate('/admin');
       }
@@ -131,6 +148,19 @@ const AdminDashboard: React.FC = () => {
       console.error('Error loading audits:', error);
     }
     setLoadingAudits(false);
+  };
+
+  const loadLoginAudit = async () => {
+    setLoadingLoginAudit(true);
+    try {
+      const listLoginAudit = httpsCallable(functions, 'listLoginAudit');
+      const result = await listLoginAudit();
+      const data = result.data as { entries: LoginAuditEntry[] };
+      setLoginAudit(data.entries || []);
+    } catch (error) {
+      console.error('Error loading login audit:', error);
+    }
+    setLoadingLoginAudit(false);
   };
 
   const toggleActive = async (practice: Practice) => {
@@ -796,63 +826,113 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {activeTab === 'audit' && (
-      <div className="dashboard-panel dashboard-section">
-        <div className="dashboard-panel-header">
-          <div>
-            <h2 className="dashboard-panel-title">
-            Medication Audit Log ({auditLogs.length})
-            </h2>
-            <p className="dashboard-panel-subtitle">History of changes to medication cards.</p>
+      <>
+        <div className="dashboard-panel dashboard-section">
+          <div className="dashboard-panel-header">
+            <div>
+              <h2 className="dashboard-panel-title">
+              Recent Login Audit ({loginAudit.length})
+              </h2>
+              <p className="dashboard-panel-subtitle">Successful sign-ins for administrator and practice accounts.</p>
+            </div>
+            <button onClick={loadLoginAudit} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+              <RefreshCw size={16} /> Refresh Logins
+            </button>
           </div>
-          <button onClick={loadAudits} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-            <RefreshCw size={16} /> Refresh
-          </button>
-        </div>
 
-        {loadingAudits ? (
-          <p style={{ color: '#4c6272' }}>Loading audit logs...</p>
-        ) : auditLogs.length === 0 ? (
-          <p style={{ color: '#4c6272' }}>No audit history found.</p>
-        ) : (
-          <div className="dashboard-list">
-            {auditLogs.map((audit) => {
-              const actorEmail = adminUsers.find(a => a.uid === audit.actorUid)?.email || audit.actorUid;
-              const dateObj = new Date(audit.timestampMs);
-              const isDeleted = audit.action === 'deleted';
-              const isCreated = audit.action === 'created';
-              
-              const title = audit.new_state?.title || audit.previous_state?.title || 'Unknown Card';
+          <div className="dashboard-banner dashboard-banner--info" style={{ marginBottom: '1rem' }}>
+            Failed sign-in attempts are not captured here because the password check is handled directly by Firebase Auth.
+          </div>
 
-              return (
-              <div
-                key={audit.id}
-                className="dashboard-list-card"
-              >
-                <div style={{
-                  padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem',
-                  fontWeight: 800, fontFamily: 'monospace', background: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8'), color: 'white',
-                  minWidth: '40px', textAlign: 'center',
-                }}>
-                  {audit.code || '???'}
-                </div>
-                <div className="dashboard-list-main" style={{ marginLeft: '1rem' }}>
-                  <div className="dashboard-list-title">{title}</div>
-                  <div className="dashboard-meta" style={{ marginTop: '0.25rem' }}>
-                    <span style={{ 
-                      fontWeight: 700, 
-                      color: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8')
-                     }}>
-                      {audit.action.toUpperCase()}
-                    </span>
-                    <span>by {actorEmail}</span>
-                    <span>{dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString()}</span>
+          {loadingLoginAudit ? (
+            <p style={{ color: '#4c6272' }}>Loading login audit...</p>
+          ) : loginAudit.length === 0 ? (
+            <p style={{ color: '#4c6272' }}>No successful sign-ins recorded yet.</p>
+          ) : (
+            <div className="dashboard-list" style={{ marginBottom: '1rem' }}>
+              {loginAudit.map((entry) => (
+                <div key={entry.id} className="dashboard-list-card">
+                  <div className="dashboard-list-main">
+                    <div className="dashboard-list-title">{entry.actorName}</div>
+                    <div className="dashboard-meta">
+                      <span>{entry.email}</span>
+                      <span className={`dashboard-badge ${entry.actorType === 'admin' ? 'dashboard-badge--blue' : 'dashboard-badge--green'}`}>
+                        {entry.actorType.toUpperCase()}
+                      </span>
+                      <span className="dashboard-badge dashboard-badge--amber">{entry.portal.toUpperCase()} PORTAL</span>
+                      {entry.adminRole && (
+                        <span className="dashboard-badge dashboard-badge--muted">{entry.adminRole.toUpperCase()}</span>
+                      )}
+                      <span>{new Date(entry.createdAtMs).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="dashboard-meta" style={{ marginTop: '0.35rem' }}>
+                      <span>IP: {entry.ipAddress || 'Unavailable'}</span>
+                      <span title={entry.userAgent}>Browser: {entry.userAgent ? entry.userAgent.slice(0, 90) : 'Unavailable'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )})}
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="dashboard-panel dashboard-section">
+          <div className="dashboard-panel-header">
+            <div>
+              <h2 className="dashboard-panel-title">
+              Medication Audit Log ({auditLogs.length})
+              </h2>
+              <p className="dashboard-panel-subtitle">History of changes to medication cards.</p>
+            </div>
+            <button onClick={loadAudits} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+              <RefreshCw size={16} /> Refresh
+            </button>
           </div>
-        )}
-      </div>
+
+          {loadingAudits ? (
+            <p style={{ color: '#4c6272' }}>Loading audit logs...</p>
+          ) : auditLogs.length === 0 ? (
+            <p style={{ color: '#4c6272' }}>No audit history found.</p>
+          ) : (
+            <div className="dashboard-list">
+              {auditLogs.map((audit) => {
+                const actorEmail = adminUsers.find(a => a.uid === audit.actorUid)?.email || audit.actorUid;
+                const dateObj = new Date(audit.timestampMs);
+                const isDeleted = audit.action === 'deleted';
+                const isCreated = audit.action === 'created';
+                const title = audit.new_state?.title || audit.previous_state?.title || 'Unknown Card';
+
+                return (
+                <div
+                  key={audit.id}
+                  className="dashboard-list-card"
+                >
+                  <div style={{
+                    padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem',
+                    fontWeight: 800, fontFamily: 'monospace', background: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8'), color: 'white',
+                    minWidth: '40px', textAlign: 'center',
+                  }}>
+                    {audit.code || '???'}
+                  </div>
+                  <div className="dashboard-list-main" style={{ marginLeft: '1rem' }}>
+                    <div className="dashboard-list-title">{title}</div>
+                    <div className="dashboard-meta" style={{ marginTop: '0.25rem' }}>
+                      <span style={{
+                        fontWeight: 700,
+                        color: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8')
+                      }}>
+                        {audit.action.toUpperCase()}
+                      </span>
+                      <span>by {actorEmail}</span>
+                      <span>{dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )})}
+            </div>
+          )}
+        </div>
+      </>
       )}
     </div>
     </>

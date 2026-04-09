@@ -59,6 +59,19 @@ type AdminRecord = {
   updated_at: Timestamp;
 };
 
+type LoginAuditRecord = {
+  uid: string;
+  email: string;
+  actorType: 'admin' | 'practice';
+  actorName: string;
+  actorId?: string;
+  adminRole?: 'owner' | 'admin';
+  portal: 'admin' | 'practice';
+  userAgent: string;
+  ipAddress: string;
+  created_at: Timestamp;
+};
+
 const medicationGenerationSchema: ResponseSchema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -270,6 +283,19 @@ const sendAdminPasswordResetEmail = async ({
       </div>
     `,
   });
+};
+
+const getClientIp = (request: {
+  rawRequest?: { headers?: Record<string, string | string[] | undefined>; ip?: string };
+}) => {
+  const forwarded = request.rawRequest?.headers?.['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return forwarded[0].split(',')[0].trim();
+  }
+  return request.rawRequest?.ip || '';
 };
 
 /**
@@ -685,6 +711,96 @@ export const updatePracticeMedications = onCall(
       throw new HttpsError('internal', 'Unable to update medications');
     }
   }
+);
+
+export const recordLoginAudit = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ success: boolean }> => {
+    if (!request.auth?.uid) {
+      throw new HttpsError('unauthenticated', 'Must be logged in');
+    }
+
+    const { portal, userAgent } = request.data as {
+      portal?: 'admin' | 'practice';
+      userAgent?: string;
+    };
+
+    const adminDoc = await db.collection('admins').doc(request.auth.uid).get();
+    let auditRecord: LoginAuditRecord | null = null;
+
+    if (adminDoc.exists) {
+      const adminData = adminDoc.data() as AdminRecord;
+      auditRecord = {
+        uid: request.auth.uid,
+        email: adminData.email,
+        actorType: 'admin',
+        actorName: adminData.name || adminData.email,
+        adminRole: adminData.role,
+        portal: portal === 'practice' ? 'practice' : 'admin',
+        userAgent: typeof userAgent === 'string' ? userAgent.slice(0, 500) : '',
+        ipAddress: getClientIp(request),
+        created_at: Timestamp.now(),
+      };
+    } else {
+      const practiceSnapshot = await db.collection('practices')
+        .where('auth_uid', '==', request.auth.uid)
+        .limit(1)
+        .get();
+
+      if (practiceSnapshot.empty) {
+        throw new HttpsError('not-found', 'No linked account found for login audit');
+      }
+
+      const practiceDoc = practiceSnapshot.docs[0];
+      const practiceData = practiceDoc.data();
+
+      auditRecord = {
+        uid: request.auth.uid,
+        email: typeof practiceData.contact_email === 'string' ? practiceData.contact_email : request.auth.token?.email || '',
+        actorType: 'practice',
+        actorName: typeof practiceData.name === 'string' ? practiceData.name : 'Practice user',
+        actorId: practiceDoc.id,
+        portal: 'practice',
+        userAgent: typeof userAgent === 'string' ? userAgent.slice(0, 500) : '',
+        ipAddress: getClientIp(request),
+        created_at: Timestamp.now(),
+      };
+    }
+
+    await db.collection('login_audit').add(auditRecord);
+    return { success: true };
+  },
+);
+
+export const listLoginAudit = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ entries: Array<Record<string, unknown>> }> => {
+    await assertAdmin(request);
+
+    const snapshot = await db.collection('login_audit')
+      .orderBy('created_at', 'desc')
+      .limit(100)
+      .get();
+
+    const entries = snapshot.docs.map((doc) => {
+      const data = doc.data() as LoginAuditRecord;
+      return {
+        id: doc.id,
+        uid: data.uid,
+        email: data.email,
+        actorType: data.actorType,
+        actorName: data.actorName,
+        actorId: data.actorId || null,
+        adminRole: data.adminRole || null,
+        portal: data.portal,
+        userAgent: data.userAgent || '',
+        ipAddress: data.ipAddress || '',
+        createdAtMs: data.created_at.toMillis(),
+      };
+    });
+
+    return { entries };
+  },
 );
 
 /**
