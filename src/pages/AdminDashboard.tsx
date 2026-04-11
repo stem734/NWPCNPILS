@@ -17,6 +17,8 @@ interface Practice {
   signed_up_at?: Timestamp;
   last_accessed?: Timestamp;
   link_visit_count?: number;
+  patient_rating_count?: number;
+  patient_rating_total?: number;
 }
 
 interface AdminUser {
@@ -249,6 +251,25 @@ const AdminDashboard: React.FC = () => {
           loadPractices();
         } catch (error) {
           console.error('Error deleting practice:', error);
+        }
+        setConfirmDialog(null);
+      },
+    });
+  };
+
+  const resetPracticeCounters = (practice: Practice) => {
+    setConfirmDialog({
+      title: 'Reset Practice Counters',
+      message: `Reset patient link usage and satisfaction scores for "${practice.name}"? This will clear usage count, rating count, rating total, and last accessed date.`,
+      confirmLabel: 'Reset Counters',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          const resetCounters = httpsCallable(functions, 'resetPracticeCounters');
+          await resetCounters({ practiceId: practice.id });
+          loadPractices();
+        } catch (error) {
+          console.error('Error resetting counters:', error);
         }
         setConfirmDialog(null);
       },
@@ -836,6 +857,11 @@ const AdminDashboard: React.FC = () => {
                     {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
                     {practice.contact_email && <span>{practice.contact_email}</span>}
                     <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
+                    <span>
+                      Satisfaction: {practice.patient_rating_count && practice.patient_rating_count > 0
+                        ? `${((practice.patient_rating_total ?? 0) / practice.patient_rating_count).toFixed(1)}/5 (${practice.patient_rating_count})`
+                        : 'No ratings'}
+                    </span>
                     {practice.last_accessed && (
                       <span>Last active: {practice.last_accessed.toDate?.().toLocaleDateString() || 'N/A'}</span>
                     )}
@@ -856,6 +882,9 @@ const AdminDashboard: React.FC = () => {
                   </button>
                   <button onClick={() => toggleActive(practice)} className={`dashboard-pill-button ${practice.is_active ? 'dashboard-pill-button--danger' : 'dashboard-pill-button--success'}`}>
                     {practice.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button onClick={() => resetPracticeCounters(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
+                    <RefreshCw size={14} /> Reset Counters
                   </button>
                   <button onClick={() => deletePractice(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
                     <Trash2 size={16} />

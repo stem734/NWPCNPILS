@@ -466,6 +466,33 @@ export const createPracticeUser = onCall(
   }
 );
 
+export const resetPracticeCounters = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ success: boolean }> => {
+    await assertAdmin(request);
+
+    const { practiceId } = request.data as { practiceId?: string };
+    if (!practiceId || typeof practiceId !== 'string') {
+      throw new HttpsError('invalid-argument', 'practiceId is required');
+    }
+
+    try {
+      await db.collection('practices').doc(practiceId).update({
+        link_visit_count: 0,
+        patient_rating_count: 0,
+        patient_rating_total: 0,
+        last_accessed: null,
+        updated_at: Timestamp.now(),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error resetting practice counters:', error);
+      throw new HttpsError('internal', 'Unable to reset practice counters');
+    }
+  },
+);
+
 export const listAdminUsers = onCall(
   { region: 'europe-west2' },
   async (request): Promise<{ admins: Array<Record<string, unknown>> }> => {
