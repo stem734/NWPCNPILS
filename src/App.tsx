@@ -58,7 +58,28 @@ const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
   const orgParam = searchParams.get('org');
+  const forenameParam = searchParams.get('forename') || searchParams.get('first_name') || searchParams.get('firstname');
+  const nhsNumberParam = searchParams.get('nhs_number') || searchParams.get('nhsNumber') || searchParams.get('nhs');
   const codesParam = searchParams.get('codes');
+  const unnamedValues = useMemo(() => {
+    const values: string[] = [];
+
+    searchParams.forEach((value, key) => {
+      if (key === 'org' || key === 'code' || key === 'med' || key === 'codes' || key === 'forename' || key === 'first_name' || key === 'firstname' || key === 'nhs_number' || key === 'nhsNumber' || key === 'nhs') {
+        return;
+      }
+
+      if (value === '') {
+        values.push(key);
+      }
+    });
+
+    return values;
+  }, [searchParams]);
+  const fallbackForename = unnamedValues[0];
+  const fallbackNhsNumber = unnamedValues[1];
+  const forename = (forenameParam || fallbackForename || '').trim();
+  const nhsNumber = (nhsNumberParam || fallbackNhsNumber || '').trim();
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -192,6 +213,14 @@ const ResourceView: React.FC = () => {
     );
   }, [contents]);
 
+  const patientGreeting = useMemo(() => {
+    const namePart = forename ? `Hi ${forename}` : 'Hi';
+    const nhsPart = nhsNumber ? ` (NHS No: ${nhsNumber})` : '';
+    const orgPart = orgParam ? `${orgParam} has shared the information below about your medication.` : 'has shared the information below about your medication.';
+
+    return `${namePart}${nhsPart} ${orgPart}`;
+  }, [forename, nhsNumber, orgParam]);
+
   // Show loading while validating
   if (isValidating && orgParam) {
     return (
@@ -244,16 +273,12 @@ const ResourceView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view">
-      {contents.length > 1 && (
-        <div className="patient-summary patient-summary-card" role="alert" aria-live="polite">
-          <div className="patient-summary-icon">
-            <Info size={20} aria-hidden="true" />
-          </div>
-          <p className="patient-summary-text">
-            Your GP has shared {contents.length} medication guide{contents.length !== 1 ? 's' : ''} with you.
-          </p>
+      <div className="patient-greeting-card" role="status" aria-live="polite">
+        <div className="patient-greeting-icon">
+          <Info size={20} aria-hidden="true" />
         </div>
-      )}
+        <p className="patient-greeting-text">{patientGreeting}</p>
+      </div>
 
       {groupedContents.map(([badge, items]) => (
         <section key={badge} className="patient-section">

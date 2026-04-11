@@ -236,6 +236,33 @@ p {
   width: 100%;
 }
 
+.patient-greeting-card {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #eef7ff;
+  border-radius: 12px;
+  border: 1px solid #005eb8;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.patient-greeting-icon {
+  background: #005eb8;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 999px;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.patient-greeting-text {
+  margin: 0;
+  font-weight: 600;
+  color: #005eb8;
+  font-size: 1.1rem;
+}
+
 .patient-summary-card {
   margin-bottom: 2rem;
   padding: 1.25rem;
@@ -1157,6 +1184,12 @@ p {
     align-items: flex-start;
   }
 
+  .patient-greeting-card {
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
   .patient-summary-card {
     gap: 0.75rem;
     padding: 1rem;
@@ -1168,6 +1201,10 @@ p {
   }
 
   .patient-summary-text {
+    font-size: 1rem;
+  }
+
+  .patient-greeting-text {
     font-size: 1rem;
   }
 
