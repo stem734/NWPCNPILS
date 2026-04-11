@@ -328,11 +328,6 @@ export const validatePractice = onCall(
         return { valid: false, error: 'Practice subscription is inactive' };
       }
 
-      await practiceDoc.ref.update({
-        last_accessed: Timestamp.now(),
-        link_visit_count: FieldValue.increment(1),
-      });
-
       return { valid: true };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
@@ -340,6 +335,45 @@ export const validatePractice = onCall(
       throw new HttpsError('internal', 'Unable to validate practice');
     }
   }
+);
+
+export const recordPatientAccess = onCall(
+  { region: 'europe-west2', maxInstances: 100 },
+  async (request): Promise<{ success: boolean }> => {
+    const { orgName } = request.data as { orgName: string };
+
+    if (!orgName || typeof orgName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Organisation name is required');
+    }
+
+    try {
+      const snapshot = await db.collection('practices')
+        .where('name_lowercase', '==', orgName.toLowerCase().trim())
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return { success: false };
+      }
+
+      const practiceDoc = snapshot.docs[0];
+      const practice = practiceDoc.data();
+
+      if (!practice.is_active) {
+        return { success: false };
+      }
+
+      await practiceDoc.ref.update({
+        last_accessed: Timestamp.now(),
+        link_visit_count: FieldValue.increment(1),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error recording patient access:', error);
+      throw new HttpsError('internal', 'Unable to record patient access');
+    }
+  },
 );
 
 /**

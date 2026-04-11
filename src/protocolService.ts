@@ -28,6 +28,17 @@ export async function validateOrganisation(orgName: string): Promise<{ valid: bo
   }
 }
 
+export async function recordPatientAccess(orgName: string): Promise<void> {
+  if (!orgName.trim()) return;
+
+  try {
+    const recordFunc = httpsCallable(functions, 'recordPatientAccess');
+    await recordFunc({ orgName });
+  } catch (error) {
+    console.error('Patient access logging error:', error);
+  }
+}
+
 /**
  * Parse medication codes from the codes parameter
  * Accepts: "101,102" or "101,202,301"

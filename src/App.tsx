@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle, Star } from 'lucide-react';
-import { validateOrganisation } from './protocolService';
+import { recordPatientAccess, validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import PracticeSignup from './pages/PracticeSignup';
@@ -64,6 +64,7 @@ const ResourceView: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const { medicationMap: allMeds } = useMedicationCatalog();
+  const loggedAccessKeyRef = useRef<string | null>(null);
 
   const [rating, setRating] = useState<number>(0);
   const [hasRated, setHasRated] = useState<boolean>(false);
@@ -140,6 +141,21 @@ const ResourceView: React.FC = () => {
       window.clearTimeout(loadingTimer);
     };
   }, [orgParam]);
+
+  useEffect(() => {
+    if (!orgParam || isAuthorised !== true) {
+      loggedAccessKeyRef.current = null;
+      return;
+    }
+
+    const accessKey = `${orgParam.trim().toLowerCase()}|${codesParam || rawCode || ''}`;
+    if (loggedAccessKeyRef.current === accessKey) {
+      return;
+    }
+
+    loggedAccessKeyRef.current = accessKey;
+    void recordPatientAccess(orgParam);
+  }, [codesParam, isAuthorised, orgParam, rawCode]);
 
   const contents = useMemo(() => {
     // If org param present, must be validated first
