@@ -214,11 +214,11 @@ const ResourceView: React.FC = () => {
   }, [contents]);
 
   const patientGreeting = useMemo(() => {
-    const namePart = forename ? `Hi ${forename}` : 'Hi';
-    const nhsPart = nhsNumber ? ` (NHS No: ${nhsNumber})` : '';
+    const namePart = forename ? `Hi ${forename},` : 'Hi,';
     const orgPart = orgParam ? `${orgParam} has shared the information below about your medication.` : 'has shared the information below about your medication.';
+    const nhsPart = nhsNumber ? ` If you need it your NHS Number is ${nhsNumber}.` : '';
 
-    return `${namePart}${nhsPart} ${orgPart}`;
+    return `${namePart} ${orgPart}${nhsPart}`;
   }, [forename, nhsNumber, orgParam]);
 
   // Show loading while validating
