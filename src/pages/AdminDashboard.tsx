@@ -276,6 +276,16 @@ const AdminDashboard: React.FC = () => {
     });
   };
 
+  const getPracticeSatisfaction = (practice: Practice) => {
+    const count = practice.patient_rating_count ?? 0;
+    const total = practice.patient_rating_total ?? 0;
+    if (count <= 0) {
+      return 'No ratings';
+    }
+
+    return `${(total / count).toFixed(1)}/5 (${count})`;
+  };
+
   const addPractice = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError('');
@@ -857,11 +867,7 @@ const AdminDashboard: React.FC = () => {
                     {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
                     {practice.contact_email && <span>{practice.contact_email}</span>}
                     <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
-                    <span>
-                      Satisfaction: {practice.patient_rating_count && practice.patient_rating_count > 0
-                        ? `${((practice.patient_rating_total ?? 0) / practice.patient_rating_count).toFixed(1)}/5 (${practice.patient_rating_count})`
-                        : 'No ratings'}
-                    </span>
+                    <span>Satisfaction: {getPracticeSatisfaction(practice)}</span>
                     {practice.last_accessed && (
                       <span>Last active: {practice.last_accessed.toDate?.().toLocaleDateString() || 'N/A'}</span>
                     )}
