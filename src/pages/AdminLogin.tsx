@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { browserLocalPersistence, setPersistence, signInWithEmailAndPassword } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ const AdminLogin: React.FC = () => {
     setLoading(true);
 
     try {
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, email, password);
       try {
         const recordLoginAudit = httpsCallable(functions, 'recordLoginAudit');

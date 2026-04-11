@@ -526,7 +526,7 @@ const AppContent: React.FC = () => {
       </main>
 
       <footer className="footer">
-        <p>© {new Date().getFullYear()} Nottingham West Primary Care Network - MyMedInfo</p>
+        <p>© {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo</p>
         <p>
           This information is for guidance only. Always follow the specific advice from your GP or clinical team.
         </p>
