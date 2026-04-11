@@ -214,25 +214,11 @@ const ResourceView: React.FC = () => {
   }, [contents]);
 
   const patientGreeting = useMemo(() => {
-    const parts: string[] = [];
+    const namePart = forename ? `Hi ${forename}` : 'Hi';
+    const nhsPart = nhsNumber ? ` (NHS No: ${nhsNumber})` : '';
+    const orgPart = orgParam ? `${orgParam} has shared the information below about your medication.` : 'has shared the information below about your medication.';
 
-    if (forename) {
-      parts.push(`Hi ${forename}`);
-    } else {
-      parts.push('Hi');
-    }
-
-    if (nhsNumber) {
-      parts[parts.length - 1] += ` (${nhsNumber})`;
-    }
-
-    if (orgParam) {
-      parts.push(`${orgParam} has shared the information below about your medication.`);
-    } else {
-      parts.push('has shared the information below about your medication.');
-    }
-
-    return parts.join(' ');
+    return `${namePart}${nhsPart} ${orgPart}`;
   }, [forename, nhsNumber, orgParam]);
 
   // Show loading while validating
@@ -293,17 +279,6 @@ const ResourceView: React.FC = () => {
         </div>
         <p className="patient-greeting-text">{patientGreeting}</p>
       </div>
-
-      {contents.length > 1 && (
-        <div className="patient-summary patient-summary-card" role="alert" aria-live="polite">
-          <div className="patient-summary-icon">
-            <Info size={20} aria-hidden="true" />
-          </div>
-          <p className="patient-summary-text">
-            Your GP has shared {contents.length} medication guide{contents.length !== 1 ? 's' : ''} with you.
-          </p>
-        </div>
-      )}
 
       {groupedContents.map(([badge, items]) => (
         <section key={badge} className="patient-section">
