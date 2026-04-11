@@ -58,7 +58,28 @@ const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
   const orgParam = searchParams.get('org');
+  const forenameParam = searchParams.get('forename') || searchParams.get('first_name') || searchParams.get('firstname');
+  const nhsNumberParam = searchParams.get('nhs_number') || searchParams.get('nhsNumber') || searchParams.get('nhs');
   const codesParam = searchParams.get('codes');
+  const unnamedValues = useMemo(() => {
+    const values: string[] = [];
+
+    searchParams.forEach((value, key) => {
+      if (key === 'org' || key === 'code' || key === 'med' || key === 'codes' || key === 'forename' || key === 'first_name' || key === 'firstname' || key === 'nhs_number' || key === 'nhsNumber' || key === 'nhs') {
+        return;
+      }
+
+      if (value === '') {
+        values.push(key);
+      }
+    });
+
+    return values;
+  }, [searchParams]);
+  const fallbackForename = unnamedValues[0];
+  const fallbackNhsNumber = unnamedValues[1];
+  const forename = (forenameParam || fallbackForename || '').trim();
+  const nhsNumber = (nhsNumberParam || fallbackNhsNumber || '').trim();
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -192,6 +213,28 @@ const ResourceView: React.FC = () => {
     );
   }, [contents]);
 
+  const patientGreeting = useMemo(() => {
+    const parts: string[] = [];
+
+    if (forename) {
+      parts.push(`Hi ${forename}`);
+    } else {
+      parts.push('Hi');
+    }
+
+    if (nhsNumber) {
+      parts[parts.length - 1] += ` (${nhsNumber})`;
+    }
+
+    if (orgParam) {
+      parts.push(`${orgParam} has shared the information below about your medication.`);
+    } else {
+      parts.push('has shared the information below about your medication.');
+    }
+
+    return parts.join(' ');
+  }, [forename, nhsNumber, orgParam]);
+
   // Show loading while validating
   if (isValidating && orgParam) {
     return (
@@ -244,6 +287,13 @@ const ResourceView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view">
+      <div className="patient-greeting-card" role="status" aria-live="polite">
+        <div className="patient-greeting-icon">
+          <Info size={20} aria-hidden="true" />
+        </div>
+        <p className="patient-greeting-text">{patientGreeting}</p>
+      </div>
+
       {contents.length > 1 && (
         <div className="patient-summary patient-summary-card" role="alert" aria-live="polite">
           <div className="patient-summary-icon">
