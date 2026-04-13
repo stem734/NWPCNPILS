@@ -101,10 +101,10 @@ const ResourceView: React.FC = () => {
     const issuedDate = new Date(dateToParse);
     if (isNaN(issuedDate.getTime())) return false;
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    return issuedDate < thirtyDaysAgo;
+    return issuedDate < sixMonthsAgo;
   }, [dateParam]);
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
@@ -309,7 +309,7 @@ const ResourceView: React.FC = () => {
       {isOutOfDate && (
         <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
           <AlertCircle size={20} style={{ flexShrink: 0 }} />
-          <span>This information was issued over 30 days ago and may be out of date. Please contact your GP practice if you have any concerns.</span>
+          <span>This information was issued over 6 months ago and may be out of date. Please contact your GP practice if you have any concerns.</span>
         </div>
       )}
 
