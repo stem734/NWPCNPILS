@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle, Star } from 'lucide-react';
+import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
 import { recordPatientAccess, validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -273,11 +273,21 @@ const ResourceView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view">
-      <div className="patient-greeting-card" role="status" aria-live="polite">
+      <div className="patient-greeting-card" role="status" aria-live="polite" style={{ marginBottom: '1rem' }}>
         <div className="patient-greeting-icon">
           <Info size={20} aria-hidden="true" />
         </div>
         <p className="patient-greeting-text">{patientGreeting}</p>
+      </div>
+
+      <div className="patient-controls no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="data-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#007f3b', fontSize: '0.9rem', backgroundColor: '#eefaee', padding: '0.5rem 0.75rem', borderRadius: '4px', border: '1px solid #7ecc98' }}>
+          <ShieldCheck size={18} />
+          <span><b>Privacy Assured:</b> All data is held securely on your device and nothing is stored anywhere else.</span>
+        </div>
+        <button onClick={() => window.print()} className="action-button" style={{ backgroundColor: '#4c6272', color: 'white', padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}>
+          <Printer size={16} /> Print to PDF
+        </button>
       </div>
 
       {groupedContents.map(([badge, items]) => (

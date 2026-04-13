@@ -1315,3 +1315,39 @@ p {
     right: 16px;
   }
 }
+
+@media print {
+  body {
+    background-color: white !important;
+  }
+  .app-container {
+    background-color: white !important;
+  }
+  .patient-view {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .patient-greeting-card, .patient-summary-card {
+    border: 1px solid #d8dde0 !important;
+    background: transparent !important;
+    page-break-inside: avoid;
+  }
+  .card, .patient-view .card {
+    border: 1px solid #d8dde0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .patient-group-heading {
+    border: 1px solid #d8dde0 !important;
+    background: transparent !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .no-print {
+    display: none !important;
+  }
+  header, .footer, .demo-fab {
+    display: none !important;
+  }
+}
