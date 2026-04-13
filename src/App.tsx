@@ -61,11 +61,12 @@ const ResourceView: React.FC = () => {
   const forenameParam = searchParams.get('forename') || searchParams.get('first_name') || searchParams.get('firstname');
   const nhsNumberParam = searchParams.get('nhs_number') || searchParams.get('nhsNumber') || searchParams.get('nhs');
   const codesParam = searchParams.get('codes');
+  const dateParam = searchParams.get('date');
   const unnamedValues = useMemo(() => {
     const values: string[] = [];
 
     searchParams.forEach((value, key) => {
-      if (key === 'org' || key === 'code' || key === 'med' || key === 'codes' || key === 'forename' || key === 'first_name' || key === 'firstname' || key === 'nhs_number' || key === 'nhsNumber' || key === 'nhs') {
+      if (key === 'org' || key === 'code' || key === 'med' || key === 'codes' || key === 'forename' || key === 'first_name' || key === 'firstname' || key === 'nhs_number' || key === 'nhsNumber' || key === 'nhs' || key === 'date') {
         return;
       }
 
@@ -80,6 +81,31 @@ const ResourceView: React.FC = () => {
   const fallbackNhsNumber = unnamedValues[1];
   const forename = (forenameParam || fallbackForename || '').trim();
   const nhsNumber = (nhsNumberParam || fallbackNhsNumber || '').trim();
+
+  const isOutOfDate = useMemo(() => {
+    if (!dateParam) return false;
+    
+    // SystmOne often uses DD/MM/YYYY or YYYY-MM-DD
+    // If it's DD/MM/YYYY, new Date() might fail on some browsers depending on locale
+    let dateToParse = dateParam;
+    if (dateParam.includes('/')) {
+      const parts = dateParam.split('/');
+      if (parts.length === 3) {
+        // Assume DD/MM/YYYY -> MM/DD/YYYY for Date constructor safety or use YYYY-MM-DD
+        if (parts[2].length === 4) {
+          dateToParse = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+    }
+
+    const issuedDate = new Date(dateToParse);
+    if (isNaN(issuedDate.getTime())) return false;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    return issuedDate < thirtyDaysAgo;
+  }, [dateParam]);
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -280,10 +306,17 @@ const ResourceView: React.FC = () => {
         <p className="patient-greeting-text">{patientGreeting}</p>
       </div>
 
+      {isOutOfDate && (
+        <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+          <AlertCircle size={20} style={{ flexShrink: 0 }} />
+          <span>This information was issued over 30 days ago and may be out of date. Please contact your GP practice if you have any concerns.</span>
+        </div>
+      )}
+
       <div className="patient-controls no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div className="data-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#007f3b', fontSize: '0.9rem', backgroundColor: '#eefaee', padding: '0.5rem 0.75rem', borderRadius: '4px', border: '1px solid #7ecc98' }}>
-          <ShieldCheck size={18} />
-          <span><b>Privacy Assured:</b> All data is held securely on your device and nothing is stored anywhere else.</span>
+        <div className="data-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#005eb8', fontSize: '0.9rem', backgroundColor: '#eef7ff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #005eb8', lineHeight: '1.4' }}>
+          <ShieldCheck size={20} style={{ flexShrink: 0 }} />
+          <span>This information has been sent to you directly from your GP practice. All information is stored on this device only. If you clear your browser this information will be removed.</span>
         </div>
         <button onClick={() => window.print()} className="action-button" style={{ backgroundColor: '#4c6272', color: 'white', padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}>
           <Printer size={16} /> Print to PDF
