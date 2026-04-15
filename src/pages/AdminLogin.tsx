@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { browserLocalPersistence, setPersistence, signInWithEmailAndPassword } from 'firebase/auth';
-import { httpsCallable } from 'firebase/functions';
-import { auth, functions } from '../firebase';
+import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 
@@ -18,11 +16,13 @@ const AdminLogin: React.FC = () => {
     setLoading(true);
 
     try {
-      await setPersistence(auth, browserLocalPersistence);
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
       try {
-        const recordLoginAudit = httpsCallable(functions, 'recordLoginAudit');
-        await recordLoginAudit({ portal: 'admin', userAgent: navigator.userAgent });
+        await supabase.functions.invoke('record-login-audit', {
+          body: { portal: 'admin', userAgent: navigator.userAgent },
+        });
       } catch (auditError) {
         console.warn('Login audit failed:', auditError);
       }

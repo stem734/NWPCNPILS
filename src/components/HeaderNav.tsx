@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
+import { supabase } from '../supabase';
 import { LogOut, Home, FlaskConical, Settings } from 'lucide-react';
 
 type UserRole = 'admin' | 'practice' | null;
@@ -12,8 +11,8 @@ const HeaderNav: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
         // Determine role based on current path
         const path = location.pathname;
         if (path.startsWith('/admin')) {
@@ -28,7 +27,7 @@ const HeaderNav: React.FC = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, [location.pathname]);
 
   if (!userRole) {
@@ -36,7 +35,7 @@ const HeaderNav: React.FC = () => {
   }
 
   const handleSignOut = async () => {
-    await auth.signOut();
+    await supabase.auth.signOut();
     setUserRole(null);
     navigate('/');
   };

@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { browserLocalPersistence, setPersistence, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { httpsCallable } from 'firebase/functions';
-import { auth, functions } from '../firebase';
+import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { FlaskConical } from 'lucide-react';
 
@@ -19,11 +17,13 @@ const PracticeLogin: React.FC = () => {
     setLoading(true);
 
     try {
-      await setPersistence(auth, browserLocalPersistence);
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
       try {
-        const recordLoginAudit = httpsCallable(functions, 'recordLoginAudit');
-        await recordLoginAudit({ portal: 'practice', userAgent: navigator.userAgent });
+        await supabase.functions.invoke('record-login-audit', {
+          body: { portal: 'practice', userAgent: navigator.userAgent },
+        });
       } catch (auditError) {
         console.warn('Login audit failed:', auditError);
       }
@@ -40,7 +40,8 @@ const PracticeLogin: React.FC = () => {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+      if (resetError) throw resetError;
       setResetSent(true);
       setError('');
     } catch {

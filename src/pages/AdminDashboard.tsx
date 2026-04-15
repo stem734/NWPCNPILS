@@ -1,8 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, Timestamp } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { auth, db, functions } from '../firebase';
+import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -14,8 +11,8 @@ interface Practice {
   is_active: boolean;
   ods_code?: string;
   contact_email?: string;
-  signed_up_at?: Timestamp;
-  last_accessed?: Timestamp;
+  signed_up_at?: string;
+  last_accessed?: string;
   link_visit_count?: number;
   patient_rating_count?: number;
   patient_rating_total?: number;
@@ -113,8 +110,8 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
         setAuthenticated(true);
         loadPractices();
         loadAdmins();
@@ -124,18 +121,18 @@ const AdminDashboard: React.FC = () => {
         navigate('/admin');
       }
     });
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const loadPractices = async () => {
     setLoading(true);
     try {
-      const snapshot = await getDocs(collection(db, 'practices'));
-      const practiceList: Practice[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-      } as Practice));
-      setPractices(practiceList.sort((a, b) => a.name.localeCompare(b.name)));
+      const { data, error } = await supabase
+        .from('practices')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      setPractices((data || []) as Practice[]);
     } catch (error) {
       console.error('Error loading practices:', error);
     }
@@ -145,10 +142,13 @@ const AdminDashboard: React.FC = () => {
   const loadAdmins = async () => {
     setLoadingAdmins(true);
     try {
-      const listAdmins = httpsCallable(functions, 'listAdminUsers');
-      const result = await listAdmins();
-      const data = result.data as { admins: AdminUser[] };
-      setAdminUsers((data.admins || []).sort((a, b) => a.email.localeCompare(b.email)));
+      const { data, error } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('is_active', true)
+        .order('email');
+      if (error) throw error;
+      setAdminUsers((data || []) as AdminUser[]);
     } catch (error) {
       console.error('Error loading admins:', error);
     }
@@ -158,10 +158,22 @@ const AdminDashboard: React.FC = () => {
   const loadAudits = async () => {
     setLoadingAudits(true);
     try {
-      const listAudits = httpsCallable(functions, 'listMedicationAudits');
-      const result = await listAudits();
-      const data = result.data as { audits: AuditLog[] };
-      setAuditLogs(data.audits || []);
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const audits: AuditLog[] = (data || []).map((row) => ({
+        id: row.id,
+        action: row.action,
+        actorUid: row.actor_uid,
+        code: row.code,
+        timestampMs: new Date(row.timestamp).getTime(),
+        previous_state: row.previous_state,
+        new_state: row.new_state,
+      }));
+      setAuditLogs(audits);
     } catch (error) {
       console.error('Error loading audits:', error);
     }
@@ -171,10 +183,26 @@ const AdminDashboard: React.FC = () => {
   const loadLoginAudit = async () => {
     setLoadingLoginAudit(true);
     try {
-      const listLoginAudit = httpsCallable(functions, 'listLoginAudit');
-      const result = await listLoginAudit();
-      const data = result.data as { entries: LoginAuditEntry[] };
-      setLoginAudit(data.entries || []);
+      const { data, error } = await supabase
+        .from('login_audit')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const entries: LoginAuditEntry[] = (data || []).map((row) => ({
+        id: row.id,
+        uid: row.uid,
+        email: row.email,
+        actorType: row.actor_type,
+        actorName: row.actor_name,
+        actorId: row.actor_id,
+        adminRole: row.admin_role,
+        portal: row.portal,
+        userAgent: row.user_agent || '',
+        ipAddress: row.ip_address || '',
+        createdAtMs: new Date(row.created_at).getTime(),
+      }));
+      setLoginAudit(entries);
     } catch (error) {
       console.error('Error loading login audit:', error);
     }
@@ -230,9 +258,10 @@ const AdminDashboard: React.FC = () => {
 
   const toggleActive = async (practice: Practice) => {
     try {
-      await updateDoc(doc(db, 'practices', practice.id), {
-        is_active: !practice.is_active,
-      });
+      await supabase
+        .from('practices')
+        .update({ is_active: !practice.is_active })
+        .eq('id', practice.id);
       loadPractices();
     } catch (error) {
       console.error('Error updating practice:', error);
@@ -247,7 +276,7 @@ const AdminDashboard: React.FC = () => {
       isDangerous: true,
       onConfirm: async () => {
         try {
-          await deleteDoc(doc(db, 'practices', practice.id));
+          await supabase.from('practices').delete().eq('id', practice.id);
           loadPractices();
         } catch (error) {
           console.error('Error deleting practice:', error);
@@ -265,8 +294,13 @@ const AdminDashboard: React.FC = () => {
       isDangerous: true,
       onConfirm: async () => {
         try {
-          const resetCounters = httpsCallable(functions, 'resetPracticeCounters');
-          await resetCounters({ practiceId: practice.id });
+          await supabase.from('practices').update({
+            link_visit_count: 0,
+            patient_rating_count: 0,
+            patient_rating_total: 0,
+            last_accessed: null,
+            updated_at: new Date().toISOString(),
+          }).eq('id', practice.id);
           loadPractices();
         } catch (error) {
           console.error('Error resetting counters:', error);
@@ -308,21 +342,27 @@ const AdminDashboard: React.FC = () => {
 
     try {
       // 1. Create the practice document
-      const docRef = await addDoc(collection(db, 'practices'), {
-        name: newName.trim(),
-        name_lowercase: newName.trim().toLowerCase(),
-        ods_code: newOds.trim().toUpperCase(),
-        contact_email: newEmail.trim(),
-        is_active: true,
-        link_visit_count: 0,
-        selected_medications: [],
-        signed_up_at: Timestamp.now(),
-      });
+      const { data: insertedPractice, error: insertError } = await supabase
+        .from('practices')
+        .insert({
+          name: newName.trim(),
+          name_lowercase: newName.trim().toLowerCase(),
+          ods_code: newOds.trim().toUpperCase(),
+          contact_email: newEmail.trim(),
+          is_active: true,
+          link_visit_count: 0,
+          selected_medications: [],
+        })
+        .select('id')
+        .single();
 
-      // 2. Create Firebase Auth account for the practice via Cloud Function
+      if (insertError) throw insertError;
+
+      // 2. Create auth account for the practice via Edge Function
       try {
-        const createUser = httpsCallable(functions, 'createPracticeUser');
-        await createUser({ email: newEmail.trim(), practiceId: docRef.id });
+        await supabase.functions.invoke('create-practice-user', {
+          body: { email: newEmail.trim(), practiceId: insertedPractice.id },
+        });
       } catch (authErr) {
         console.warn('Auth account creation failed (practice still added):', authErr);
       }
@@ -363,12 +403,12 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      await updateDoc(doc(db, 'practices', editingPractice.id), {
+      await supabase.from('practices').update({
         name: editName.trim(),
         name_lowercase: editName.trim().toLowerCase(),
         ods_code: editOds.trim().toUpperCase(),
         contact_email: editEmail.trim(),
-      });
+      }).eq('id', editingPractice.id);
 
       setEditingPractice(null);
       loadPractices();
@@ -379,7 +419,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     navigate('/admin');
   };
 
@@ -395,12 +435,10 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const createAdmin = httpsCallable(functions, 'createAdminUser');
-      const result = await createAdmin({
-        email: newAdminEmail.trim(),
-        name: newAdminName.trim(),
+      const { data, error: invokeError } = await supabase.functions.invoke('create-admin-user', {
+        body: { email: newAdminEmail.trim(), name: newAdminName.trim() },
       });
-      const data = result.data as { resetLink?: string };
+      if (invokeError) throw invokeError;
       setNewAdminName('');
       setNewAdminEmail('');
       setShowAddAdminForm(false);
@@ -428,13 +466,15 @@ const AdminDashboard: React.FC = () => {
     if (!editingAdmin) return;
 
     try {
-      const updateAdmin = httpsCallable(functions, 'updateAdminUser');
-      await updateAdmin({
-        uid: editingAdmin.uid,
-        email: editAdminEmail.trim(),
-        name: editAdminName.trim(),
-        isActive: editAdminActive,
+      const { error: invokeError } = await supabase.functions.invoke('update-admin-user', {
+        body: {
+          uid: editingAdmin.uid,
+          email: editAdminEmail.trim(),
+          name: editAdminName.trim(),
+          isActive: editAdminActive,
+        },
       });
+      if (invokeError) throw invokeError;
       setEditingAdmin(null);
       loadAdmins();
     } catch (error) {
@@ -445,9 +485,10 @@ const AdminDashboard: React.FC = () => {
 
   const resetAdminPassword = async (adminUser: AdminUser) => {
     try {
-      const resetAdmin = httpsCallable(functions, 'sendAdminPasswordReset');
-      const result = await resetAdmin({ uid: adminUser.uid });
-      const data = result.data as { resetLink?: string };
+      const { data, error: invokeError } = await supabase.functions.invoke('send-admin-password-reset', {
+        body: { uid: adminUser.uid },
+      });
+      if (invokeError) throw invokeError;
       setAdminActionMessage(`Password reset link prepared for ${adminUser.email}. Copy and send it manually.`);
       setAdminActionLink(data.resetLink || '');
     } catch (error) {
@@ -464,8 +505,10 @@ const AdminDashboard: React.FC = () => {
       isDangerous: true,
       onConfirm: async () => {
         try {
-          const removeAdmin = httpsCallable(functions, 'deleteAdminUser');
-          await removeAdmin({ uid: adminUser.uid });
+          const { error: invokeError } = await supabase.functions.invoke('delete-admin-user', {
+            body: { uid: adminUser.uid },
+          });
+          if (invokeError) throw invokeError;
           loadAdmins();
         } catch (error) {
           console.error('Error deleting admin:', error);
@@ -869,7 +912,7 @@ const AdminDashboard: React.FC = () => {
                     <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
                     <span>Satisfaction: {getPracticeSatisfaction(practice)}</span>
                     {practice.last_accessed && (
-                      <span>Last active: {practice.last_accessed.toDate?.().toLocaleDateString() || 'N/A'}</span>
+                      <span>Last active: {new Date(practice.last_accessed).toLocaleDateString() || 'N/A'}</span>
                     )}
                   </div>
                 </div>

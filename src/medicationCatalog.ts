@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './supabase';
 import { MEDICATIONS, type MedContent } from './medicationData';
 
 export type MedicationRecord = MedContent & {
@@ -74,8 +73,28 @@ export const buildMedicationMap = (medications: MedicationRecord[]): Record<stri
   Object.fromEntries(medications.map((med) => [med.code, med]));
 
 export const loadMedicationCatalog = async (): Promise<MedicationRecord[]> => {
-  const snapshot = await getDocs(collection(db, 'medications'));
-  const overrides = snapshot.docs.map((doc) => doc.data() as MedicationOverride);
+  const { data, error } = await supabase.from('medications').select('*');
+  if (error) {
+    console.error('Failed to load medications:', error);
+    return mergeMedicationCatalog([]);
+  }
+
+  // Map snake_case DB columns back to camelCase for the MedicationOverride type
+  const overrides: MedicationOverride[] = (data || []).map((row) => ({
+    code: row.code,
+    title: row.title,
+    description: row.description,
+    badge: row.badge,
+    category: row.category,
+    keyInfo: row.key_info,
+    nhsLink: row.nhs_link,
+    trendLinks: row.trend_links,
+    sickDaysNeeded: row.sick_days_needed,
+    reviewMonths: row.review_months,
+    contentReviewDate: row.content_review_date,
+    is_deleted: row.is_deleted,
+  }));
+
   return mergeMedicationCatalog(overrides);
 };
 

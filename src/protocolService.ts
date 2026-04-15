@@ -1,17 +1,19 @@
-import { functions } from './firebase';
-import { httpsCallable } from 'firebase/functions';
+import { supabase } from './supabase';
 
 /**
- * Validate organisation name against signed-up practices in Firestore
- * via Cloud Function
+ * Validate organisation name against signed-up practices in Supabase
+ * via PostgreSQL RPC function.
  */
 export async function validateOrganisation(orgName: string): Promise<{ valid: boolean; error?: string }> {
   try {
-    const validateFunc = httpsCallable(functions, 'validatePractice');
-    const result = await validateFunc({ orgName });
-    const data = result.data as Record<string, unknown>;
+    const { data, error } = await supabase.rpc('validate_practice', { org_name: orgName });
 
-    if (data.valid) {
+    if (error) {
+      console.error('Organisation validation error:', error);
+      return { valid: false, error: 'Unable to verify practice. Please try again later.' };
+    }
+
+    if (data?.valid) {
       return { valid: true };
     }
 
@@ -32,8 +34,7 @@ export async function recordPatientAccess(orgName: string): Promise<void> {
   if (!orgName.trim()) return;
 
   try {
-    const recordFunc = httpsCallable(functions, 'recordPatientAccess');
-    await recordFunc({ orgName });
+    await supabase.rpc('record_patient_access', { org_name: orgName });
   } catch (error) {
     console.error('Patient access logging error:', error);
   }

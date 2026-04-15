@@ -7,15 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "firebase": "firebase"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^10.14.1",
+    "@supabase/supabase-js": "^2.49.1",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.1"
+    "react-router-dom": "^7.13.1",
+    "scoop": "^0.0.2",
+    "supabase": "^2.91.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -26,8 +27,9 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "firebase-tools": "^15.11.0",
+    "firebase-admin": "^13.8.0",
     "globals": "^17.4.0",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1"

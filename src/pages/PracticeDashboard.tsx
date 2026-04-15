@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth, functions } from '../firebase';
-import { httpsCallable } from 'firebase/functions';
+import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, FlaskConical, CheckCircle, Save, CheckSquare, Square, Eye, Star } from 'lucide-react';
 import type { MedContent } from '../medicationData';
@@ -30,14 +28,14 @@ const PracticeDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
         loadPractice();
       } else {
         navigate('/practice');
       }
     });
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const getDefaultReviewDate = () => {
@@ -49,29 +47,36 @@ const PracticeDashboard: React.FC = () => {
   const loadPractice = async () => {
     setLoading(true);
     try {
-      const getMyPractice = httpsCallable(functions, 'getMyPractice');
-      const result = await getMyPractice();
-      const data = result.data as { found: boolean; practice?: Record<string, unknown>; practiceId?: string };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError('Not authenticated'); setLoading(false); return; }
 
-      if (data.found && data.practice) {
-        setPracticeName(data.practice.name as string);
-        const meds = (data.practice.selected_medications as string[]) || [];
-        const loadedReviewDates = (data.practice.medication_review_dates as Record<string, string>) || {};
-        const hydratedReviewDates = meds.reduce<Record<string, string>>((acc, code) => {
-          acc[code] = loadedReviewDates[code] || getDefaultReviewDate();
-          return acc;
-        }, {});
-        setSelectedMeds(meds);
-        setSavedMeds(meds);
-        setReviewDates(hydratedReviewDates);
-        setSavedReviewDates(hydratedReviewDates);
-        setLinkVisitCount((data.practice.link_visit_count as number) || 0);
-        setRatingCount((data.practice.patient_rating_count as number) || 0);
-        setRatingTotal((data.practice.patient_rating_total as number) || 0);
-        setLastAccessedMs((data.practice.last_accessed_ms as number | null) || null);
-      } else {
+      const { data: practice, error: fetchError } = await supabase
+        .from('practices')
+        .select('*')
+        .eq('auth_uid', user.id)
+        .single();
+
+      if (fetchError || !practice) {
         setError('No practice linked to this account. Contact your administrator.');
+        setLoading(false);
+        return;
       }
+
+      setPracticeName(practice.name);
+      const meds = (practice.selected_medications as string[]) || [];
+      const loadedReviewDates = (practice.medication_review_dates as Record<string, string>) || {};
+      const hydratedReviewDates = meds.reduce<Record<string, string>>((acc, code) => {
+        acc[code] = loadedReviewDates[code] || getDefaultReviewDate();
+        return acc;
+      }, {});
+      setSelectedMeds(meds);
+      setSavedMeds(meds);
+      setReviewDates(hydratedReviewDates);
+      setSavedReviewDates(hydratedReviewDates);
+      setLinkVisitCount(practice.link_visit_count || 0);
+      setRatingCount(practice.patient_rating_count || 0);
+      setRatingTotal(practice.patient_rating_total || 0);
+      setLastAccessedMs(practice.last_accessed ? new Date(practice.last_accessed).getTime() : null);
     } catch (err) {
       console.error('Error loading practice:', err);
       setError('Unable to load practice data. Please try again.');
@@ -128,15 +133,29 @@ const PracticeDashboard: React.FC = () => {
     setSaving(true);
     setSaveSuccess(false);
     try {
-      const updateMeds = httpsCallable(functions, 'updatePracticeMedications');
-      const result = await updateMeds({
-        medications: selectedMeds,
-        medicationReviewDates: reviewDates,
-      });
-      const data = result.data as { medicationReviewDates?: Record<string, string> };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Build review dates with defaults for any newly selected meds
+      const nextReviewDates = selectedMeds.reduce<Record<string, string>>((acc, code) => {
+        acc[code] = reviewDates[code] || getDefaultReviewDate();
+        return acc;
+      }, {});
+
+      const { error: updateError } = await supabase
+        .from('practices')
+        .update({
+          selected_medications: selectedMeds,
+          medication_review_dates: nextReviewDates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('auth_uid', user.id);
+
+      if (updateError) throw updateError;
+
       setSavedMeds([...selectedMeds]);
-      setSavedReviewDates(data.medicationReviewDates || reviewDates);
-      setReviewDates(data.medicationReviewDates || reviewDates);
+      setSavedReviewDates(nextReviewDates);
+      setReviewDates(nextReviewDates);
       setSaveSuccess(true);
     } catch (err) {
       console.error('Error saving:', err);
@@ -146,7 +165,7 @@ const PracticeDashboard: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     navigate('/practice');
   };
 

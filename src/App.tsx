@@ -12,8 +12,7 @@ import Landing from './pages/Landing';
 import Demo from './pages/Demo';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
-import { functions } from './firebase';
-import { httpsCallable } from 'firebase/functions';
+import { supabase } from './supabase';
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   NEW: 0,
@@ -122,8 +121,7 @@ const ResourceView: React.FC = () => {
     setRating(value);
     setIsSubmittingRating(true);
     try {
-      const submitRating = httpsCallable(functions, 'submitPatientRating');
-      await submitRating({ orgName: orgParam, rating: value });
+      await supabase.rpc('submit_patient_rating', { org_name: orgParam, rating_value: value });
       setHasRated(true);
     } catch (err) {
       console.error('Failed to submit rating:', err);
@@ -131,7 +129,7 @@ const ResourceView: React.FC = () => {
     setIsSubmittingRating(false);
   };
 
-  // Validate organisation against Firestore
+  // Validate organisation against database
   useEffect(() => {
     if (!orgParam) {
       setIsAuthorised(null);

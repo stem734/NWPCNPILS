@@ -1,7 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { httpsCallable } from 'firebase/functions';
-import { auth, functions } from '../firebase';
+import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
@@ -60,14 +58,14 @@ const DrugBuilder: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
         setAuthenticated(true);
       } else {
         navigate('/admin');
       }
     });
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const previewDraft = useMemo<MedicationRecord | null>(() => {
@@ -159,9 +157,10 @@ const DrugBuilder: React.FC = () => {
     setGenerating(true);
     setGenError('');
     try {
-      const generate = httpsCallable(functions, 'generateMedicationContent');
-      const result = await generate({ medicationName: medName.trim(), type: medType });
-      const data = result.data as { success: boolean; content: Record<string, unknown> };
+      const { data, error: invokeError } = await supabase.functions.invoke('generate-medication-content', {
+        body: { medicationName: medName.trim(), type: medType },
+      });
+      if (invokeError) throw invokeError;
 
       if (data.success && data.content) {
         const c = data.content;
@@ -205,23 +204,24 @@ const DrugBuilder: React.FC = () => {
     setSaving(true);
     setSaveError('');
     try {
-      const save = httpsCallable(functions, 'saveMedication');
-      const result = await save({
-        code: editingCode || undefined,
-        requestedCode: requestedCode.trim() || undefined,
-        medicationName: medName.trim() || title.trim(),
-        title: title.trim(),
-        description: description.trim(),
-        badge,
-        category: category.trim(),
-        keyInfo: keyInfo.filter(k => k.trim()),
-        nhsLink: nhsLink.trim(),
-        trendLinks: trendLinks.filter(l => l.title.trim() && l.url.trim()),
-        sickDaysNeeded,
-        reviewMonths,
-        contentReviewDate,
+      const { data, error: invokeError } = await supabase.functions.invoke('save-medication', {
+        body: {
+          code: editingCode || undefined,
+          requestedCode: requestedCode.trim() || undefined,
+          medicationName: medName.trim() || title.trim(),
+          title: title.trim(),
+          description: description.trim(),
+          badge,
+          category: category.trim(),
+          keyInfo: keyInfo.filter(k => k.trim()),
+          nhsLink: nhsLink.trim(),
+          trendLinks: trendLinks.filter(l => l.title.trim() && l.url.trim()),
+          sickDaysNeeded,
+          reviewMonths,
+          contentReviewDate,
+        },
       });
-      const data = result.data as { success: boolean; code: string };
+      if (invokeError) throw invokeError;
       if (data.success) {
         setSavedAction(editingCode ? 'updated' : 'created');
         setSavedCode(data.code);
@@ -239,7 +239,7 @@ const DrugBuilder: React.FC = () => {
     const isBuiltIn = medication.isBuiltIn;
     const deleteTitle = isBuiltIn ? 'Hide Medication?' : 'Delete Medication?';
     const deleteMessage = isBuiltIn
-      ? `Hide medication ${medication.code}? It will be removed from the app until you restore it in Firestore.`
+      ? `Hide medication ${medication.code}? It will be removed from the app until you restore it in the database.`
       : `Delete medication ${medication.code}? This cannot be undone from the builder.`;
 
     setConfirmDialog({
@@ -250,8 +250,10 @@ const DrugBuilder: React.FC = () => {
       onConfirm: async () => {
         setDeletingCode(medication.code);
         try {
-          const del = httpsCallable(functions, 'deleteMedication');
-          await del({ code: medication.code });
+          const { error: delError } = await supabase.functions.invoke('delete-medication', {
+            body: { code: medication.code },
+          });
+          if (delError) throw delError;
           await reloadMeds();
           if (editingCode === medication.code) {
             resetForm();

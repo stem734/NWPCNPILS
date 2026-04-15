@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { supabase } from '../supabase';
 import { FlaskConical, CheckCircle } from 'lucide-react';
 
 const PracticeSignup: React.FC = () => {
@@ -26,7 +25,7 @@ const PracticeSignup: React.FC = () => {
 
     try {
 
-      await addDoc(collection(db, 'practices'), {
+      const { error: insertError } = await supabase.from('practices').insert({
         name: name.trim(),
         name_lowercase: name.trim().toLowerCase(),
         ods_code: odsCode.trim().toUpperCase(),
@@ -34,8 +33,8 @@ const PracticeSignup: React.FC = () => {
         contact_name: contactName.trim(),
         is_active: false, // Requires admin approval
         link_visit_count: 0,
-        signed_up_at: Timestamp.now(),
       });
+      if (insertError) throw insertError;
 
       setSubmitted(true);
     } catch (err) {
