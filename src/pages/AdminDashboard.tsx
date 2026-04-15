@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
+import PracticeUserManagement from '../components/PracticeUserManagement';
 import { resolvePath } from '../subdomainUtils';
 
 interface Practice {
@@ -33,8 +34,8 @@ interface AuditLog {
   actorUid: string;
   code: string;
   timestampMs: number;
-  previous_state: any;
-  new_state: any;
+  previous_state: unknown;
+  new_state: unknown;
 }
 
 interface LoginAuditEntry {
@@ -65,8 +66,18 @@ interface LoginAuditGroup {
   entries: LoginAuditEntry[];
 }
 
+const getAuditStateTitle = (value: unknown): string | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  return typeof (value as { title?: unknown }).title === 'string'
+    ? (value as { title: string }).title
+    : null;
+};
+
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'practices' | 'admins' | 'setup' | 'audit'>('practices');
+  const [activeTab, setActiveTab] = useState<'practices' | 'practiceUsers' | 'admins' | 'setup' | 'audit'>('practices');
   const [auditTab, setAuditTab] = useState<'login' | 'medication'>('login');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -331,7 +342,7 @@ const AdminDashboard: React.FC = () => {
     }
 
     if (!newEmail.trim()) {
-      setAddError('Contact email is required to create practice login');
+      setAddError('Contact email is required');
       return;
     }
 
@@ -343,7 +354,7 @@ const AdminDashboard: React.FC = () => {
 
     try {
       // 1. Create the practice document
-      const { data: insertedPractice, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('practices')
         .insert({
           name: newName.trim(),
@@ -352,21 +363,9 @@ const AdminDashboard: React.FC = () => {
           contact_email: newEmail.trim(),
           is_active: true,
           link_visit_count: 0,
-          selected_medications: [],
-        })
-        .select('id')
-        .single();
+        });
 
       if (insertError) throw insertError;
-
-      // 2. Create auth account for the practice via Edge Function
-      try {
-        await supabase.functions.invoke('create-practice-user', {
-          body: { email: newEmail.trim(), practiceId: insertedPractice.id },
-        });
-      } catch (authErr) {
-        console.warn('Auth account creation failed (practice still added):', authErr);
-      }
 
       setNewName('');
       setNewOds('');
@@ -540,7 +539,7 @@ const AdminDashboard: React.FC = () => {
           <h1>
             <ShieldAlert size={22} color="#005eb8" /> Admin Dashboard
           </h1>
-          <p>Manage practices, administrators, and setup links from one place.</p>
+          <p>Manage practices, practice users, administrators, and the global medication library from one place.</p>
         </div>
         <div className="dashboard-actions">
           <button onClick={() => navigate(resolvePath('/admin/drug-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
@@ -558,6 +557,9 @@ const AdminDashboard: React.FC = () => {
       <div className="dashboard-tabs">
         <button className={`dashboard-tab${activeTab === 'practices' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('practices')}>
           Practices
+        </button>
+        <button className={`dashboard-tab${activeTab === 'practiceUsers' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('practiceUsers')}>
+          Practice Users
         </button>
         <button className={`dashboard-tab${activeTab === 'admins' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('admins')}>
           Administrators
@@ -636,12 +638,12 @@ const AdminDashboard: React.FC = () => {
                 <label>Contact Email *</label>
                 <input
                   type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required
-                  placeholder="e.g. admin@nhs.net"
+                  placeholder="e.g. practice.manager@nhs.net"
                 />
               </div>
             </div>
             <button type="submit" className="action-button" style={{ alignSelf: 'flex-start' }}>
-              <Plus size={16} /> Add & Activate Practice
+              <Plus size={16} /> Add Practice
             </button>
           </form>
         </div>
@@ -776,6 +778,18 @@ const AdminDashboard: React.FC = () => {
             </div>
           </form>
         </div>
+      )}
+
+      {activeTab === 'practiceUsers' && (
+      <>
+        <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
+          <h2 className="dashboard-panel-title">Practice User Management</h2>
+          <p className="dashboard-panel-subtitle">
+            Practice users can belong to multiple practices. Global medication changes go live immediately for practices using the global source.
+          </p>
+        </div>
+        <PracticeUserManagement practices={practices} />
+      </>
       )}
 
       {activeTab === 'admins' && (
@@ -962,7 +976,7 @@ const AdminDashboard: React.FC = () => {
           {window.location.origin}/signup
         </div>
         <div className="dashboard-banner dashboard-banner--info" style={{ marginTop: '1rem' }}>
-          Use the Administrators tab to create manual setup or reset links after accounts are created.
+          Use the Practice Users tab to create practice logins, assign users to multiple practices, and send reset links after accounts are created.
         </div>
       </div>
       )}
@@ -1094,7 +1108,7 @@ const AdminDashboard: React.FC = () => {
                 const dateObj = new Date(audit.timestampMs);
                 const isDeleted = audit.action === 'deleted';
                 const isCreated = audit.action === 'created';
-                const title = audit.new_state?.title || audit.previous_state?.title || 'Unknown Card';
+                const title = getAuditStateTitle(audit.new_state) || getAuditStateTitle(audit.previous_state) || 'Unknown Card';
 
                 return (
                 <div

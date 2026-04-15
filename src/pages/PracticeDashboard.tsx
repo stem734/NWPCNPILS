@@ -1,255 +1,287 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, FlaskConical, CheckCircle, Save, CheckSquare, Square, Eye, Star } from 'lucide-react';
+import {
+  CheckCircle,
+  Edit2,
+  Eye,
+  FlaskConical,
+  LogOut,
+  Plus,
+  RefreshCw,
+  Save,
+  Star,
+  Trash2,
+} from 'lucide-react';
 import type { MedContent } from '../medicationData';
 import { resolvePath } from '../subdomainUtils';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
-import { useMedicationCatalog } from '../medicationCatalog';
+import ConfirmDialog from '../components/ConfirmDialog';
+import DisclaimerDialog from '../components/DisclaimerDialog';
+import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getMedicationIcon } from '../medicationIcons';
+import {
+  CUSTOM_CARD_DISCLAIMER_TEXT,
+  GLOBAL_TEMPLATE_DISCLAIMER_TEXT,
+  PRACTICE_SELECTION_STORAGE_KEY,
+  type PracticeMembership,
+  type PracticeMedicationCardRow,
+  type PracticeSummary,
+} from '../practicePortal';
+
+type PracticeMembershipRow = {
+  id: string;
+  practice_id: string;
+  user_uid: string;
+  role: 'editor';
+  is_default: boolean;
+  practice: PracticeSummary | PracticeSummary[] | null;
+};
+
+type CustomCardDraft = {
+  code: string;
+  title: string;
+  description: string;
+  badge: 'NEW' | 'REAUTH' | 'GENERAL';
+  category: string;
+  keyInfo: string[];
+  nhsLink: string;
+  trendLinks: Array<{ title: string; url: string }>;
+  sickDaysNeeded: boolean;
+  reviewMonths: number;
+  contentReviewDate: string;
+};
+
+type DisclaimerRequest = {
+  title: string;
+  message: string;
+  checkboxLabel: string;
+  confirmLabel: string;
+  onConfirm: () => Promise<void>;
+};
+
+const EMPTY_TREND_LINK = { title: '', url: '' };
+
+const normalisePracticeSummary = (value: PracticeSummary | PracticeSummary[] | null | undefined): PracticeSummary | null => {
+  const practice = Array.isArray(value) ? value[0] : value;
+  if (!practice) {
+    return null;
+  }
+
+  return {
+    ...practice,
+    selected_medications: Array.isArray(practice.selected_medications)
+      ? practice.selected_medications
+      : [],
+  };
+};
 
 const PracticeDashboard: React.FC = () => {
-  const [reviewFilter, setReviewFilter] = useState<'all' | 'due' | 'overdue'>('all');
-  const [practiceName, setPracticeName] = useState('');
-  const [selectedMeds, setSelectedMeds] = useState<string[]>([]);
-  const [savedMeds, setSavedMeds] = useState<string[]>([]);
-  const [reviewDates, setReviewDates] = useState<Record<string, string>>({});
-  const [savedReviewDates, setSavedReviewDates] = useState<Record<string, string>>({});
-  const [linkVisitCount, setLinkVisitCount] = useState(0);
-  const [lastAccessedMs, setLastAccessedMs] = useState<number | null>(null);
-  const [ratingCount, setRatingCount] = useState(0);
-  const [ratingTotal, setRatingTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [memberships, setMemberships] = useState<PracticeMembership[]>([]);
+  const [selectedPracticeId, setSelectedPracticeId] = useState('');
+  const [practiceCards, setPracticeCards] = useState<Record<string, PracticeMedicationCardRow>>({});
+  const [loadingPortal, setLoadingPortal] = useState(true);
+  const [loadingCards, setLoadingCards] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [librarySearch, setLibrarySearch] = useState('');
   const [previewMed, setPreviewMed] = useState<MedContent | null>(null);
+  const [draft, setDraft] = useState<CustomCardDraft | null>(null);
+  const [draftCode, setDraftCode] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    isDangerous: boolean;
+    onConfirm: () => void;
+  } | null>(null);
+  const [disclaimerRequest, setDisclaimerRequest] = useState<DisclaimerRequest | null>(null);
   const { medications: allMedications, loading: loadingMedications } = useMedicationCatalog();
   const navigate = useNavigate();
 
+  const loadMemberships = useCallback(async () => {
+    setLoadingPortal(true);
+    setError('');
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate(resolvePath('/practice'));
+        return;
+      }
+
+      const { data, error: membershipError } = await supabase
+        .from('practice_memberships')
+        .select(`
+          id,
+          practice_id,
+          user_uid,
+          role,
+          is_default,
+          practice:practices(
+            id,
+            name,
+            ods_code,
+            contact_email,
+            is_active,
+            link_visit_count,
+            patient_rating_count,
+            patient_rating_total,
+            last_accessed,
+            selected_medications
+          )
+        `)
+        .eq('user_uid', user.id)
+        .order('is_default', { ascending: false });
+
+      if (membershipError) {
+        throw membershipError;
+      }
+
+      const mappedMemberships: PracticeMembership[] = (((data || []) as unknown) as PracticeMembershipRow[])
+        .flatMap((row) => {
+          const practice = normalisePracticeSummary(row.practice);
+          if (!practice) {
+            return [];
+          }
+
+          return [{
+            id: row.id,
+            practice_id: row.practice_id,
+            user_uid: row.user_uid,
+            role: row.role,
+            is_default: row.is_default,
+            practice,
+          }];
+        });
+
+      if (mappedMemberships.length === 0) {
+        setMemberships([]);
+        setSelectedPracticeId('');
+        setError('No practice is linked to this account. Contact your administrator.');
+        return;
+      }
+
+      setMemberships(mappedMemberships);
+
+      const savedPracticeId = window.sessionStorage.getItem(PRACTICE_SELECTION_STORAGE_KEY) || '';
+      const defaultPracticeId =
+        mappedMemberships.find((membership) => membership.practice_id === savedPracticeId)?.practice_id ||
+        mappedMemberships.find((membership) => membership.is_default)?.practice_id ||
+        mappedMemberships[0].practice_id;
+
+      setSelectedPracticeId(defaultPracticeId);
+    } catch (err) {
+      console.error('Error loading practice memberships:', err);
+      setError('Unable to load your practice access. Please try again.');
+    } finally {
+      setLoadingPortal(false);
+    }
+  }, [navigate]);
+
+  const loadPracticeCards = useCallback(async (practiceId: string) => {
+    setLoadingCards(true);
+    setError('');
+
+    try {
+      const { data, error: cardsError } = await supabase
+        .from('practice_medication_cards')
+        .select('*')
+        .eq('practice_id', practiceId);
+
+      if (cardsError) {
+        throw cardsError;
+      }
+
+      const nextCards = Object.fromEntries(
+        (data || []).map((row) => [row.code, row as PracticeMedicationCardRow]),
+      );
+
+      setPracticeCards(nextCards);
+    } catch (err) {
+      console.error('Error loading practice cards:', err);
+      setError('Unable to load medication cards for this practice.');
+    } finally {
+      setLoadingCards(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const hydrate = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        loadPractice();
+        await loadMemberships();
+      } else {
+        navigate(resolvePath('/practice'));
+      }
+    };
+
+    void hydrate();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await loadMemberships();
       } else {
         navigate(resolvePath('/practice'));
       }
     });
+
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [loadMemberships, navigate]);
 
-  const getDefaultReviewDate = () => {
-    const date = new Date();
-    date.setMonth(date.getMonth() + 12);
-    return date.toISOString().slice(0, 10);
-  };
-
-  const loadPractice = async () => {
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setError('Not authenticated'); setLoading(false); return; }
-
-      const { data: practice, error: fetchError } = await supabase
-        .from('practices')
-        .select('*')
-        .eq('auth_uid', user.id)
-        .single();
-
-      if (fetchError || !practice) {
-        setError('No practice linked to this account. Contact your administrator.');
-        setLoading(false);
-        return;
-      }
-
-      setPracticeName(practice.name);
-      const meds = (practice.selected_medications as string[]) || [];
-      const loadedReviewDates = (practice.medication_review_dates as Record<string, string>) || {};
-      const hydratedReviewDates = meds.reduce<Record<string, string>>((acc, code) => {
-        acc[code] = loadedReviewDates[code] || getDefaultReviewDate();
-        return acc;
-      }, {});
-      setSelectedMeds(meds);
-      setSavedMeds(meds);
-      setReviewDates(hydratedReviewDates);
-      setSavedReviewDates(hydratedReviewDates);
-      setLinkVisitCount(practice.link_visit_count || 0);
-      setRatingCount(practice.patient_rating_count || 0);
-      setRatingTotal(practice.patient_rating_total || 0);
-      setLastAccessedMs(practice.last_accessed ? new Date(practice.last_accessed).getTime() : null);
-    } catch (err) {
-      console.error('Error loading practice:', err);
-      setError('Unable to load practice data. Please try again.');
+  useEffect(() => {
+    if (!selectedPracticeId) {
+      setPracticeCards({});
+      return;
     }
-    setLoading(false);
-  };
 
-  const toggleMed = (code: string) => {
-    setSaveSuccess(false);
-    setSelectedMeds(prev => {
-      if (prev.includes(code)) {
-        setReviewDates((current) => {
-          const updated = { ...current };
-          delete updated[code];
-          return updated;
-        });
-        return prev.filter(c => c !== code);
-      }
+    window.sessionStorage.setItem(PRACTICE_SELECTION_STORAGE_KEY, selectedPracticeId);
+    void loadPracticeCards(selectedPracticeId);
+  }, [loadPracticeCards, selectedPracticeId]);
 
-      setReviewDates((current) => ({
-        ...current,
-        [code]: current[code] || savedReviewDates[code] || getDefaultReviewDate(),
-      }));
-      return [...prev, code];
-    });
-  };
-
-  const toggleAll = () => {
-    setSaveSuccess(false);
-    const allCodes = allMedications.map(m => m.code);
-    if (selectedMeds.length === allCodes.length) {
-      setSelectedMeds([]);
-      setReviewDates({});
-    } else {
-      setSelectedMeds(allCodes);
-      setReviewDates((current) =>
-        allCodes.reduce<Record<string, string>>((acc, code) => {
-          acc[code] = current[code] || savedReviewDates[code] || getDefaultReviewDate();
-          return acc;
-        }, {}),
-      );
-    }
-  };
-
-  const updateReviewDate = (code: string, value: string) => {
-    setSaveSuccess(false);
-    setReviewDates((current) => ({
-      ...current,
-      [code]: value,
-    }));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setSaveSuccess(false);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Build review dates with defaults for any newly selected meds
-      const nextReviewDates = selectedMeds.reduce<Record<string, string>>((acc, code) => {
-        acc[code] = reviewDates[code] || getDefaultReviewDate();
-        return acc;
-      }, {});
-
-      const { error: updateError } = await supabase
-        .from('practices')
-        .update({
-          selected_medications: selectedMeds,
-          medication_review_dates: nextReviewDates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('auth_uid', user.id);
-
-      if (updateError) throw updateError;
-
-      setSavedMeds([...selectedMeds]);
-      setSavedReviewDates(nextReviewDates);
-      setReviewDates(nextReviewDates);
-      setSaveSuccess(true);
-    } catch (err) {
-      console.error('Error saving:', err);
-      setError('Failed to save. Please try again.');
-    }
-    setSaving(false);
-  };
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate(resolvePath('/practice'));
-  };
-
-  const selectedMedicationSet = useMemo(() => new Set(selectedMeds), [selectedMeds]);
-
-  const activeMedications = useMemo(
-    () => allMedications.filter((med) => selectedMedicationSet.has(med.code)),
-    [allMedications, selectedMedicationSet],
+  const selectedMembership = useMemo(
+    () => memberships.find((membership) => membership.practice_id === selectedPracticeId) || null,
+    [memberships, selectedPracticeId],
   );
 
-  const getReviewState = (code: string) => {
-    const value = reviewDates[code];
-    if (!value) return 'due' as const;
+  const selectedPractice = selectedMembership?.practice || null;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const dueDate = new Date(`${value}T00:00:00`);
-    const diffMs = dueDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) return 'overdue' as const;
-    if (diffDays <= 30) return 'due' as const;
-    return 'ok' as const;
-  };
-
-  const filteredActiveMedications = useMemo(() => {
-    if (reviewFilter === 'all') return activeMedications;
-    if (reviewFilter === 'overdue') {
-      return activeMedications.filter((med) => getReviewState(med.code) === 'overdue');
-    }
-    return activeMedications.filter((med) => {
-      const state = getReviewState(med.code);
-      return state === 'due' || state === 'overdue';
-    });
-  }, [activeMedications, reviewFilter, reviewDates]);
-
-  const dueCount = useMemo(
-    () => activeMedications.filter((med) => {
-      const state = getReviewState(med.code);
-      return state === 'due' || state === 'overdue';
-    }).length,
-    [activeMedications, reviewDates],
+  const globalCount = useMemo(
+    () => Object.values(practiceCards).filter((card) => card.source_type === 'global').length,
+    [practiceCards],
   );
 
-  const overdueCount = useMemo(
-    () => activeMedications.filter((med) => getReviewState(med.code) === 'overdue').length,
-    [activeMedications, reviewDates],
+  const customCount = useMemo(
+    () => Object.values(practiceCards).filter((card) => card.source_type === 'custom').length,
+    [practiceCards],
   );
 
-  const availableMedications = useMemo(() => {
+  const unconfiguredCount = Math.max(allMedications.length - Object.keys(practiceCards).length, 0);
+
+  const legacyReviewCodes = useMemo(() => {
+    if (!selectedPractice?.selected_medications) return [];
+
+    return selectedPractice.selected_medications.filter((code) => !practiceCards[code]);
+  }, [practiceCards, selectedPractice]);
+
+  const filteredMedications = useMemo(() => {
     const query = librarySearch.trim().toLowerCase();
-    return allMedications.filter((med) => {
-      // Exclude medications already selected
-      if (selectedMeds.includes(med.code)) return false;
-      // Filter by search query
+
+    return allMedications.filter((medication) => {
       if (!query) return true;
+
       return [
-        med.title,
-        med.category,
-        med.description,
-        med.code,
+        medication.code,
+        medication.title,
+        medication.description,
+        medication.category,
       ].some((value) => value.toLowerCase().includes(query));
     });
-  }, [allMedications, librarySearch, selectedMeds]);
+  }, [allMedications, librarySearch]);
 
-  const categories = availableMedications.reduce((acc, med) => {
-    if (!acc[med.category]) acc[med.category] = [];
-    acc[med.category].push(med);
-    return acc;
-  }, {} as Record<string, MedContent[]>);
-
-  const hasChanges = useMemo(() => {
-    const selectedSorted = [...selectedMeds].sort();
-    const savedSorted = [...savedMeds].sort();
-    const medsChanged = JSON.stringify(selectedSorted) !== JSON.stringify(savedSorted);
-    const reviewDatesChanged = JSON.stringify(reviewDates) !== JSON.stringify(savedReviewDates);
-    return medsChanged || reviewDatesChanged;
-  }, [reviewDates, savedMeds, savedReviewDates, selectedMeds]);
-
-  const allSelected = allMedications.length > 0 && selectedMeds.length === allMedications.length;
-  const lastAccessedLabel = lastAccessedMs
-    ? new Date(lastAccessedMs).toLocaleString('en-GB', {
+  const lastAccessedLabel = selectedPractice?.last_accessed
+    ? new Date(selectedPractice.last_accessed).toLocaleString('en-GB', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -258,23 +290,262 @@ const PracticeDashboard: React.FC = () => {
       })
     : 'No patient visits yet';
 
-  if (loading || loadingMedications) {
+  const satisfactionLabel = useMemo(() => {
+    if (!selectedPractice) return 'No ratings';
+
+    const count = selectedPractice.patient_rating_count ?? 0;
+    const total = selectedPractice.patient_rating_total ?? 0;
+    if (count <= 0) return 'No ratings';
+
+    return `${(total / count).toFixed(1)}/5`;
+  }, [selectedPractice]);
+
+  const buildMedicationPreview = (medication: MedicationRecord, practiceCard?: PracticeMedicationCardRow): MedContent => {
+    if (practiceCard?.source_type === 'custom') {
+      return {
+        code: medication.code,
+        title: practiceCard.title || medication.title,
+        description: practiceCard.description || medication.description,
+        badge: practiceCard.badge || medication.badge,
+        category: practiceCard.category || medication.category,
+        keyInfo: Array.isArray(practiceCard.key_info) ? practiceCard.key_info : medication.keyInfo,
+        nhsLink: typeof practiceCard.nhs_link === 'string' ? practiceCard.nhs_link : medication.nhsLink,
+        trendLinks: Array.isArray(practiceCard.trend_links) ? practiceCard.trend_links : medication.trendLinks,
+        sickDaysNeeded:
+          typeof practiceCard.sick_days_needed === 'boolean'
+            ? practiceCard.sick_days_needed
+            : medication.sickDaysNeeded,
+        reviewMonths:
+          typeof practiceCard.review_months === 'number'
+            ? practiceCard.review_months
+            : medication.reviewMonths,
+        contentReviewDate:
+          typeof practiceCard.content_review_date === 'string'
+            ? practiceCard.content_review_date
+            : medication.contentReviewDate,
+      };
+    }
+
+    return {
+      code: medication.code,
+      title: medication.title,
+      description: medication.description,
+      badge: medication.badge,
+      category: medication.category,
+      keyInfo: medication.keyInfo,
+      nhsLink: medication.nhsLink,
+      trendLinks: medication.trendLinks,
+      sickDaysNeeded: medication.sickDaysNeeded,
+      reviewMonths: medication.reviewMonths,
+      contentReviewDate: medication.contentReviewDate,
+    };
+  };
+
+  const openCustomEditor = (medication: MedicationRecord) => {
+    const practiceCard = practiceCards[medication.code];
+    const preview = buildMedicationPreview(medication, practiceCard);
+
+    setDraftCode(medication.code);
+    setDraft({
+      code: medication.code,
+      title: preview.title,
+      description: preview.description,
+      badge: preview.badge,
+      category: preview.category,
+      keyInfo: preview.keyInfo.length > 0 ? preview.keyInfo : [''],
+      nhsLink: preview.nhsLink || '',
+      trendLinks: preview.trendLinks.length > 0 ? preview.trendLinks : [{ ...EMPTY_TREND_LINK }],
+      sickDaysNeeded: Boolean(preview.sickDaysNeeded),
+      reviewMonths: preview.reviewMonths || 12,
+      contentReviewDate: preview.contentReviewDate || '',
+    });
+    setSuccessMessage('');
+  };
+
+  const resetEditor = () => {
+    setDraft(null);
+    setDraftCode('');
+  };
+
+  const updateDraft = <K extends keyof CustomCardDraft>(key: K, value: CustomCardDraft[K]) => {
+    setDraft((current) => current ? { ...current, [key]: value } : current);
+  };
+
+  const updateKeyInfo = (index: number, value: string) => {
+    setDraft((current) => {
+      if (!current) return current;
+      const next = [...current.keyInfo];
+      next[index] = value;
+      return { ...current, keyInfo: next };
+    });
+  };
+
+  const addKeyInfo = () => {
+    setDraft((current) => current ? { ...current, keyInfo: [...current.keyInfo, ''] } : current);
+  };
+
+  const removeKeyInfo = (index: number) => {
+    setDraft((current) => {
+      if (!current) return current;
+      const next = current.keyInfo.filter((_, currentIndex) => currentIndex !== index);
+      return { ...current, keyInfo: next.length > 0 ? next : [''] };
+    });
+  };
+
+  const updateTrendLink = (index: number, field: 'title' | 'url', value: string) => {
+    setDraft((current) => {
+      if (!current) return current;
+      const next = [...current.trendLinks];
+      next[index] = { ...next[index], [field]: value };
+      return { ...current, trendLinks: next };
+    });
+  };
+
+  const addTrendLink = () => {
+    setDraft((current) => current ? { ...current, trendLinks: [...current.trendLinks, { ...EMPTY_TREND_LINK }] } : current);
+  };
+
+  const removeTrendLink = (index: number) => {
+    setDraft((current) => {
+      if (!current) return current;
+      const next = current.trendLinks.filter((_, currentIndex) => currentIndex !== index);
+      return { ...current, trendLinks: next.length > 0 ? next : [{ ...EMPTY_TREND_LINK }] };
+    });
+  };
+
+  const invokeAndReload = async (fn: () => Promise<void>, success: string) => {
+    setSaving(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      await fn();
+      await loadPracticeCards(selectedPracticeId);
+      await loadMemberships();
+      setSuccessMessage(success);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setSaving(false);
+      setDisclaimerRequest(null);
+      setConfirmDialog(null);
+    }
+  };
+
+  const acceptGlobalCard = (medication: MedicationRecord, confirmLabel = 'Accept Global Template') => {
+    if (!selectedPracticeId) return;
+
+    setDisclaimerRequest({
+      title: 'Accept Global Template',
+      message: GLOBAL_TEMPLATE_DISCLAIMER_TEXT,
+      checkboxLabel: 'I have reviewed this template and accept responsibility for deciding whether it is suitable for my practice.',
+      confirmLabel,
+      onConfirm: async () => {
+        await invokeAndReload(async () => {
+          const { error: invokeError } = await supabase.functions.invoke('accept-global-medication-card', {
+            body: {
+              practiceId: selectedPracticeId,
+              code: medication.code,
+              disclaimerAccepted: true,
+            },
+          });
+
+          if (invokeError) {
+            throw new Error(invokeError.message);
+          }
+        }, `${medication.code} is now using the global template.`);
+      },
+    });
+  };
+
+  const clearConfiguredCard = (medication: MedicationRecord) => {
+    if (!selectedPracticeId) return;
+
+    setConfirmDialog({
+      title: 'Clear Practice Configuration',
+      message: `Remove the configuration for ${medication.code}? Patients will see a placeholder for this medication until your practice accepts the global template or creates a custom version.`,
+      confirmLabel: 'Clear Configuration',
+      isDangerous: true,
+      onConfirm: () => {
+        void invokeAndReload(async () => {
+          const { error: invokeError } = await supabase.functions.invoke('clear-practice-medication-card', {
+            body: { practiceId: selectedPracticeId, code: medication.code },
+          });
+
+          if (invokeError) {
+            throw new Error(invokeError.message);
+          }
+        }, `${medication.code} is now unconfigured for this practice.`);
+      },
+    });
+  };
+
+  const saveCustomDraft = () => {
+    if (!selectedPracticeId || !draft) return;
+
+    if (!draft.title.trim() || !draft.description.trim() || !draft.category.trim()) {
+      setError('Title, description, and category are required for a practice version.');
+      return;
+    }
+
+    setDisclaimerRequest({
+      title: 'Save Practice Version',
+      message: CUSTOM_CARD_DISCLAIMER_TEXT,
+      checkboxLabel: 'I understand that my practice is responsible for this custom medication content.',
+      confirmLabel: 'Save Practice Version',
+      onConfirm: async () => {
+        await invokeAndReload(async () => {
+          const { error: invokeError } = await supabase.functions.invoke('save-practice-medication-card', {
+            body: {
+              practiceId: selectedPracticeId,
+              code: draft.code,
+              title: draft.title,
+              description: draft.description,
+              badge: draft.badge,
+              category: draft.category,
+              keyInfo: draft.keyInfo,
+              nhsLink: draft.nhsLink,
+              trendLinks: draft.trendLinks,
+              sickDaysNeeded: draft.sickDaysNeeded,
+              reviewMonths: draft.reviewMonths,
+              contentReviewDate: draft.contentReviewDate,
+              disclaimerAccepted: true,
+            },
+          });
+
+          if (invokeError) {
+            throw new Error(invokeError.message);
+          }
+        }, `${draft.code} is now using a practice-specific version.`);
+
+        resetEditor();
+      },
+    });
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate(resolvePath('/practice'));
+  };
+
+  if (loadingPortal || loadingMedications) {
     return (
-      <div style={{ maxWidth: '800px', margin: '2rem auto' }}>
+      <div style={{ maxWidth: '820px', margin: '2rem auto' }}>
         <div className="card" style={{ textAlign: 'center' }}>
           <FlaskConical size={48} color="#005eb8" style={{ marginBottom: '1rem' }} />
-          <h1 style={{ fontSize: '1.25rem' }}>Loading your practice...</h1>
+          <h1 style={{ fontSize: '1.25rem' }}>Loading your practice workspace...</h1>
         </div>
       </div>
     );
   }
 
-  if (error && !practiceName) {
+  if (!selectedPractice) {
     return (
-      <div style={{ maxWidth: '800px', margin: '2rem auto' }}>
+      <div style={{ maxWidth: '820px', margin: '2rem auto' }}>
         <div className="card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
-          <h1 style={{ fontSize: '1.25rem', color: '#d5281b' }}>Error</h1>
-          <p>{error}</p>
+          <h1 style={{ fontSize: '1.25rem', color: '#d5281b' }}>Practice Access Error</h1>
+          <p>{error || 'No practice is linked to this account. Contact your administrator.'}</p>
           <button onClick={handleSignOut} className="action-button" style={{ backgroundColor: '#d5281b' }}>
             <LogOut size={16} /> Sign Out
           </button>
@@ -287,313 +558,392 @@ const PracticeDashboard: React.FC = () => {
     <div className="dashboard-shell">
       {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
 
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          isDangerous={confirmDialog.isDangerous}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
+
+      {disclaimerRequest && (
+        <DisclaimerDialog
+          title={disclaimerRequest.title}
+          message={disclaimerRequest.message}
+          checkboxLabel={disclaimerRequest.checkboxLabel}
+          confirmLabel={disclaimerRequest.confirmLabel}
+          onCancel={() => setDisclaimerRequest(null)}
+          onConfirm={() => void disclaimerRequest.onConfirm()}
+        />
+      )}
+
       <div className="dashboard-header">
         <div className="dashboard-header-copy">
           <h1>
-            <FlaskConical size={28} color="#005eb8" /> {practiceName}
+            <FlaskConical size={28} color="#005eb8" /> {selectedPractice.name}
           </h1>
-          <p>Select which medication information blocks are live for patients and manage your available library.</p>
+          <p>Review the shared medication library, accept global templates, and maintain practice-owned card versions.</p>
         </div>
         <div className="dashboard-actions">
+          <button onClick={() => void loadPracticeCards(selectedPracticeId)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+            <RefreshCw size={16} /> Refresh
+          </button>
           <button onClick={handleSignOut} className="action-button" style={{ backgroundColor: '#d5281b' }}>
             <LogOut size={16} /> Sign Out
           </button>
         </div>
       </div>
 
-      {error && practiceName && (
+      {memberships.length > 1 && (
+        <section className="dashboard-section">
+          <div className="dashboard-panel">
+            <div className="dashboard-field" style={{ maxWidth: '420px' }}>
+              <label>Selected Practice</label>
+              <select value={selectedPracticeId} onChange={(event) => setSelectedPracticeId(event.target.value)}>
+                {memberships.map((membership) => (
+                  <option key={membership.practice_id} value={membership.practice_id}>
+                    {membership.practice.name}{membership.practice.is_active ? '' : ' (Inactive)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!selectedPractice.is_active && (
+        <div className="dashboard-banner dashboard-banner--info" style={{ marginBottom: '1rem' }}>
+          This practice is currently inactive. You can still review and prepare medication cards, but patient links will not validate until the practice is activated by an administrator.
+        </div>
+      )}
+
+      {error && (
         <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
           {error}
         </div>
       )}
 
-      <div className="dashboard-stat-grid dashboard-section">
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Patient link uses</div>
-          <div className="dashboard-stat-value">{linkVisitCount}</div>
-          <p className="dashboard-stat-copy">
-            Increases each time your active SystmOne patient link is opened successfully.
-          </p>
-        </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Last patient access</div>
-          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#212b32' }}>{lastAccessedLabel}</div>
-          <p className="dashboard-stat-copy">
-            This updates when a patient opens a valid link for your practice.
-          </p>
-        </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Patient Rating</div>
-          <div className="dashboard-stat-value" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            {ratingCount > 0 ? (ratingTotal / ratingCount).toFixed(1) : 'No ratings'}
-            {ratingCount > 0 && <Star size={24} fill="#fbc02d" color="#fbc02d" style={{ marginTop: '-3px' }} />}
-          </div>
-          <p className="dashboard-stat-copy">
-            Based on {ratingCount} patient {ratingCount === 1 ? 'review' : 'reviews'}.
-          </p>
-        </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Live medication blocks</div>
-          <div className="dashboard-stat-value">{activeMedications.length}</div>
-          <p className="dashboard-stat-copy">
-            These are the medication guides currently available to your patients.
-          </p>
-        </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Due for review</div>
-          <div className="dashboard-stat-value">{dueCount}</div>
-          <p className="dashboard-stat-copy">
-            Includes overdue items and anything due within the next 30 days.
-          </p>
-        </div>
-      </div>
-
-      {saveSuccess && (
+      {successMessage && (
         <div className="dashboard-banner dashboard-banner--success" style={{ marginBottom: '1rem' }}>
-          <CheckCircle size={18} /> Medication selections saved successfully.
+          <CheckCircle size={18} /> {successMessage}
         </div>
       )}
 
       <section className="dashboard-section">
-        <div className="dashboard-panel">
-          <div className="dashboard-panel-header">
-            <div>
-              <h2 className="dashboard-panel-title">Live for Patients</h2>
-              <p className="dashboard-panel-subtitle">
-                This is the current patient-facing set for your practice.
-              </p>
-            </div>
-            <div className="dashboard-inline-actions">
-              <button
-                onClick={handleSave}
-                disabled={!hasChanges || saving}
-                className="action-button"
-                style={{
-                  backgroundColor: hasChanges ? '#007f3b' : '#d8dde0',
-                  cursor: hasChanges ? 'pointer' : 'default',
-                  opacity: saving ? 0.7 : 1,
-                }}
-              >
-                <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+        <div className="dashboard-stat-grid">
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-label">Using Global Templates</div>
+            <div className="dashboard-stat-value">{globalCount}</div>
+            <p className="dashboard-stat-copy">Cards currently following the latest shared template.</p>
           </div>
-
-          <div className="dashboard-chip-row" style={{ marginBottom: '1rem' }}>
-            <button
-              type="button"
-              className={`dashboard-chip${reviewFilter === 'all' ? ' dashboard-chip--active' : ''}`}
-              onClick={() => setReviewFilter('all')}
-            >
-              All ({activeMedications.length})
-            </button>
-            <button
-              type="button"
-              className={`dashboard-chip${reviewFilter === 'due' ? ' dashboard-chip--active' : ''}`}
-              onClick={() => setReviewFilter('due')}
-            >
-              Due soon ({dueCount})
-            </button>
-            <button
-              type="button"
-              className={`dashboard-chip${reviewFilter === 'overdue' ? ' dashboard-chip--active' : ''}`}
-              onClick={() => setReviewFilter('overdue')}
-            >
-              Overdue ({overdueCount})
-            </button>
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-label">Practice Versions</div>
+            <div className="dashboard-stat-value">{customCount}</div>
+            <p className="dashboard-stat-copy">Cards currently maintained by your practice.</p>
           </div>
-
-          {activeMedications.length === 0 ? (
-            <div className="dashboard-banner dashboard-banner--info" style={{ marginBottom: '1rem' }}>
-              No medication blocks are live yet. Use the library below to select what patients should see.
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-label">Unconfigured Codes</div>
+            <div className="dashboard-stat-value">{unconfiguredCount}</div>
+            <p className="dashboard-stat-copy">Patients will see a placeholder for these medication codes.</p>
+          </div>
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-label">Patient Link Uses</div>
+            <div className="dashboard-stat-value">{selectedPractice.link_visit_count ?? 0}</div>
+            <p className="dashboard-stat-copy">Successful patient link opens for this practice.</p>
+          </div>
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-label">Last Patient Access</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#212b32' }}>{lastAccessedLabel}</div>
+            <p className="dashboard-stat-copy">Updated when patients open a valid link.</p>
+          </div>
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-label">Patient Rating</div>
+            <div className="dashboard-stat-value" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {satisfactionLabel}
+              {satisfactionLabel !== 'No ratings' && <Star size={22} fill="#fbc02d" color="#fbc02d" style={{ marginTop: '-2px' }} />}
             </div>
-          ) : filteredActiveMedications.length === 0 ? (
-            <div className="dashboard-banner dashboard-banner--info" style={{ marginBottom: '1rem' }}>
-              No active medications match this review filter.
-            </div>
-          ) : (
-            <div className="dashboard-list" style={{ marginBottom: '1rem' }}>
-              {filteredActiveMedications.map((med) => (
-                <div key={med.code} className="dashboard-list-card dashboard-list-card--selected">
-                  <div style={{ color: '#005eb8', flexShrink: 0 }}>{getMedicationIcon(med.code)}</div>
-                  <div className="dashboard-list-main">
-                    <div className="dashboard-list-title">{med.title}</div>
-                    <p className="dashboard-list-copy">
-                      {med.description.length > 120 ? med.description.slice(0, 120) + '...' : med.description}
-                    </p>
-                    <div className="dashboard-meta">
-                      <span className="dashboard-badge dashboard-badge--blue">{med.code}</span>
-                      <span className={`dashboard-badge ${med.badge === 'NEW' ? 'dashboard-badge--blue' : 'dashboard-badge--green'}`}>
-                        {med.badge}
-                      </span>
-                      <span className="dashboard-badge dashboard-badge--amber">{med.category}</span>
-                      <span className={`dashboard-badge ${
-                        getReviewState(med.code) === 'overdue'
-                          ? 'dashboard-badge--red'
-                          : getReviewState(med.code) === 'due'
-                            ? 'dashboard-badge--amber'
-                            : 'dashboard-badge--green'
-                      }`}>
-                        {getReviewState(med.code) === 'overdue'
-                          ? 'OVERDUE'
-                          : getReviewState(med.code) === 'due'
-                            ? 'DUE SOON'
-                            : 'ON TRACK'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="dashboard-list-side">
-                    <div className="dashboard-list-actions">
-                      <button
-                        onClick={() => setPreviewMed(med)}
-                        className="dashboard-pill-button"
-                      >
-                        <Eye size={14} /> Preview
-                      </button>
-                      <button
-                        onClick={() => toggleMed(med.code)}
-                        className="dashboard-pill-button dashboard-pill-button--danger"
-                      >
-                        <Square size={14} /> Remove
-                      </button>
-                    </div>
-                    <div className="dashboard-date-field">
-                      <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem', color: '#4c6272' }}>
-                      Review date
-                      </label>
-                      <input
-                        type="date"
-                        value={reviewDates[med.code] || getDefaultReviewDate()}
-                        onChange={(e) => updateReviewDate(med.code, e.target.value)}
-                        style={{ width: '100%', padding: '0.55rem 0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.9rem' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="dashboard-chip-row">
-            {activeMedications.map((med) => (
-              <span key={med.code} className="dashboard-chip dashboard-chip--active">
-                {med.code} {med.title.split(' - ')[0]}
-              </span>
-            ))}
+            <p className="dashboard-stat-copy">Average patient feedback score for this practice.</p>
           </div>
         </div>
       </section>
+
+      {legacyReviewCodes.length > 0 && (
+        <section className="dashboard-section">
+          <div className="dashboard-panel" style={{ borderLeft: '4px solid #fa8c16' }}>
+            <div className="dashboard-panel-header">
+              <div>
+                <h2 className="dashboard-panel-title">Previously Live Cards To Review</h2>
+                <p className="dashboard-panel-subtitle">
+                  These codes were previously selected in the legacy workflow. They are not active until your practice explicitly accepts the global template or saves a custom version.
+                </p>
+              </div>
+            </div>
+            <div className="dashboard-chip-row">
+              {legacyReviewCodes.map((code) => (
+                <span key={code} className="dashboard-chip dashboard-chip--active">
+                  {code}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {draft && (
+        <section className="dashboard-section">
+          <div className="dashboard-panel" style={{ borderLeft: '4px solid #007f3b' }}>
+            <div className="dashboard-panel-header">
+              <div>
+                <h2 className="dashboard-panel-title">Practice Version: {draft.code}</h2>
+                <p className="dashboard-panel-subtitle">Save a practice-specific medication card for this code.</p>
+              </div>
+              <button onClick={resetEditor} className="dashboard-pill-button dashboard-pill-button--muted">
+                Cancel
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="dashboard-field">
+                <label>Title *</label>
+                <input value={draft.title} onChange={(event) => updateDraft('title', event.target.value)} />
+              </div>
+
+              <div className="dashboard-field">
+                <label>Description *</label>
+                <textarea
+                  value={draft.description}
+                  rows={4}
+                  onChange={(event) => updateDraft('description', event.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div className="dashboard-form-grid">
+                <div className="dashboard-field">
+                  <label>Badge</label>
+                  <select value={draft.badge} onChange={(event) => updateDraft('badge', event.target.value as CustomCardDraft['badge'])}>
+                    <option value="NEW">New Medication</option>
+                    <option value="REAUTH">Annual Review</option>
+                    <option value="GENERAL">General Information</option>
+                  </select>
+                </div>
+                <div className="dashboard-field">
+                  <label>Category *</label>
+                  <input value={draft.category} onChange={(event) => updateDraft('category', event.target.value)} />
+                </div>
+                <div className="dashboard-field">
+                  <label>Review Period (months)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={draft.reviewMonths}
+                    onChange={(event) => updateDraft('reviewMonths', Math.max(1, parseInt(event.target.value, 10) || 12))}
+                  />
+                </div>
+                <div className="dashboard-field">
+                  <label>Content Review Date</label>
+                  <input
+                    type="date"
+                    value={draft.contentReviewDate}
+                    onChange={(event) => updateDraft('contentReviewDate', event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                <input
+                  type="checkbox"
+                  checked={draft.sickDaysNeeded}
+                  onChange={(event) => updateDraft('sickDaysNeeded', event.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                Sick day rules apply
+              </label>
+
+              <div>
+                <div className="dashboard-panel-header" style={{ marginBottom: '0.5rem' }}>
+                  <h3 className="dashboard-panel-title" style={{ fontSize: '1rem' }}>Key Information</h3>
+                  <button onClick={addKeyInfo} className="dashboard-pill-button dashboard-pill-button--primary">
+                    <Plus size={14} /> Add Point
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {draft.keyInfo.map((info, index) => (
+                    <div key={`${draft.code}-key-${index}`} style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        value={info}
+                        onChange={(event) => updateKeyInfo(index, event.target.value)}
+                        placeholder={`Key point ${index + 1}`}
+                        style={{ flex: 1, padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px' }}
+                      />
+                      <button onClick={() => removeKeyInfo(index)} className="dashboard-pill-button dashboard-pill-button--danger">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="dashboard-field">
+                <label>NHS Link</label>
+                <input value={draft.nhsLink} onChange={(event) => updateDraft('nhsLink', event.target.value)} />
+              </div>
+
+              <div>
+                <div className="dashboard-panel-header" style={{ marginBottom: '0.5rem' }}>
+                  <h3 className="dashboard-panel-title" style={{ fontSize: '1rem' }}>Linked Resources</h3>
+                  <button onClick={addTrendLink} className="dashboard-pill-button dashboard-pill-button--primary">
+                    <Plus size={14} /> Add Link
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {draft.trendLinks.map((link, index) => (
+                    <div key={`${draft.code}-link-${index}`} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr auto', gap: '0.5rem' }}>
+                      <input
+                        value={link.title}
+                        onChange={(event) => updateTrendLink(index, 'title', event.target.value)}
+                        placeholder="Link title"
+                        style={{ padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px' }}
+                      />
+                      <input
+                        value={link.url}
+                        onChange={(event) => updateTrendLink(index, 'url', event.target.value)}
+                        placeholder="https://..."
+                        style={{ padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px' }}
+                      />
+                      <button onClick={() => removeTrendLink(index)} className="dashboard-pill-button dashboard-pill-button--danger">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="dashboard-inline-actions" style={{ marginTop: '1.25rem' }}>
+              <button
+                onClick={() => {
+                  const baseMedication = allMedications.find((medication) => medication.code === draftCode);
+                  if (!baseMedication) return;
+
+                  setPreviewMed(buildMedicationPreview(baseMedication, {
+                    practice_id: selectedPracticeId,
+                    code: draft.code,
+                    source_type: 'custom',
+                    title: draft.title,
+                    description: draft.description,
+                    badge: draft.badge,
+                    category: draft.category,
+                    key_info: draft.keyInfo,
+                    nhs_link: draft.nhsLink,
+                    trend_links: draft.trendLinks,
+                    sick_days_needed: draft.sickDaysNeeded,
+                    review_months: draft.reviewMonths,
+                    content_review_date: draft.contentReviewDate,
+                    disclaimer_version: '',
+                  }));
+                }}
+                className="action-button"
+                style={{ backgroundColor: '#005eb8' }}
+              >
+                <Eye size={16} /> Preview Practice Version
+              </button>
+              <button onClick={saveCustomDraft} disabled={saving} className="action-button" style={{ backgroundColor: '#007f3b', opacity: saving ? 0.7 : 1 }}>
+                <Save size={16} /> {saving ? 'Saving...' : 'Save Practice Version'}
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="dashboard-section">
         <div className="dashboard-panel">
           <div className="dashboard-toolbar">
             <div>
-              <h2 className="dashboard-panel-title">Available Medication Library</h2>
+              <h2 className="dashboard-panel-title">Medication Library</h2>
               <p className="dashboard-panel-subtitle">
-                Search, preview, and choose which medication guides should be available through your SystmOne link.
+                Each code can be left unconfigured, linked to the shared global template, or maintained as a practice-owned version.
               </p>
             </div>
-            <div className="dashboard-inline-actions">
-            <button
-              onClick={toggleAll}
-              className="action-button"
-              style={{ backgroundColor: allSelected ? '#4c6272' : '#005eb8' }}
-            >
-              {allSelected ? <><Square size={16} /> Deselect All</> : <><CheckSquare size={16} /> Select All</>}
-            </button>
-            </div>
-          </div>
-
-          <div className="dashboard-toolbar">
             <div className="dashboard-search">
-              <label htmlFor="med-library-search" style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Search Medications</label>
               <input
-                id="med-library-search"
                 type="text"
                 value={librarySearch}
-                onChange={(e) => setLibrarySearch(e.target.value)}
-                placeholder="Search by name, code, category, or description"
+                onChange={(event) => setLibrarySearch(event.target.value)}
+                placeholder="Search by code, title, category, or description"
+                style={{ width: '100%', padding: '0.75rem 0.9rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem' }}
               />
-            </div>
-            <div className="dashboard-chip-row">
-              <span className="dashboard-chip">{availableMedications.length} shown</span>
-              <span className="dashboard-chip dashboard-chip--active">{selectedMeds.length} selected</span>
             </div>
           </div>
 
-          {Object.entries(categories).length === 0 ? (
-            <div className="dashboard-banner dashboard-banner--info">
-              No medication blocks match your search.
-            </div>
-          ) : Object.entries(categories).map(([category, meds]) => (
-          <div key={category} style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '0.9rem', color: '#4c6272', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', borderBottom: '1px solid #d8dde0', paddingBottom: '0.5rem' }}>
-              {category}
-            </h3>
+          {loadingCards ? (
+            <p style={{ color: '#4c6272' }}>Loading medication configuration...</p>
+          ) : (
             <div className="dashboard-list">
-              {meds.map(med => (
-                  <div
-                    key={med.code}
-                    className="dashboard-list-card"
-                  >
-                    <div
-                      onClick={() => toggleMed(med.code)}
-                      role="checkbox"
-                      aria-checked="false"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === ' ' || e.key === 'Enter') {
-                          e.preventDefault();
-                          toggleMed(med.code);
-                        }
-                      }}
-                      style={{
-                        width: '24px', height: '24px', borderRadius: '4px',
-                        border: '2px solid #d8dde0',
-                        background: 'white',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0, cursor: 'pointer',
-                      }}
-                    >
-                      {/* Checkbox stays empty until clicked */}
-                    </div>
-                    <div
-                      onClick={() => toggleMed(med.code)}
-                      style={{ color: '#4c6272', flexShrink: 0, cursor: 'pointer' }}
-                    >
-                      {getMedicationIcon(med.code)}
-                    </div>
-                    <div className="dashboard-list-main" style={{ cursor: 'pointer' }} onClick={() => toggleMed(med.code)}>
-                      <div className="dashboard-list-title">
-                        {med.title}
-                      </div>
-                      <div className="dashboard-list-copy">
-                        {med.description.length > 80 ? med.description.slice(0, 80) + '...' : med.description}
-                      </div>
+              {filteredMedications.map((medication) => {
+                const practiceCard = practiceCards[medication.code];
+                const state: 'global' | 'custom' | 'unconfigured' = practiceCard?.source_type ?? 'unconfigured';
+                const previewMedication = buildMedicationPreview(medication, practiceCard);
+
+                return (
+                  <div key={medication.code} className="dashboard-list-card">
+                    <div style={{ color: '#005eb8', flexShrink: 0 }}>{getMedicationIcon(medication.code)}</div>
+                    <div className="dashboard-list-main">
+                      <div className="dashboard-list-title">{medication.title}</div>
                       <div className="dashboard-meta">
-                        <span className={`dashboard-badge ${med.badge === 'NEW' ? 'dashboard-badge--blue' : 'dashboard-badge--green'}`}>
-                          {med.badge}
+                        <span className="dashboard-badge dashboard-badge--blue">{medication.code}</span>
+                        <span className={`dashboard-badge ${medication.badge === 'NEW' ? 'dashboard-badge--blue' : medication.badge === 'REAUTH' ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>
+                          {medication.badge}
                         </span>
-                        <span className="dashboard-badge dashboard-badge--amber">{med.category}</span>
+                        <span className="dashboard-badge dashboard-badge--amber">{medication.category}</span>
+                        <span className={`dashboard-badge ${
+                          state === 'custom'
+                            ? 'dashboard-badge--green'
+                            : state === 'global'
+                              ? 'dashboard-badge--blue'
+                              : 'dashboard-badge--muted'
+                        }`}>
+                          {state === 'custom' ? 'USING PRACTICE VERSION' : state === 'global' ? 'USING GLOBAL TEMPLATE' : 'NOT CONFIGURED'}
+                        </span>
                       </div>
+                      <p className="dashboard-list-copy" style={{ marginTop: '0.5rem' }}>
+                        {state === 'custom'
+                          ? 'Patients will see your practice-specific version for this medication.'
+                          : state === 'global'
+                            ? 'Patients will see the current global template for this medication.'
+                            : 'Patients will see a placeholder until your practice accepts the global template or saves a practice version.'}
+                      </p>
                     </div>
                     <div className="dashboard-list-actions">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setPreviewMed(med); }}
-                        title="Preview patient content"
-                        className="dashboard-pill-button"
-                      >
-                        <Eye size={14} /> Preview
+                      <button onClick={() => setPreviewMed(previewMedication)} className="dashboard-pill-button">
+                        <Eye size={14} /> {state === 'custom' ? 'Preview Practice' : 'Preview Global'}
                       </button>
-                      <div className="dashboard-badge dashboard-badge--amber">
-                        {med.code}
-                      </div>
+
+                      {state !== 'custom' && (
+                        <button onClick={() => acceptGlobalCard(medication, state === 'global' ? 'Use Global Template' : 'Accept Global Template')} className="dashboard-pill-button dashboard-pill-button--primary">
+                          <CheckCircle size={14} /> {state === 'global' ? 'Use Global Instead' : 'Accept Global'}
+                        </button>
+                      )}
+
+                      <button onClick={() => openCustomEditor(medication)} className="dashboard-pill-button dashboard-pill-button--success">
+                        {state === 'custom' ? <><Edit2 size={14} /> Edit Practice Version</> : <><Plus size={14} /> Create Practice Version</>}
+                      </button>
+
+                      {practiceCard && (
+                        <button onClick={() => clearConfiguredCard(medication)} className="dashboard-pill-button dashboard-pill-button--danger">
+                          <Trash2 size={14} /> Clear Configuration
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
-          </div>
-        ))}
+          )}
         </div>
       </section>
     </div>

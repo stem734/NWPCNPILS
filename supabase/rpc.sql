@@ -6,7 +6,6 @@
 
 -- ===================
 -- validate_practice(org_name text)
--- Replaces Firebase: validatePractice
 -- Called by anonymous patients to check if a practice is registered and active.
 -- ===================
 CREATE OR REPLACE FUNCTION validate_practice(org_name text)
@@ -21,7 +20,8 @@ BEGIN
     RETURN jsonb_build_object('valid', false, 'error', 'Organisation name is required');
   END IF;
 
-  SELECT * INTO practice_record
+  SELECT *
+  INTO practice_record
   FROM practices
   WHERE name_lowercase = lower(trim(org_name))
   LIMIT 1;
@@ -43,9 +43,7 @@ GRANT EXECUTE ON FUNCTION validate_practice TO authenticated;
 
 -- ===================
 -- record_patient_access(org_name text)
--- Replaces Firebase: recordPatientAccess
 -- Atomically increments link_visit_count and updates last_accessed.
--- Called by anonymous patients when they view medication info.
 -- ===================
 CREATE OR REPLACE FUNCTION record_patient_access(org_name text)
 RETURNS jsonb
@@ -76,9 +74,7 @@ GRANT EXECUTE ON FUNCTION record_patient_access TO authenticated;
 
 -- ===================
 -- submit_patient_rating(org_name text, rating_value integer)
--- Replaces Firebase: submitPatientRating
 -- Atomically increments patient_rating_count and patient_rating_total.
--- Called by anonymous patients to rate their experience.
 -- ===================
 CREATE OR REPLACE FUNCTION submit_patient_rating(org_name text, rating_value integer)
 RETURNS jsonb
@@ -109,3 +105,129 @@ $$;
 
 GRANT EXECUTE ON FUNCTION submit_patient_rating TO anon;
 GRANT EXECUTE ON FUNCTION submit_patient_rating TO authenticated;
+
+-- ===================
+-- resolve_patient_medication_cards(org_name text, requested_codes text[])
+-- Resolves a patient request to the practice-specific card, accepted global card,
+-- or placeholder state for each requested medication code.
+-- ===================
+CREATE OR REPLACE FUNCTION resolve_patient_medication_cards(org_name text, requested_codes text[])
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  practice_record practices%ROWTYPE;
+  resolved_cards jsonb;
+  placeholder_message constant text := 'No drug information available at your practice for this particular medication.';
+BEGIN
+  IF org_name IS NULL OR trim(org_name) = '' THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  SELECT *
+  INTO practice_record
+  FROM practices
+  WHERE name_lowercase = lower(trim(org_name))
+    AND is_active = true
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  WITH deduped_codes AS (
+    SELECT DISTINCT ON (trim(requested.code))
+      trim(requested.code) AS code,
+      requested.ord
+    FROM unnest(COALESCE(requested_codes, ARRAY[]::text[]))
+      WITH ORDINALITY AS requested(code, ord)
+    WHERE trim(requested.code) <> ''
+    ORDER BY trim(requested.code), requested.ord
+  ),
+  ordered_codes AS (
+    SELECT code, ord
+    FROM deduped_codes
+    ORDER BY ord
+  )
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'state',
+        CASE
+          WHEN cards.source_type = 'custom' THEN 'custom'
+          WHEN cards.source_type = 'global' THEN 'global'
+          ELSE 'placeholder'
+        END,
+        'code', ordered_codes.code,
+        'badge',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.badge, medications.badge, 'GENERAL')
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.badge, 'GENERAL')
+          WHEN medications.code IS NOT NULL THEN medications.badge
+          ELSE 'GENERAL'
+        END,
+        'title',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.title, medications.title, 'Medication information unavailable')
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.title, 'Medication information unavailable')
+          WHEN medications.code IS NOT NULL THEN medications.title
+          ELSE 'Medication information unavailable'
+        END,
+        'description',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.description, placeholder_message)
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.description, placeholder_message)
+          ELSE placeholder_message
+        END,
+        'keyInfo',
+        CASE
+          WHEN cards.source_type = 'custom' THEN to_jsonb(COALESCE(cards.key_info, ARRAY[]::text[]))
+          WHEN cards.source_type = 'global' THEN to_jsonb(COALESCE(medications.key_info, ARRAY[]::text[]))
+          ELSE '[]'::jsonb
+        END,
+        'nhsLink',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.nhs_link, '')
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.nhs_link, '')
+          ELSE ''
+        END,
+        'trendLinks',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.trend_links, '[]'::jsonb)
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.trend_links, '[]'::jsonb)
+          ELSE '[]'::jsonb
+        END,
+        'sickDaysNeeded',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.sick_days_needed, false)
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.sick_days_needed, false)
+          ELSE false
+        END,
+        'reviewMonths',
+        CASE
+          WHEN cards.source_type = 'custom' THEN to_jsonb(cards.review_months)
+          WHEN cards.source_type = 'global' THEN to_jsonb(medications.review_months)
+          WHEN medications.code IS NOT NULL THEN to_jsonb(medications.review_months)
+          ELSE 'null'::jsonb
+        END
+      )
+      ORDER BY ordered_codes.ord
+    ),
+    '[]'::jsonb
+  )
+  INTO resolved_cards
+  FROM ordered_codes
+  LEFT JOIN medications
+    ON medications.code = ordered_codes.code
+   AND medications.is_deleted = false
+  LEFT JOIN practice_medication_cards cards
+    ON cards.practice_id = practice_record.id
+   AND cards.code = ordered_codes.code;
+
+  RETURN resolved_cards;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION resolve_patient_medication_cards TO anon;
+GRANT EXECUTE ON FUNCTION resolve_patient_medication_cards TO authenticated;

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { resolvePatientMedicationCards, type ResolvedMedicationCard } from './practicePortal';
 
 /**
  * Validate organisation name against signed-up practices in Supabase
@@ -42,7 +43,7 @@ export async function recordPatientAccess(orgName: string): Promise<void> {
 
 /**
  * Parse medication codes from the codes parameter
- * Accepts: "101,102" or "101,202,301"
+ * Accepts any comma-separated 3-digit medication codes
  */
 export function parseMedicationCodes(codesParam: string): string[] {
   if (!codesParam) return [];
@@ -50,5 +51,18 @@ export function parseMedicationCodes(codesParam: string): string[] {
   return codesParam
     .split(',')
     .map(c => c.trim())
-    .filter(c => /^\d0[12]$/.test(c));
+    .filter(c => /^\d{3}$/.test(c));
+}
+
+export async function resolveOrganisationMedicationCards(orgName: string, codes: string[]): Promise<ResolvedMedicationCard[]> {
+  if (!orgName.trim() || codes.length === 0) {
+    return [];
+  }
+
+  try {
+    return await resolvePatientMedicationCards(orgName, codes);
+  } catch (error) {
+    console.error('Medication resolution error:', error);
+    return [];
+  }
 }

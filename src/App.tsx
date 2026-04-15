@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
-import { recordPatientAccess, validateOrganisation } from './protocolService';
+import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import PracticeSignup from './pages/PracticeSignup';
@@ -24,6 +24,11 @@ const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
 
 const getValidationCacheKey = (orgName: string) =>
   `practice-validation:${orgName.trim().toLowerCase()}`;
+
+const isFreshValidationCache = (value: { expiresAt?: number; valid?: boolean }) =>
+  value.valid === true &&
+  typeof value.expiresAt === 'number' &&
+  value.expiresAt > Date.now();
 
 const GROUP_COPY: Record<'NEW' | 'REAUTH' | 'GENERAL', { title: string; description: string }> = {
   NEW: {
@@ -112,6 +117,20 @@ const ResourceView: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const { medicationMap: allMeds } = useMedicationCatalog();
+  const [resolvedContents, setResolvedContents] = useState<Array<{
+    state: 'global' | 'custom' | 'placeholder';
+    code: string;
+    badge: 'NEW' | 'REAUTH' | 'GENERAL';
+    title: string;
+    description: string;
+    category: string;
+    keyInfo: string[];
+    nhsLink?: string;
+    trendLinks: { title: string; url: string }[];
+    sickDaysNeeded?: boolean;
+    reviewMonths?: number;
+  }>>([]);
+  const [isResolvingContents, setIsResolvingContents] = useState(false);
   const loggedAccessKeyRef = useRef<string | null>(null);
 
   const [rating, setRating] = useState<number>(0);
@@ -145,7 +164,7 @@ const ResourceView: React.FC = () => {
     if (cached) {
       try {
         const parsed = JSON.parse(cached) as { expiresAt?: number; valid?: boolean };
-        if (parsed.valid && typeof parsed.expiresAt === 'number' && parsed.expiresAt > Date.now()) {
+        if (isFreshValidationCache(parsed)) {
           setIsAuthorised(true);
           setAuthError(null);
           setIsValidating(false);
@@ -204,27 +223,67 @@ const ResourceView: React.FC = () => {
     void recordPatientAccess(orgParam);
   }, [codesParam, isAuthorised, orgParam, rawCode]);
 
-  const contents = useMemo(() => {
-    // If org param present, must be validated first
-    if (orgParam && !isAuthorised) return [];
-
-    // Use codes param if present (from SystmOne: ?org=NAME&codes=101,102,601)
+  const requestedCodes = useMemo(() => {
     if (codesParam) {
-      const codes = codesParam.split(',').map(c => c.trim()).filter(Boolean);
-      const items = codes
-        .map(code => allMeds[code] ? { id: code, icon: getMedicationIcon(code), ...allMeds[code] } : null)
-        .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
-      return sortMedicationGroups(items);
+      return Array.from(new Set(parseMedicationCodes(codesParam)));
     }
 
-    // Fallback: extract from code/med param (demo mode: ?code=101)
-    const codes = rawCode.match(/\d0[12]/g) || [];
-    const uniqueCodes = Array.from(new Set(codes));
-    const items = uniqueCodes
-      .map(code => allMeds[code] ? { id: code, icon: getMedicationIcon(code), ...allMeds[code] } : null)
+    const matches = rawCode.match(/\d{3}/g) || [];
+    return Array.from(new Set(matches));
+  }, [codesParam, rawCode]);
+
+  useEffect(() => {
+    if (!orgParam || isAuthorised !== true) {
+      setResolvedContents([]);
+      setIsResolvingContents(false);
+      return;
+    }
+
+    if (requestedCodes.length === 0) {
+      setResolvedContents([]);
+      setIsResolvingContents(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResolvingContents(true);
+
+    resolveOrganisationMedicationCards(orgParam, requestedCodes)
+      .then((cards) => {
+        if (!cancelled) {
+          setResolvedContents(cards);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsResolvingContents(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthorised, orgParam, requestedCodes]);
+
+  const contents = useMemo(() => {
+    if (orgParam) {
+      if (isAuthorised !== true) return [];
+
+      return sortMedicationGroups(
+        resolvedContents.map((card) => ({
+          id: card.code,
+          icon: getMedicationIcon(card.code),
+          ...card,
+        })),
+      );
+    }
+
+    const items = requestedCodes
+      .map((code) => allMeds[code] ? { id: code, icon: getMedicationIcon(code), state: 'global' as const, ...allMeds[code] } : null)
       .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
+
     return sortMedicationGroups(items);
-  }, [rawCode, orgParam, codesParam, isAuthorised, allMeds]);
+  }, [allMeds, isAuthorised, orgParam, requestedCodes, resolvedContents]);
 
   const groupedContents = useMemo(() => {
     const groups = new Map<'NEW' | 'REAUTH' | 'GENERAL', typeof contents>();
@@ -248,7 +307,7 @@ const ResourceView: React.FC = () => {
   }, [forename, nhsNumber, orgParam]);
 
   // Show loading while validating
-  if (isValidating && orgParam) {
+  if ((isValidating || isResolvingContents) && orgParam) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '1rem' }}>
@@ -345,21 +404,23 @@ const ResourceView: React.FC = () => {
                   </h1>
                   <p>{content.description}</p>
 
-                  <div className="patient-info-section">
-                    <h2>Key Information</h2>
-                    <ul className="patient-info-list">
-                      {content.keyInfo.map((info, i) => (
-                        <li key={i} className="patient-info-item">
-                          <div className="patient-info-icon">
-                            <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} aria-hidden="true" />
-                          </div>
-                          <span className="patient-info-text">{info}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  {content.state !== 'placeholder' && content.keyInfo.length > 0 && (
+                    <div className="patient-info-section">
+                      <h2>Key Information</h2>
+                      <ul className="patient-info-list">
+                        {content.keyInfo.map((info, i) => (
+                          <li key={i} className="patient-info-item">
+                            <div className="patient-info-icon">
+                              <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} aria-hidden="true" />
+                            </div>
+                            <span className="patient-info-text">{info}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                  {content.sickDaysNeeded && (
+                  {content.state !== 'placeholder' && content.sickDaysNeeded && (
                     <div className="sick-days-callout">
                       <div className="sick-days-header">
                         <ShieldAlert size={28} color="#d5281b" />
@@ -375,36 +436,38 @@ const ResourceView: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="patient-resources">
-                    <h2 className="patient-resources-heading">
-                      Trusted Resources for {content.title.split('-')[0].trim()}
-                    </h2>
-                    <div className="patient-resource-list">
-                    {content.nhsLink && (
-                      <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
-                        <div className="patient-resource-meta">
-                          <div className="patient-resource-chip">NHS</div>
-                          <span className="patient-resource-meta-text">Official Guidance</span>
-                        </div>
-                        <h3>Read NHS.UK <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
-                        <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
-                        <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
-                      </a>
-                    )}
+                  {content.state !== 'placeholder' && (content.nhsLink || content.trendLinks.length > 0) && (
+                    <div className="patient-resources">
+                      <h2 className="patient-resources-heading">
+                        Trusted Resources for {content.title.split('-')[0].trim()}
+                      </h2>
+                      <div className="patient-resource-list">
+                      {content.nhsLink && (
+                        <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                          <div className="patient-resource-meta">
+                            <div className="patient-resource-chip">NHS</div>
+                            <span className="patient-resource-meta-text">Official Guidance</span>
+                          </div>
+                          <h3>Read NHS.UK <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
+                          <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
+                          <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+                        </a>
+                      )}
 
-                    {content.trendLinks.map((link, i) => (
-                      <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
-                        <div className="patient-resource-meta patient-resource-meta--trend">
-                          <FlaskConical size={24} color="#007f3b" />
-                          <span className="patient-resource-meta-text">Trend Diabetes</span>
-                        </div>
-                        <h3>{link.title} <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
-                        <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
-                        <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
-                      </a>
-                    ))}
+                      {content.trendLinks.map((link, i) => (
+                        <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                          <div className="patient-resource-meta patient-resource-meta--trend">
+                            <FlaskConical size={24} color="#007f3b" />
+                            <span className="patient-resource-meta-text">Trend Diabetes</span>
+                          </div>
+                          <h3>{link.title} <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
+                          <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
+                          <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+                        </a>
+                      ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </article>
             ))}

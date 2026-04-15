@@ -8,12 +8,14 @@
 ALTER TABLE practices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE medications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE practice_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE practice_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE practice_medication_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE login_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
 -- ===================
 -- Helper function: is the current user an active admin?
--- Replaces the Firestore isAdmin() security rule helper
 -- ===================
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS boolean
@@ -22,50 +24,81 @@ SECURITY DEFINER
 STABLE
 AS $$
   SELECT EXISTS (
-    SELECT 1 FROM admins
+    SELECT 1
+    FROM admins
     WHERE uid = auth.uid()
       AND is_active = true
   );
 $$;
 
+-- ===================
+-- Helper function: is the current user an active practice user?
+-- ===================
+CREATE OR REPLACE FUNCTION is_practice_user()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM practice_users
+    WHERE uid = auth.uid()
+      AND is_active = true
+  );
+$$;
+
+-- ===================
+-- Helper function: does the current user belong to a practice?
+-- ===================
+CREATE OR REPLACE FUNCTION is_practice_member(target_practice uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM practice_memberships memberships
+    JOIN practice_users users
+      ON users.uid = memberships.user_uid
+    WHERE memberships.practice_id = target_practice
+      AND memberships.user_uid = auth.uid()
+      AND users.is_active = true
+  );
+$$;
+
 -- =============================================================================
 -- PRACTICES policies
--- Firestore rules: allow create: if true; allow read, update, delete: if isAdmin()
--- Extended: practice users can also read/update their own practice via auth_uid
 -- =============================================================================
+DROP POLICY IF EXISTS "practices_insert_anyone" ON practices;
+DROP POLICY IF EXISTS "practices_select_admin" ON practices;
+DROP POLICY IF EXISTS "practices_select_member" ON practices;
+DROP POLICY IF EXISTS "practices_select_own" ON practices;
+DROP POLICY IF EXISTS "practices_update_admin" ON practices;
+DROP POLICY IF EXISTS "practices_update_own" ON practices;
+DROP POLICY IF EXISTS "practices_delete_admin" ON practices;
 
--- Anyone can insert (signup form)
 CREATE POLICY "practices_insert_anyone"
   ON practices FOR INSERT
   TO authenticated, anon
   WITH CHECK (true);
 
--- Admins can read all practices
 CREATE POLICY "practices_select_admin"
   ON practices FOR SELECT
   TO authenticated
   USING (is_admin());
 
--- Practice users can read their own practice
-CREATE POLICY "practices_select_own"
+CREATE POLICY "practices_select_member"
   ON practices FOR SELECT
   TO authenticated
-  USING (auth_uid = auth.uid());
+  USING (is_practice_member(id));
 
--- Admins can update any practice
 CREATE POLICY "practices_update_admin"
   ON practices FOR UPDATE
   TO authenticated
   USING (is_admin());
 
--- Practice users can update their own practice (medication selections)
-CREATE POLICY "practices_update_own"
-  ON practices FOR UPDATE
-  TO authenticated
-  USING (auth_uid = auth.uid())
-  WITH CHECK (auth_uid = auth.uid());
-
--- Only admins can delete practices
 CREATE POLICY "practices_delete_admin"
   ON practices FOR DELETE
   TO authenticated
@@ -73,28 +106,27 @@ CREATE POLICY "practices_delete_admin"
 
 -- =============================================================================
 -- MEDICATIONS policies
--- Firestore rules: allow read: if true; allow write: if isAdmin()
 -- =============================================================================
+DROP POLICY IF EXISTS "medications_select_anyone" ON medications;
+DROP POLICY IF EXISTS "medications_insert_admin" ON medications;
+DROP POLICY IF EXISTS "medications_update_admin" ON medications;
+DROP POLICY IF EXISTS "medications_delete_admin" ON medications;
 
--- Anyone can read medications (patient-facing)
 CREATE POLICY "medications_select_anyone"
   ON medications FOR SELECT
   TO authenticated, anon
   USING (true);
 
--- Only admins can insert medications
 CREATE POLICY "medications_insert_admin"
   ON medications FOR INSERT
   TO authenticated
   WITH CHECK (is_admin());
 
--- Only admins can update medications
 CREATE POLICY "medications_update_admin"
   ON medications FOR UPDATE
   TO authenticated
   USING (is_admin());
 
--- Only admins can delete medications
 CREATE POLICY "medications_delete_admin"
   ON medications FOR DELETE
   TO authenticated
@@ -102,45 +134,164 @@ CREATE POLICY "medications_delete_admin"
 
 -- =============================================================================
 -- ADMINS policies
--- Firestore rules: allow read, write: if isAdmin()
 -- =============================================================================
+DROP POLICY IF EXISTS "admins_select_admin" ON admins;
+DROP POLICY IF EXISTS "admins_insert_admin" ON admins;
+DROP POLICY IF EXISTS "admins_update_admin" ON admins;
+DROP POLICY IF EXISTS "admins_delete_admin" ON admins;
 
--- Only active admins can read admin list
 CREATE POLICY "admins_select_admin"
   ON admins FOR SELECT
   TO authenticated
   USING (is_admin());
 
--- Only active admins can insert new admins
 CREATE POLICY "admins_insert_admin"
   ON admins FOR INSERT
   TO authenticated
   WITH CHECK (is_admin());
 
--- Only active admins can update admins
 CREATE POLICY "admins_update_admin"
   ON admins FOR UPDATE
   TO authenticated
   USING (is_admin());
 
--- Only active admins can delete admins
 CREATE POLICY "admins_delete_admin"
   ON admins FOR DELETE
   TO authenticated
   USING (is_admin());
 
 -- =============================================================================
--- LOGIN_AUDIT policies
--- Firestore: no explicit rules (default deny), written via Cloud Functions
+-- PRACTICE_USERS policies
 -- =============================================================================
+DROP POLICY IF EXISTS "practice_users_select_admin" ON practice_users;
+DROP POLICY IF EXISTS "practice_users_select_self" ON practice_users;
+DROP POLICY IF EXISTS "practice_users_insert_admin" ON practice_users;
+DROP POLICY IF EXISTS "practice_users_update_admin" ON practice_users;
+DROP POLICY IF EXISTS "practice_users_delete_admin" ON practice_users;
 
--- Authenticated users can insert their own audit records
+CREATE POLICY "practice_users_select_admin"
+  ON practice_users FOR SELECT
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "practice_users_select_self"
+  ON practice_users FOR SELECT
+  TO authenticated
+  USING (uid = auth.uid());
+
+CREATE POLICY "practice_users_insert_admin"
+  ON practice_users FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin());
+
+CREATE POLICY "practice_users_update_admin"
+  ON practice_users FOR UPDATE
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "practice_users_delete_admin"
+  ON practice_users FOR DELETE
+  TO authenticated
+  USING (is_admin());
+
+-- =============================================================================
+-- PRACTICE_MEMBERSHIPS policies
+-- =============================================================================
+DROP POLICY IF EXISTS "practice_memberships_select_admin" ON practice_memberships;
+DROP POLICY IF EXISTS "practice_memberships_select_self" ON practice_memberships;
+DROP POLICY IF EXISTS "practice_memberships_insert_admin" ON practice_memberships;
+DROP POLICY IF EXISTS "practice_memberships_update_admin" ON practice_memberships;
+DROP POLICY IF EXISTS "practice_memberships_delete_admin" ON practice_memberships;
+
+CREATE POLICY "practice_memberships_select_admin"
+  ON practice_memberships FOR SELECT
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "practice_memberships_select_self"
+  ON practice_memberships FOR SELECT
+  TO authenticated
+  USING (user_uid = auth.uid());
+
+CREATE POLICY "practice_memberships_insert_admin"
+  ON practice_memberships FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin());
+
+CREATE POLICY "practice_memberships_update_admin"
+  ON practice_memberships FOR UPDATE
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "practice_memberships_delete_admin"
+  ON practice_memberships FOR DELETE
+  TO authenticated
+  USING (is_admin());
+
+-- =============================================================================
+-- PRACTICE_MEDICATION_CARDS policies
+-- =============================================================================
+DROP POLICY IF EXISTS "practice_medication_cards_select_admin" ON practice_medication_cards;
+DROP POLICY IF EXISTS "practice_medication_cards_select_member" ON practice_medication_cards;
+DROP POLICY IF EXISTS "practice_medication_cards_insert_admin" ON practice_medication_cards;
+DROP POLICY IF EXISTS "practice_medication_cards_insert_member" ON practice_medication_cards;
+DROP POLICY IF EXISTS "practice_medication_cards_update_admin" ON practice_medication_cards;
+DROP POLICY IF EXISTS "practice_medication_cards_update_member" ON practice_medication_cards;
+DROP POLICY IF EXISTS "practice_medication_cards_delete_admin" ON practice_medication_cards;
+DROP POLICY IF EXISTS "practice_medication_cards_delete_member" ON practice_medication_cards;
+
+CREATE POLICY "practice_medication_cards_select_admin"
+  ON practice_medication_cards FOR SELECT
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "practice_medication_cards_select_member"
+  ON practice_medication_cards FOR SELECT
+  TO authenticated
+  USING (is_practice_member(practice_id));
+
+CREATE POLICY "practice_medication_cards_insert_admin"
+  ON practice_medication_cards FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin());
+
+CREATE POLICY "practice_medication_cards_insert_member"
+  ON practice_medication_cards FOR INSERT
+  TO authenticated
+  WITH CHECK (is_practice_member(practice_id));
+
+CREATE POLICY "practice_medication_cards_update_admin"
+  ON practice_medication_cards FOR UPDATE
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "practice_medication_cards_update_member"
+  ON practice_medication_cards FOR UPDATE
+  TO authenticated
+  USING (is_practice_member(practice_id))
+  WITH CHECK (is_practice_member(practice_id));
+
+CREATE POLICY "practice_medication_cards_delete_admin"
+  ON practice_medication_cards FOR DELETE
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "practice_medication_cards_delete_member"
+  ON practice_medication_cards FOR DELETE
+  TO authenticated
+  USING (is_practice_member(practice_id));
+
+-- =============================================================================
+-- LOGIN_AUDIT policies
+-- =============================================================================
+DROP POLICY IF EXISTS "login_audit_insert_authenticated" ON login_audit;
+DROP POLICY IF EXISTS "login_audit_select_admin" ON login_audit;
+
 CREATE POLICY "login_audit_insert_authenticated"
   ON login_audit FOR INSERT
   TO authenticated
   WITH CHECK (uid = auth.uid());
 
--- Only admins can read audit logs
 CREATE POLICY "login_audit_select_admin"
   ON login_audit FOR SELECT
   TO authenticated
@@ -148,16 +299,15 @@ CREATE POLICY "login_audit_select_admin"
 
 -- =============================================================================
 -- AUDIT_LOG policies
--- Firestore: no explicit rules (default deny), written via Cloud Functions
 -- =============================================================================
+DROP POLICY IF EXISTS "audit_log_select_admin" ON audit_log;
+DROP POLICY IF EXISTS "audit_log_insert_admin" ON audit_log;
 
--- Only admins can read medication audit logs
 CREATE POLICY "audit_log_select_admin"
   ON audit_log FOR SELECT
   TO authenticated
   USING (is_admin());
 
--- Only admins can insert audit entries (via Edge Functions with service role)
 CREATE POLICY "audit_log_insert_admin"
   ON audit_log FOR INSERT
   TO authenticated

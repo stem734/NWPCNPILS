@@ -40,23 +40,22 @@ serve(async (req) => {
         ip_address: ipAddress,
       };
     } else {
-      // Look up practice
-      const { data: practiceData } = await supabase
-        .from('practices')
+      const { data: practiceUserData } = await supabase
+        .from('practice_users')
         .select('*')
-        .eq('auth_uid', user.id)
+        .eq('uid', user.id)
         .single();
 
-      if (!practiceData) {
+      if (!practiceUserData) {
         return errorResponse('No linked account found for login audit', 404);
       }
 
       auditRecord = {
         uid: user.id,
-        email: typeof practiceData.contact_email === 'string' ? practiceData.contact_email : user.email || '',
+        email: typeof practiceUserData.email === 'string' ? practiceUserData.email : user.email || '',
         actor_type: 'practice' as const,
-        actor_name: typeof practiceData.name === 'string' ? practiceData.name : 'Practice user',
-        actor_id: practiceData.id,
+        actor_name: typeof practiceUserData.name === 'string' ? practiceUserData.name : 'Practice user',
+        actor_id: user.id,
         portal: 'practice' as const,
         user_agent: typeof userAgent === 'string' ? userAgent.slice(0, 500) : '',
         ip_address: ipAddress,

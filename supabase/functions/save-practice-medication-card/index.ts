@@ -1,0 +1,119 @@
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { assertPracticeAccess } from '../_shared/assert-practice-access.ts';
+import { CUSTOM_CARD_DISCLAIMER_VERSION } from '../_shared/practice-card-constants.ts';
+import { createServiceClient, corsHeaders, jsonResponse, errorResponse } from '../_shared/supabase-client.ts';
+
+type TrendLink = {
+  title?: string;
+  url?: string;
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json() as {
+      practiceId?: string;
+      code?: string;
+      title?: string;
+      description?: string;
+      badge?: string;
+      category?: string;
+      keyInfo?: string[];
+      nhsLink?: string;
+      trendLinks?: TrendLink[];
+      sickDaysNeeded?: boolean;
+      reviewMonths?: number;
+      contentReviewDate?: string;
+      disclaimerAccepted?: boolean;
+    };
+
+    if (!body.practiceId || !body.code) {
+      return errorResponse('practiceId and code are required');
+    }
+
+    if (body.disclaimerAccepted !== true) {
+      return errorResponse('The custom medication disclaimer must be accepted');
+    }
+
+    if (!body.title?.trim() || !body.description?.trim() || !body.category?.trim()) {
+      return errorResponse('Title, description, and category are required');
+    }
+
+    const badge = body.badge === 'REAUTH' || body.badge === 'GENERAL' ? body.badge : 'NEW';
+    const { userId } = await assertPracticeAccess(req.headers.get('Authorization'), body.practiceId);
+    const supabase = createServiceClient();
+
+    const { data: medication, error: medicationError } = await supabase
+      .from('medications')
+      .select('code')
+      .eq('code', body.code)
+      .eq('is_deleted', false)
+      .single();
+
+    if (medicationError || !medication) {
+      return errorResponse('Medication code not found in the global library', 404);
+    }
+
+    const { data: existingDoc } = await supabase
+      .from('practice_medication_cards')
+      .select('*')
+      .eq('practice_id', body.practiceId)
+      .eq('code', body.code)
+      .maybeSingle();
+
+    const now = new Date().toISOString();
+    const nextDoc = {
+      practice_id: body.practiceId,
+      code: body.code,
+      source_type: 'custom',
+      title: body.title.trim(),
+      description: body.description.trim(),
+      badge,
+      category: body.category.trim(),
+      key_info: Array.isArray(body.keyInfo)
+        ? body.keyInfo.map((item) => item.trim()).filter(Boolean)
+        : [],
+      nhs_link: typeof body.nhsLink === 'string' ? body.nhsLink.trim() : '',
+      trend_links: Array.isArray(body.trendLinks)
+        ? body.trendLinks
+            .map((item) => ({
+              title: typeof item.title === 'string' ? item.title.trim() : '',
+              url: typeof item.url === 'string' ? item.url.trim() : '',
+            }))
+            .filter((item) => item.title && item.url)
+        : [],
+      sick_days_needed: body.sickDaysNeeded === true,
+      review_months: typeof body.reviewMonths === 'number' && body.reviewMonths > 0 ? body.reviewMonths : 12,
+      content_review_date: typeof body.contentReviewDate === 'string' ? body.contentReviewDate : '',
+      disclaimer_version: CUSTOM_CARD_DISCLAIMER_VERSION,
+      accepted_at: now,
+      accepted_by: userId,
+      updated_at: now,
+      updated_by: userId,
+    };
+
+    const { error: upsertError } = await supabase
+      .from('practice_medication_cards')
+      .upsert(nextDoc, { onConflict: 'practice_id,code' });
+
+    if (upsertError) {
+      return errorResponse(`Failed to save practice medication card: ${upsertError.message}`, 500);
+    }
+
+    await supabase.from('audit_log').insert({
+      action: existingDoc ? 'updated' : 'created',
+      actor_uid: userId,
+      code: body.code,
+      timestamp: now,
+      previous_state: existingDoc || null,
+      new_state: nextDoc,
+    });
+
+    return jsonResponse({ success: true });
+  } catch (err) {
+    return errorResponse(err instanceof Error ? err.message : 'Internal error', 500);
+  }
+});

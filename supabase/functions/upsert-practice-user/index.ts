@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { Resend } from 'https://esm.sh/resend@6';
 import { assertAdmin } from '../_shared/assert-admin.ts';
-import { createServiceClient, corsHeaders, errorResponse, jsonResponse } from '../_shared/supabase-client.ts';
+import { createServiceClient, corsHeaders, jsonResponse, errorResponse } from '../_shared/supabase-client.ts';
 import {
   addPracticeMemberships,
   assertNoAdminConflict,
@@ -19,18 +20,19 @@ serve(async (req) => {
 
     const body = await req.json() as {
       email?: string;
-      practiceId?: string;
       name?: string;
+      practiceIds?: string[];
+      defaultPracticeId?: string;
     };
 
-    if (!body.email || typeof body.email !== 'string' || !body.practiceId || typeof body.practiceId !== 'string') {
-      return errorResponse('Email and practiceId are required');
+    if (!body.email || typeof body.email !== 'string') {
+      return errorResponse('Practice user email is required');
     }
 
     const supabase = createServiceClient();
     const email = normaliseEmail(body.email);
     const displayName = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : email;
-    const [practiceId] = await assertPracticeIdsExist(supabase, [body.practiceId]);
+    const practiceIds = await assertPracticeIdsExist(supabase, Array.isArray(body.practiceIds) ? body.practiceIds : []);
 
     await assertNoAdminConflict(supabase, email);
 
@@ -59,12 +61,7 @@ serve(async (req) => {
         return errorResponse(`Failed to update practice user: ${updateError.message}`, 500);
       }
 
-      await addPracticeMemberships(supabase, existingPracticeUser.uid, [practiceId], practiceId);
-
-      await supabase
-        .from('practices')
-        .update({ contact_email: email, updated_at: new Date().toISOString() })
-        .eq('id', practiceId);
+      await addPracticeMemberships(supabase, existingPracticeUser.uid, practiceIds, body.defaultPracticeId);
 
       return jsonResponse({
         success: true,
@@ -100,16 +97,7 @@ serve(async (req) => {
       return errorResponse(`Failed to create practice user record: ${insertError.message}`, 500);
     }
 
-    await addPracticeMemberships(supabase, userRecord.user.id, [practiceId], practiceId);
-
-    const { error: contactError } = await supabase
-      .from('practices')
-      .update({ contact_email: email, updated_at: now })
-      .eq('id', practiceId);
-
-    if (contactError) {
-      return errorResponse(`Failed to update practice contact email: ${contactError.message}`, 500);
-    }
+    await addPracticeMemberships(supabase, userRecord.user.id, practiceIds, body.defaultPracticeId);
 
     const appBaseUrl = (Deno.env.get('APP_BASE_URL') || 'https://www.mymedinfo.info').replace(/\/$/, '');
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
@@ -122,11 +110,38 @@ serve(async (req) => {
       return errorResponse(`Failed to generate reset link: ${linkError.message}`, 500);
     }
 
+    const resetLink = linkData?.properties?.action_link || '';
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL');
+
+    if (resendApiKey && resendFromEmail && resetLink) {
+      const resend = new Resend(resendApiKey);
+      await resend.emails.send({
+        from: resendFromEmail,
+        to: email,
+        subject: 'Set up your MyMedInfo practice account',
+        text: `Hello ${displayName},\n\nYour MyMedInfo practice account has been created. Set your password using this secure link:\n${resetLink}\n\nAfter setting your password, sign in at ${appBaseUrl}/practice\n`,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #212b32;">
+            <h2 style="color: #005eb8;">Welcome to MyMedInfo</h2>
+            <p>Hello ${displayName},</p>
+            <p>Your MyMedInfo practice account has been created. Use the button below to set your password.</p>
+            <p style="margin: 24px 0;">
+              <a href="${resetLink}" style="background: #005eb8; color: white; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: 700;">Set Your Password</a>
+            </p>
+            <p>If the button does not work, copy and paste this link into your browser:</p>
+            <p><a href="${resetLink}">${resetLink}</a></p>
+            <p>After setting your password, sign in at <a href="${appBaseUrl}/practice">${appBaseUrl}/practice</a>.</p>
+          </div>
+        `,
+      });
+    }
+
     return jsonResponse({
       success: true,
       uid: userRecord.user.id,
       created: true,
-      resetLink: linkData?.properties?.action_link || '',
+      resetLink,
     });
   } catch (err) {
     return errorResponse(err instanceof Error ? err.message : 'Internal error', 500);
