@@ -10,7 +10,7 @@ import { Resend } from 'resend';
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
 const resendApiKey = defineString('RESEND_API_KEY', { default: '' });
 const resendFromEmail = defineString('RESEND_FROM_EMAIL', { default: '' });
-const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://mymedinfo.vercel.app' });
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://www.mymedinfo.info' });
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const BUILT_IN_MAX_FAMILY = 5;
 

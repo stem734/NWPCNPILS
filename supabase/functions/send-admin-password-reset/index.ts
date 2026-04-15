@@ -25,7 +25,7 @@ serve(async (req) => {
     }
 
     // Generate password reset link
-    const appBaseUrl = (Deno.env.get('APP_BASE_URL') || 'https://mymedinfo.vercel.app').replace(/\/$/, '');
+    const appBaseUrl = (Deno.env.get('APP_BASE_URL') || 'https://www.mymedinfo.info').replace(/\/$/, '');
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: user.email,
