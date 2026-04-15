@@ -174,7 +174,7 @@ const DrugBuilder: React.FC = () => {
         setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
         setReviewMonths((c.reviewMonths as number) || 12);
         
-        let targetDate = new Date();
+        const targetDate = new Date();
         targetDate.setMonth(targetDate.getMonth() + 12);
         setContentReviewDate(targetDate.toISOString().slice(0, 10));
 

@@ -5,11 +5,8 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineString } from 'firebase-functions/params';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import type { ResponseSchema } from '@google/generative-ai';
-import { Resend } from 'resend';
 
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
-const resendApiKey = defineString('RESEND_API_KEY', { default: '' });
-const resendFromEmail = defineString('RESEND_FROM_EMAIL', { default: '' });
 const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://www.mymedinfo.info' });
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const BUILT_IN_MAX_FAMILY = 5;
@@ -129,7 +126,7 @@ const extractMedicationPayload = (raw: string): MedicationGenerationResponse => 
       // Fallback: strip all newlines which often cause unterminated string errors in generated JSON
       const singleLine = raw.trim().replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').replace(/\n/g, ' ');
       parsed = JSON.parse(singleLine);
-    } catch (fallbackErr) {
+    } catch {
       console.error('Failed to parse AI JSON:', raw);
       throw new Error(`AI response was likely truncated. Please try again. (Details: ${err instanceof Error ? err.message : 'Parse error'})`);
     }
@@ -198,92 +195,6 @@ const getAdminActionCodeSettings = () => ({
   url: `${appBaseUrl.value().replace(/\/$/, '')}/admin`,
   handleCodeInApp: false,
 });
-
-const sendTransactionalEmail = async ({
-  to,
-  subject,
-  html,
-  text,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
-}) => {
-  if (!resendApiKey.value() || !resendFromEmail.value()) {
-    throw new HttpsError(
-      'failed-precondition',
-      'Transactional email is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL to functions/.env.',
-    );
-  }
-
-  const resend = new Resend(resendApiKey.value());
-  await resend.emails.send({
-    from: resendFromEmail.value(),
-    to,
-    subject,
-    html,
-    text,
-  });
-};
-
-const sendAdminWelcomeEmail = async ({
-  email,
-  name,
-  resetLink,
-}: {
-  email: string;
-  name: string;
-  resetLink: string;
-}) => {
-  await sendTransactionalEmail({
-    to: email,
-    subject: 'Set up your MyMedInfo administrator account',
-    text: `Hello ${name},\n\nYour MyMedInfo administrator account has been created. Set your password using this secure link:\n${resetLink}\n\nAfter setting your password, sign in at ${appBaseUrl.value().replace(/\/$/, '')}/admin\n`,
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #212b32;">
-        <h2 style="color: #005eb8;">Welcome to MyMedInfo</h2>
-        <p>Hello ${name},</p>
-        <p>Your MyMedInfo administrator account has been created. Use the button below to set your password.</p>
-        <p style="margin: 24px 0;">
-          <a href="${resetLink}" style="background: #005eb8; color: white; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: 700;">Set Your Password</a>
-        </p>
-        <p>If the button does not work, copy and paste this link into your browser:</p>
-        <p><a href="${resetLink}">${resetLink}</a></p>
-        <p>After setting your password, sign in at <a href="${appBaseUrl.value().replace(/\/$/, '')}/admin">${appBaseUrl.value().replace(/\/$/, '')}/admin</a>.</p>
-      </div>
-    `,
-  });
-};
-
-const sendAdminPasswordResetEmail = async ({
-  email,
-  name,
-  resetLink,
-}: {
-  email: string;
-  name: string;
-  resetLink: string;
-}) => {
-  await sendTransactionalEmail({
-    to: email,
-    subject: 'Reset your MyMedInfo administrator password',
-    text: `Hello ${name},\n\nUse this secure link to reset your MyMedInfo administrator password:\n${resetLink}\n\nIf you did not request this, you can ignore this email.\n`,
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #212b32;">
-        <h2 style="color: #005eb8;">Reset your MyMedInfo password</h2>
-        <p>Hello ${name},</p>
-        <p>Use the button below to reset your MyMedInfo administrator password.</p>
-        <p style="margin: 24px 0;">
-          <a href="${resetLink}" style="background: #005eb8; color: white; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: 700;">Reset Password</a>
-        </p>
-        <p>If the button does not work, copy and paste this link into your browser:</p>
-        <p><a href="${resetLink}">${resetLink}</a></p>
-        <p>If you did not request this, you can ignore this email.</p>
-      </div>
-    `,
-  });
-};
 
 const getClientIp = (request: {
   rawRequest?: { headers?: Record<string, string | string[] | undefined>; ip?: string };
@@ -452,7 +363,7 @@ export const createPracticeUser = onCall(
       });
 
       // Generate password reset link so user can set their own password
-      const resetLink = await adminAuth.generatePasswordResetLink(email);
+      await adminAuth.generatePasswordResetLink(email);
 
       return {
         success: true,

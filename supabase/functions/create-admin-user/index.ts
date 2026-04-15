@@ -9,7 +9,7 @@ serve(async (req) => {
   }
 
   try {
-    const { admin: actingAdmin } = await assertAdmin(req.headers.get('Authorization'));
+    await assertAdmin(req.headers.get('Authorization'));
     const { email, name } = await req.json();
 
     if (!email || typeof email !== 'string') {
@@ -48,7 +48,7 @@ serve(async (req) => {
 
     // Generate password reset link
     const appBaseUrl = (Deno.env.get('APP_BASE_URL') || 'https://www.mymedinfo.info').replace(/\/$/, '');
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+    const { data: linkData } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email.trim(),
       options: { redirectTo: `${appBaseUrl}/reset-password` },

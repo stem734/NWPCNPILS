@@ -5,6 +5,14 @@ import { adminUrl, practiceUrl } from '../subdomainUtils';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
+  const navigateToUrl = (url: string) => {
+    if (url.startsWith('http')) {
+      window.location.href = url;
+      return;
+    }
+
+    navigate(url);
+  };
 
   return (
     <div className="landing-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#ffffff' }}>
@@ -18,7 +26,7 @@ const Landing: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem', marginTop: '3rem' }}>
           {/* Admin Login */}
           <button
-            onClick={() => { const url = adminUrl(); url.startsWith('http') ? window.location.href = url : navigate(url); }}
+            onClick={() => navigateToUrl(adminUrl())}
             style={{
               padding: '2rem',
               background: 'white',
@@ -60,7 +68,7 @@ const Landing: React.FC = () => {
 
           {/* Practice Login */}
           <button
-            onClick={() => { const url = practiceUrl(); url.startsWith('http') ? window.location.href = url : navigate(url); }}
+            onClick={() => navigateToUrl(practiceUrl())}
             style={{
               padding: '2rem',
               background: 'white',

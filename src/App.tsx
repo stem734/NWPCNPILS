@@ -64,6 +64,7 @@ const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
   const orgParam = searchParams.get('org');
+  const orgName = orgParam?.trim() || '';
   const forenameParam = searchParams.get('forename') || searchParams.get('first_name') || searchParams.get('firstname');
   const nhsNumberParam = searchParams.get('nhs_number') || searchParams.get('nhsNumber') || searchParams.get('nhs');
   const codesParam = searchParams.get('codes');
@@ -138,11 +139,11 @@ const ResourceView: React.FC = () => {
   const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
 
   const handleRating = async (value: number) => {
-    if (hasRated || !orgParam) return;
+    if (hasRated || !orgName) return;
     setRating(value);
     setIsSubmittingRating(true);
     try {
-      await supabase.rpc('submit_patient_rating', { org_name: orgParam, rating_value: value });
+      await supabase.rpc('submit_patient_rating', { org_name: orgName, rating_value: value });
       setHasRated(true);
     } catch (err) {
       console.error('Failed to submit rating:', err);
@@ -152,40 +153,54 @@ const ResourceView: React.FC = () => {
 
   // Validate organisation against database
   useEffect(() => {
-    if (!orgParam) {
-      setIsAuthorised(null);
-      setAuthError(null);
-      setIsValidating(false);
-      return;
-    }
-
-    const cacheKey = getValidationCacheKey(orgParam);
-    const cached = window.sessionStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached) as { expiresAt?: number; valid?: boolean };
-        if (isFreshValidationCache(parsed)) {
-          setIsAuthorised(true);
-          setAuthError(null);
-          setIsValidating(false);
-          return;
-        }
-      } catch {
-        // Ignore invalid cached values and fall through to live validation.
-      }
-      window.sessionStorage.removeItem(cacheKey);
-    }
-
-    setIsAuthorised(null);
-    setAuthError(null);
-    const loadingTimer = window.setTimeout(() => setIsValidating(true), 150);
     let cancelled = false;
+    let loadingTimer: number | undefined;
 
     const validate = async () => {
-      const result = await validateOrganisation(orgParam);
+      if (!orgName) {
+        if (!cancelled) {
+          setIsAuthorised(null);
+          setAuthError(null);
+          setIsValidating(false);
+        }
+        return;
+      }
+
+      const cacheKey = getValidationCacheKey(orgName);
+      const cached = window.sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached) as { expiresAt?: number; valid?: boolean };
+          if (isFreshValidationCache(parsed)) {
+            if (!cancelled) {
+              setIsAuthorised(true);
+              setAuthError(null);
+              setIsValidating(false);
+            }
+            return;
+          }
+        } catch {
+          // Ignore invalid cached values and fall through to live validation.
+        }
+        window.sessionStorage.removeItem(cacheKey);
+      }
+
+      if (!cancelled) {
+        setIsAuthorised(null);
+        setAuthError(null);
+      }
+      loadingTimer = window.setTimeout(() => {
+        if (!cancelled) {
+          setIsValidating(true);
+        }
+      }, 150);
+
+      const result = await validateOrganisation(orgName);
       if (cancelled) return;
 
-      window.clearTimeout(loadingTimer);
+      if (loadingTimer !== undefined) {
+        window.clearTimeout(loadingTimer);
+      }
       setIsAuthorised(result.valid);
       setAuthError(result.valid ? null : result.error || 'Practice not registered');
       setIsValidating(false);
@@ -200,28 +215,30 @@ const ResourceView: React.FC = () => {
       }
     };
 
-    validate();
+    void validate();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(loadingTimer);
+      if (loadingTimer !== undefined) {
+        window.clearTimeout(loadingTimer);
+      }
     };
-  }, [orgParam]);
+  }, [orgName]);
 
   useEffect(() => {
-    if (!orgParam || isAuthorised !== true) {
+    if (!orgName || isAuthorised !== true) {
       loggedAccessKeyRef.current = null;
       return;
     }
 
-    const accessKey = `${orgParam.trim().toLowerCase()}|${codesParam || rawCode || ''}`;
+    const accessKey = `${orgName.toLowerCase()}|${codesParam || rawCode || ''}`;
     if (loggedAccessKeyRef.current === accessKey) {
       return;
     }
 
     loggedAccessKeyRef.current = accessKey;
-    void recordPatientAccess(orgParam);
-  }, [codesParam, isAuthorised, orgParam, rawCode]);
+    void recordPatientAccess(orgName);
+  }, [codesParam, isAuthorised, orgName, rawCode]);
 
   const requestedCodes = useMemo(() => {
     if (codesParam) {
@@ -233,41 +250,43 @@ const ResourceView: React.FC = () => {
   }, [codesParam, rawCode]);
 
   useEffect(() => {
-    if (!orgParam || isAuthorised !== true) {
-      setResolvedContents([]);
-      setIsResolvingContents(false);
-      return;
-    }
-
-    if (requestedCodes.length === 0) {
-      setResolvedContents([]);
-      setIsResolvingContents(false);
-      return;
-    }
-
     let cancelled = false;
-    setIsResolvingContents(true);
 
-    resolveOrganisationMedicationCards(orgParam, requestedCodes)
-      .then((cards) => {
+    const resolveCards = async () => {
+      if (!orgName || isAuthorised !== true || requestedCodes.length === 0) {
+        if (!cancelled) {
+          setResolvedContents([]);
+          setIsResolvingContents(false);
+        }
+        return;
+      }
+
+      setIsResolvingContents(true);
+
+      try {
+        const cards = await resolveOrganisationMedicationCards(orgName, requestedCodes);
         if (!cancelled) {
           setResolvedContents(cards);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setIsResolvingContents(false);
         }
-      });
+      }
+    };
+
+    void resolveCards();
 
     return () => {
       cancelled = true;
     };
-  }, [isAuthorised, orgParam, requestedCodes]);
+  }, [isAuthorised, orgName, requestedCodes]);
 
   const contents = useMemo(() => {
-    if (orgParam) {
-      if (isAuthorised !== true) return [];
+    if (orgName) {
+      if (isAuthorised !== true) {
+        return [];
+      }
 
       return sortMedicationGroups(
         resolvedContents.map((card) => ({
@@ -278,12 +297,12 @@ const ResourceView: React.FC = () => {
       );
     }
 
-    const items = requestedCodes
-      .map((code) => allMeds[code] ? { id: code, icon: getMedicationIcon(code), state: 'global' as const, ...allMeds[code] } : null)
-      .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title);
-
-    return sortMedicationGroups(items);
-  }, [allMeds, isAuthorised, orgParam, requestedCodes, resolvedContents]);
+    return sortMedicationGroups(
+      requestedCodes
+        .map((code) => (allMeds[code] ? { id: code, icon: getMedicationIcon(code), state: 'global' as const, ...allMeds[code] } : null))
+        .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title),
+    );
+  }, [allMeds, isAuthorised, orgName, requestedCodes, resolvedContents]);
 
   const groupedContents = useMemo(() => {
     const groups = new Map<'NEW' | 'REAUTH' | 'GENERAL', typeof contents>();
@@ -298,16 +317,12 @@ const ResourceView: React.FC = () => {
     );
   }, [contents]);
 
-  const patientGreeting = useMemo(() => {
-    const namePart = forename ? `Hi ${forename},` : 'Hi,';
-    const orgPart = orgParam ? `${orgParam} has shared the information below about your medication.` : 'has shared the information below about your medication.';
-    const nhsPart = nhsNumber ? ` If you need it your NHS Number is ${nhsNumber}.` : '';
-
-    return `${namePart} ${orgPart}${nhsPart}`;
-  }, [forename, nhsNumber, orgParam]);
+  const patientGreeting = `${forename ? `Hi ${forename},` : 'Hi,'} ${
+    orgName ? `${orgName} has shared the information below about your medication.` : 'has shared the information below about your medication.'
+  }${nhsNumber ? ` If you need it your NHS Number is ${nhsNumber}.` : ''}`;
 
   // Show loading while validating
-  if ((isValidating || isResolvingContents) && orgParam) {
+  if ((isValidating || isResolvingContents) && orgName) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '1rem' }}>
@@ -321,7 +336,7 @@ const ResourceView: React.FC = () => {
   }
 
   // Show auth error - practice not signed up
-  if (orgParam && isAuthorised === false) {
+  if (orgName && isAuthorised === false) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
@@ -341,7 +356,7 @@ const ResourceView: React.FC = () => {
         <h1>MyMedInfo</h1>
         <p style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '1rem' }}>Clear, trusted medication information</p>
         <p>Please use the link provided by your GP or scan the QR code to find information about your specific medication.</p>
-        {!orgParam && (
+        {!orgName && (
           <div className="patient-empty-grid">
             {Object.entries(allMeds).map(([key, item]) => (
               <a key={key} href={`?code=${key}`} className="resource-card patient-empty-card" style={{ textAlign: 'center' }}>
@@ -475,7 +490,7 @@ const ResourceView: React.FC = () => {
         </section>
       ))}
 
-      {orgParam && isAuthorised && contents.length > 0 && (
+      {orgName && isAuthorised && contents.length > 0 && (
         <div className="card" style={{ marginTop: '2rem', textAlign: 'center', padding: '2rem 1rem' }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#212b32' }}>Did you find this information useful?</h2>
           {hasRated ? (

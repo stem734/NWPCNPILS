@@ -16,28 +16,32 @@ const ResetPassword: React.FC = () => {
   const [resendSent, setResendSent] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    // Check for expired link error in hash (implicit flow)
+  const urlHasExpiredLink = (() => {
     const hash = window.location.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash.substring(1));
       if (hashParams.get('error_code') === 'otp_expired') {
-        setLinkExpired(true);
-        return;
+        return true;
       }
     }
 
-    // Check for error in query params (PKCE flow)
-    if (searchParams.get('error_code') === 'otp_expired') {
-      setLinkExpired(true);
+    return searchParams.get('error_code') === 'otp_expired';
+  })();
+
+  useEffect(() => {
+    if (urlHasExpiredLink) {
       return;
     }
+
+    let cancelled = false;
 
     // PKCE flow: exchange the ?code= param for a session
     const code = searchParams.get('code');
     if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+      void supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+        if (cancelled) {
+          return;
+        }
         if (exchangeError) {
           console.error('Code exchange failed:', exchangeError.message);
           setLinkExpired(true);
@@ -56,12 +60,15 @@ const ResetPassword: React.FC = () => {
     });
 
     // Also check if there's already an active session (e.g. page refresh)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true);
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!cancelled && session) setSessionReady(true);
     });
 
-    return () => subscription.unsubscribe();
-  }, [searchParams]);
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [searchParams, urlHasExpiredLink]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +126,7 @@ const ResetPassword: React.FC = () => {
     );
   }
 
-  if (linkExpired) {
+  if (urlHasExpiredLink || linkExpired) {
     const handleResend = async (e: React.FormEvent) => {
       e.preventDefault();
       setError('');
