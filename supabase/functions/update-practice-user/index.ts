@@ -2,8 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { assertAdmin } from '../_shared/assert-admin.ts';
 import { createServiceClient, corsHeaders, jsonResponse, errorResponse } from '../_shared/supabase-client.ts';
 import {
-  assertNoAdminConflict,
-  assertNoPracticeUserConflict,
+  assertNoOtherUserWithEmail,
   assertPracticeIdsExist,
   normaliseEmail,
   replacePracticeMemberships,
@@ -36,17 +35,16 @@ serve(async (req) => {
     const practiceIds = await assertPracticeIdsExist(supabase, Array.isArray(body.practiceIds) ? body.practiceIds : []);
 
     const { data: targetPracticeUser, error: fetchError } = await supabase
-      .from('practice_users')
+      .from('users')
       .select('*')
       .eq('uid', body.uid)
       .single();
 
     if (fetchError || !targetPracticeUser) {
-      return errorResponse('Practice user account not found', 404);
+      return errorResponse('User account not found', 404);
     }
 
-    await assertNoAdminConflict(supabase, email, body.uid);
-    await assertNoPracticeUserConflict(supabase, email, body.uid);
+    await assertNoOtherUserWithEmail(supabase, email, body.uid);
 
     const { error: authError } = await supabase.auth.admin.updateUserById(body.uid, {
       email,
@@ -58,17 +56,18 @@ serve(async (req) => {
     }
 
     const { error: updateError } = await supabase
-      .from('practice_users')
+      .from('users')
       .update({
         email,
         name: displayName,
         is_active: body.isActive !== false,
+        global_role: targetPracticeUser.global_role || null,
         updated_at: new Date().toISOString(),
       })
       .eq('uid', body.uid);
 
     if (updateError) {
-      return errorResponse(`Failed to update practice user: ${updateError.message}`, 500);
+      return errorResponse(`Failed to update user: ${updateError.message}`, 500);
     }
 
     await replacePracticeMemberships(supabase, body.uid, practiceIds, body.defaultPracticeId);

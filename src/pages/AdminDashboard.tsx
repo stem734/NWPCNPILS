@@ -28,6 +28,14 @@ interface AdminUser {
   role: 'owner' | 'admin';
 }
 
+type AdminRow = {
+  uid: string;
+  email: string;
+  name: string;
+  is_active: boolean;
+  global_role: 'owner' | 'admin' | null;
+};
+
 interface AuditLog {
   id: string;
   action: 'created' | 'updated' | 'deleted';
@@ -155,12 +163,21 @@ const AdminDashboard: React.FC = () => {
     setLoadingAdmins(true);
     try {
       const { data, error } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('is_active', true)
+        .from('users')
+        .select('uid, email, name, is_active, global_role')
+        .not('global_role', 'is', null)
         .order('email');
       if (error) throw error;
-      setAdminUsers((data || []) as AdminUser[]);
+      const mappedAdmins = (((data || []) as unknown) as AdminRow[])
+        .filter((row) => row.global_role === 'owner' || row.global_role === 'admin')
+        .map((row) => ({
+          uid: row.uid,
+          email: row.email,
+          name: row.name,
+          is_active: row.is_active,
+          role: row.global_role as 'owner' | 'admin',
+        }));
+      setAdminUsers(mappedAdmins);
     } catch (error) {
       console.error('Error loading admins:', error);
     }
@@ -439,11 +456,16 @@ const AdminDashboard: React.FC = () => {
         body: { email: newAdminEmail.trim(), name: newAdminName.trim() },
       });
       if (invokeError) throw invokeError;
+      const nextEmail = newAdminEmail.trim();
       setNewAdminName('');
       setNewAdminEmail('');
       setShowAddAdminForm(false);
-      setAdminActionMessage(`Administrator created. Copy the setup link below and send it to ${newAdminEmail.trim()}.`);
-      setAdminActionLink(data.resetLink || '');
+      setAdminActionMessage(
+        data?.created === false
+          ? `Global administrator access added for ${nextEmail}. Any existing practice memberships remain in place.`
+          : `Administrator created. Copy the setup link below and send it to ${nextEmail}.`,
+      );
+      setAdminActionLink(data?.resetLink || '');
       loadAdmins();
     } catch (error) {
       console.error('Error adding admin:', error);
@@ -505,10 +527,16 @@ const AdminDashboard: React.FC = () => {
       isDangerous: true,
       onConfirm: async () => {
         try {
-          const { error: invokeError } = await supabase.functions.invoke('delete-admin-user', {
+          const { data, error: invokeError } = await supabase.functions.invoke('delete-admin-user', {
             body: { uid: adminUser.uid },
           });
           if (invokeError) throw invokeError;
+          setAdminActionMessage(
+            data?.demotedOnly
+              ? `${adminUser.email} still has practice access, so only their global administrator role was removed.`
+              : `${adminUser.email} was deleted completely.`,
+          );
+          setAdminActionLink('');
           loadAdmins();
         } catch (error) {
           console.error('Error deleting admin:', error);
@@ -539,7 +567,7 @@ const AdminDashboard: React.FC = () => {
           <h1>
             <ShieldAlert size={22} color="#005eb8" /> Admin Dashboard
           </h1>
-          <p>Manage practices, practice users, administrators, and the global medication library from one place.</p>
+          <p>Manage practices, users, administrators, and the global medication library from one place.</p>
         </div>
         <div className="dashboard-actions">
           <button onClick={() => navigate(resolvePath('/admin/drug-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
@@ -559,7 +587,7 @@ const AdminDashboard: React.FC = () => {
           Practices
         </button>
         <button className={`dashboard-tab${activeTab === 'practiceUsers' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('practiceUsers')}>
-          Practice Users
+          Users
         </button>
         <button className={`dashboard-tab${activeTab === 'admins' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('admins')}>
           Administrators
@@ -572,36 +600,58 @@ const AdminDashboard: React.FC = () => {
         </button>
       </div>
 
-      {adminActionLink && (
+      {(adminActionMessage || adminActionLink) && (
         <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
-          <h2 className="dashboard-panel-title">Administrator Link Ready</h2>
-          <p className="dashboard-panel-subtitle" style={{ marginBottom: '1rem' }}>{adminActionMessage}</p>
-          <textarea
-            readOnly
-            value={adminActionLink}
-            rows={4}
-            style={{ width: '100%', resize: 'vertical' }}
-            className="dashboard-field"
-          />
-          <div className="dashboard-inline-actions" style={{ marginTop: '1rem' }}>
-            <button
-              onClick={() => navigator.clipboard.writeText(adminActionLink)}
-              className="action-button"
-              style={{ backgroundColor: '#005eb8' }}
-            >
-              Copy Link
-            </button>
-            <button
-              onClick={() => {
-                setAdminActionLink('');
-                setAdminActionMessage('');
-              }}
-              className="action-button"
-              style={{ backgroundColor: '#4c6272' }}
-            >
-              Clear
-            </button>
-          </div>
+          <h2 className="dashboard-panel-title">Access Link Ready</h2>
+          {adminActionMessage && (
+            <p className="dashboard-panel-subtitle" style={{ marginBottom: adminActionLink ? '1rem' : '0' }}>
+              {adminActionMessage}
+            </p>
+          )}
+          {adminActionLink && (
+            <>
+              <textarea
+                readOnly
+                value={adminActionLink}
+                rows={4}
+                style={{ width: '100%', resize: 'vertical' }}
+                className="dashboard-field"
+              />
+              <div className="dashboard-inline-actions" style={{ marginTop: '1rem' }}>
+                <button
+                  onClick={() => navigator.clipboard.writeText(adminActionLink)}
+                  className="action-button"
+                  style={{ backgroundColor: '#005eb8' }}
+                >
+                  Copy Link
+                </button>
+                <button
+                  onClick={() => {
+                    setAdminActionLink('');
+                    setAdminActionMessage('');
+                  }}
+                  className="action-button"
+                  style={{ backgroundColor: '#4c6272' }}
+                >
+                  Clear
+                </button>
+              </div>
+            </>
+          )}
+          {!adminActionLink && (
+            <div className="dashboard-inline-actions" style={{ marginTop: '1rem' }}>
+              <button
+                onClick={() => {
+                  setAdminActionLink('');
+                  setAdminActionMessage('');
+                }}
+                className="action-button"
+                style={{ backgroundColor: '#4c6272' }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -783,9 +833,9 @@ const AdminDashboard: React.FC = () => {
       {activeTab === 'practiceUsers' && (
       <>
         <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
-          <h2 className="dashboard-panel-title">Practice User Management</h2>
+          <h2 className="dashboard-panel-title">User Management</h2>
           <p className="dashboard-panel-subtitle">
-            Practice users can belong to multiple practices. Global medication changes go live immediately for practices using the global source.
+            Users can be practice admins, global admins, or both. Practice-linked users can belong to multiple practices, and global medication changes go live immediately for practices using the global source.
           </p>
         </div>
         <PracticeUserManagement practices={practices} />
@@ -799,7 +849,7 @@ const AdminDashboard: React.FC = () => {
             <h2 className="dashboard-panel-title">
             Administrator Accounts ({adminUsers.length})
             </h2>
-            <p className="dashboard-panel-subtitle">Manage who can administer the platform and generate manual setup or reset links.</p>
+            <p className="dashboard-panel-subtitle">Manage global administrator access on top of the shared user account model.</p>
           </div>
           {!showAddAdminForm && (
             <button onClick={() => setShowAddAdminForm(true)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
@@ -976,7 +1026,7 @@ const AdminDashboard: React.FC = () => {
           {window.location.origin}/signup
         </div>
         <div className="dashboard-banner dashboard-banner--info" style={{ marginTop: '1rem' }}>
-          Use the Practice Users tab to create practice logins, assign users to multiple practices, and send reset links after accounts are created.
+          Use the Users tab to create accounts, assign users to multiple practices, and send reset links after accounts are created.
         </div>
       </div>
       )}

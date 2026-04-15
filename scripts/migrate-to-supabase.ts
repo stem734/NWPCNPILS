@@ -16,6 +16,8 @@
  * - This script expects a fresh or mostly empty Supabase auth user set.
  * - Legacy `selected_medications` values are copied onto `practices` only for
  *   migration support. They are not converted into active practice cards.
+ * - Global admins and practice-linked users are merged into the unified `users`
+ *   table, and practice memberships are backfilled separately.
  */
 
 import { cert, getApps, initializeApp, type ServiceAccount } from 'firebase-admin/app';
@@ -174,8 +176,8 @@ async function migrateAuthUsers() {
   console.log(`  Migrated ${migrated} users and reused ${reusedMappings} mappings`);
 }
 
-async function migrateAdmins() {
-  console.log('\n=== Step 2: Migrating Admins ===');
+async function migrateUsersWithGlobalAdminAccess() {
+  console.log('\n=== Step 2: Migrating Users With Global Admin Access ===');
 
   const snapshot = await firestore.collection('admins').get();
   console.log(`  Found ${snapshot.size} admin documents`);
@@ -185,18 +187,19 @@ async function migrateAdmins() {
   for (const doc of snapshot.docs) {
     const data = doc.data();
     const supabaseUid = uidMap.get(doc.id);
+    const firebaseUser = firebaseUsersByUid.get(doc.id);
 
     if (!supabaseUid) {
       console.error(`  x No Supabase UID mapping for admin ${doc.id}`);
       continue;
     }
 
-    const { error } = await supabase.from('admins').upsert({
+    const { error } = await supabase.from('users').upsert({
       uid: supabaseUid,
-      email: toSafeString(data.email),
-      name: toSafeString(data.name) || toSafeString(data.email) || 'Administrator',
-      is_active: Boolean(data.is_active ?? true),
-      role: data.role === 'owner' ? 'owner' : 'admin',
+      email: toSafeString(data.email) || firebaseUser?.email || '',
+      name: toSafeString(data.name) || firebaseUser?.displayName || toSafeString(data.email) || firebaseUser?.email || 'Administrator',
+      is_active: Boolean(data.is_active ?? true) && !(firebaseUser?.disabled ?? false),
+      global_role: data.role === 'owner' ? 'owner' : 'admin',
       created_at: toIso(data.created_at) || new Date().toISOString(),
       updated_at: toIso(data.updated_at) || new Date().toISOString(),
     });
@@ -210,7 +213,7 @@ async function migrateAdmins() {
     console.log(`  + ${toSafeString(data.email)} (${data.role || 'admin'})`);
   }
 
-  console.log(`  Migrated ${migrated} / ${snapshot.size} admins`);
+  console.log(`  Migrated ${migrated} / ${snapshot.size} global admin users`);
 }
 
 async function migrateMedications() {
@@ -318,8 +321,8 @@ async function migratePractices() {
   console.log(`  Migrated ${migrated} / ${snapshot.size} practices`);
 }
 
-async function migratePracticeUsersAndMemberships() {
-  console.log('\n=== Step 5: Migrating Practice Users And Memberships ===');
+async function migratePracticeAccess() {
+  console.log('\n=== Step 5: Migrating Practice Access ===');
 
   const linksByFirebaseUid = new Map<string, PracticeAuthLink[]>();
 
@@ -329,7 +332,7 @@ async function migratePracticeUsersAndMemberships() {
     linksByFirebaseUid.set(link.firebaseUid, existing);
   }
 
-  let practiceUsersMigrated = 0;
+  let usersUpserted = 0;
   let membershipsMigrated = 0;
 
   for (const [firebaseUid, links] of linksByFirebaseUid.entries()) {
@@ -351,21 +354,33 @@ async function migratePracticeUsersAndMemberships() {
       primaryLink.practiceName ||
       'Practice user';
 
-    const { error: practiceUserError } = await supabase.from('practice_users').upsert({
+    const { data: existingUser, error: existingUserError } = await supabase
+      .from('users')
+      .select('email, name, is_active, global_role, created_at')
+      .eq('uid', supabaseUid)
+      .maybeSingle();
+
+    if (existingUserError) {
+      console.error(`  x Failed to inspect existing user ${fallbackEmail || firebaseUid}: ${existingUserError.message}`);
+      continue;
+    }
+
+    const { error: practiceUserError } = await supabase.from('users').upsert({
       uid: supabaseUid,
-      email: fallbackEmail,
-      name: fallbackName,
-      is_active: !(firebaseUser?.disabled ?? false),
-      created_at: primaryLink.signedUpAt || new Date().toISOString(),
+      email: existingUser?.email || fallbackEmail,
+      name: existingUser?.name || fallbackName,
+      is_active: Boolean(existingUser?.is_active ?? true) && !(firebaseUser?.disabled ?? false),
+      global_role: existingUser?.global_role || null,
+      created_at: existingUser?.created_at || primaryLink.signedUpAt || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
 
     if (practiceUserError) {
-      console.error(`  x Failed to upsert practice user ${fallbackEmail || firebaseUid}: ${practiceUserError.message}`);
+      console.error(`  x Failed to upsert user ${fallbackEmail || firebaseUid}: ${practiceUserError.message}`);
       continue;
     }
 
-    practiceUsersMigrated++;
+    usersUpserted++;
 
     const sortedLinks = [...links].sort((left, right) =>
       (left.signedUpAt || '').localeCompare(right.signedUpAt || '') || left.practiceName.localeCompare(right.practiceName),
@@ -382,7 +397,7 @@ async function migratePracticeUsersAndMemberships() {
         return {
           practice_id: practiceId,
           user_uid: supabaseUid,
-          role: 'editor',
+          role: 'admin',
           is_default: index === 0,
           created_at: link.signedUpAt || new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -417,7 +432,7 @@ async function migratePracticeUsersAndMemberships() {
     console.log(`  + ${fallbackEmail || firebaseUid} linked to ${membershipPayload.length} practice(s)`);
   }
 
-  console.log(`  Migrated ${practiceUsersMigrated} practice users and ${membershipsMigrated} memberships`);
+  console.log(`  Migrated ${usersUpserted} practice-linked users and ${membershipsMigrated} memberships`);
 }
 
 async function migrateLoginAudit() {
@@ -502,18 +517,23 @@ async function verifyCounts() {
   console.log('\n=== Verification: Row Counts ===');
 
   const practicesSnapshot = await firestore.collection('practices').get();
+  const adminSnapshot = await firestore.collection('admins').get();
   const linkedPracticeCount = practicesSnapshot.docs.filter((doc) => toSafeString(doc.data().auth_uid)).length;
-  const uniquePracticeUserCount = new Set(
+  const uniquePracticeUserIds = new Set(
     practicesSnapshot.docs
       .map((doc) => toSafeString(doc.data().auth_uid))
       .filter(Boolean),
-  ).size;
+  );
+  const uniqueGlobalAdminIds = new Set(adminSnapshot.docs.map((doc) => doc.id));
+  const unifiedUserCount = new Set([
+    ...uniquePracticeUserIds,
+    ...uniqueGlobalAdminIds,
+  ]).size;
 
   const firestoreCounts = new Map<string, number>([
-    ['admins', (await firestore.collection('admins').get()).size],
+    ['users', unifiedUserCount],
     ['medications', (await firestore.collection('medications').get()).size],
     ['practices', practicesSnapshot.size],
-    ['practice_users', uniquePracticeUserCount],
     ['practice_memberships', linkedPracticeCount],
     ['login_audit', (await firestore.collection('login_audit').get()).size],
     ['audit_log', (await firestore.collection('audit_log').get()).size],
@@ -533,10 +553,10 @@ async function main() {
   console.log('==========================================');
 
   await migrateAuthUsers();
-  await migrateAdmins();
+  await migrateUsersWithGlobalAdminAccess();
   await migrateMedications();
   await migratePractices();
-  await migratePracticeUsersAndMemberships();
+  await migratePracticeAccess();
   await migrateLoginAudit();
   await migrateAuditLog();
   await verifyCounts();

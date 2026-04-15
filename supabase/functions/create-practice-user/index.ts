@@ -3,9 +3,8 @@ import { assertAdmin } from '../_shared/assert-admin.ts';
 import { createServiceClient, corsHeaders, errorResponse, jsonResponse } from '../_shared/supabase-client.ts';
 import {
   addPracticeMemberships,
-  assertNoAdminConflict,
   assertPracticeIdsExist,
-  loadPracticeUserByEmail,
+  loadUserByEmail,
   normaliseEmail,
 } from '../_shared/practice-user-management.ts';
 
@@ -32,11 +31,9 @@ serve(async (req) => {
     const displayName = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : email;
     const [practiceId] = await assertPracticeIdsExist(supabase, [body.practiceId]);
 
-    await assertNoAdminConflict(supabase, email);
-
-    const existingPracticeUser = await loadPracticeUserByEmail(supabase, email);
-    if (existingPracticeUser) {
-      const { error: authError } = await supabase.auth.admin.updateUserById(existingPracticeUser.uid, {
+    const existingUser = await loadUserByEmail(supabase, email);
+    if (existingUser) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(existingUser.uid, {
         email,
         user_metadata: { name: displayName },
       });
@@ -46,20 +43,21 @@ serve(async (req) => {
       }
 
       const { error: updateError } = await supabase
-        .from('practice_users')
+        .from('users')
         .update({
           email,
           name: displayName,
           is_active: true,
+          global_role: existingUser.global_role || null,
           updated_at: new Date().toISOString(),
         })
-        .eq('uid', existingPracticeUser.uid);
+        .eq('uid', existingUser.uid);
 
       if (updateError) {
-        return errorResponse(`Failed to update practice user: ${updateError.message}`, 500);
+        return errorResponse(`Failed to update user: ${updateError.message}`, 500);
       }
 
-      await addPracticeMemberships(supabase, existingPracticeUser.uid, [practiceId], practiceId);
+      await addPracticeMemberships(supabase, existingUser.uid, [practiceId], practiceId);
 
       await supabase
         .from('practices')
@@ -68,7 +66,7 @@ serve(async (req) => {
 
       return jsonResponse({
         success: true,
-        uid: existingPracticeUser.uid,
+        uid: existingUser.uid,
         created: false,
         resetLink: '',
       });
@@ -87,17 +85,18 @@ serve(async (req) => {
     }
 
     const now = new Date().toISOString();
-    const { error: insertError } = await supabase.from('practice_users').insert({
+    const { error: insertError } = await supabase.from('users').insert({
       uid: userRecord.user.id,
       email,
       name: displayName,
       is_active: true,
+      global_role: null,
       created_at: now,
       updated_at: now,
     });
 
     if (insertError) {
-      return errorResponse(`Failed to create practice user record: ${insertError.message}`, 500);
+      return errorResponse(`Failed to create user record: ${insertError.message}`, 500);
     }
 
     await addPracticeMemberships(supabase, userRecord.user.id, [practiceId], practiceId);

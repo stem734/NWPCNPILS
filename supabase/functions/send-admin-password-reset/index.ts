@@ -38,14 +38,17 @@ serve(async (req) => {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL');
 
-    // Get admin name from admins table
     const { data: adminData } = await supabase
-      .from('admins')
-      .select('name')
+      .from('users')
+      .select('name, global_role')
       .eq('uid', uid)
       .single();
 
-    const displayName = adminData?.name || user.email;
+    if (!adminData?.global_role) {
+      return errorResponse('Administrator account not found', 404);
+    }
+
+    const displayName = adminData.name || user.email;
 
     if (resendApiKey && resendFromEmail && resetLink) {
       const resend = new Resend(resendApiKey);

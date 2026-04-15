@@ -7,8 +7,7 @@
 -- Enable RLS on all tables
 ALTER TABLE practices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE medications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
-ALTER TABLE practice_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_medication_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE login_audit ENABLE ROW LEVEL SECURITY;
@@ -25,14 +24,15 @@ STABLE
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM admins
+    FROM users
     WHERE uid = auth.uid()
       AND is_active = true
+      AND global_role IN ('owner', 'admin')
   );
 $$;
 
 -- ===================
--- Helper function: is the current user an active practice user?
+-- Helper function: is the current user an active app user?
 -- ===================
 CREATE OR REPLACE FUNCTION is_practice_user()
 RETURNS boolean
@@ -42,7 +42,7 @@ STABLE
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM practice_users
+    FROM users
     WHERE uid = auth.uid()
       AND is_active = true
   );
@@ -60,7 +60,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM practice_memberships memberships
-    JOIN practice_users users
+    JOIN users
       ON users.uid = memberships.user_uid
     WHERE memberships.practice_id = target_practice
       AND memberships.user_uid = auth.uid()
@@ -133,64 +133,36 @@ CREATE POLICY "medications_delete_admin"
   USING (is_admin());
 
 -- =============================================================================
--- ADMINS policies
+-- USERS policies
 -- =============================================================================
-DROP POLICY IF EXISTS "admins_select_admin" ON admins;
-DROP POLICY IF EXISTS "admins_insert_admin" ON admins;
-DROP POLICY IF EXISTS "admins_update_admin" ON admins;
-DROP POLICY IF EXISTS "admins_delete_admin" ON admins;
+DROP POLICY IF EXISTS "users_select_admin" ON users;
+DROP POLICY IF EXISTS "users_select_self" ON users;
+DROP POLICY IF EXISTS "users_insert_admin" ON users;
+DROP POLICY IF EXISTS "users_update_admin" ON users;
+DROP POLICY IF EXISTS "users_delete_admin" ON users;
 
-CREATE POLICY "admins_select_admin"
-  ON admins FOR SELECT
+CREATE POLICY "users_select_admin"
+  ON users FOR SELECT
   TO authenticated
   USING (is_admin());
 
-CREATE POLICY "admins_insert_admin"
-  ON admins FOR INSERT
-  TO authenticated
-  WITH CHECK (is_admin());
-
-CREATE POLICY "admins_update_admin"
-  ON admins FOR UPDATE
-  TO authenticated
-  USING (is_admin());
-
-CREATE POLICY "admins_delete_admin"
-  ON admins FOR DELETE
-  TO authenticated
-  USING (is_admin());
-
--- =============================================================================
--- PRACTICE_USERS policies
--- =============================================================================
-DROP POLICY IF EXISTS "practice_users_select_admin" ON practice_users;
-DROP POLICY IF EXISTS "practice_users_select_self" ON practice_users;
-DROP POLICY IF EXISTS "practice_users_insert_admin" ON practice_users;
-DROP POLICY IF EXISTS "practice_users_update_admin" ON practice_users;
-DROP POLICY IF EXISTS "practice_users_delete_admin" ON practice_users;
-
-CREATE POLICY "practice_users_select_admin"
-  ON practice_users FOR SELECT
-  TO authenticated
-  USING (is_admin());
-
-CREATE POLICY "practice_users_select_self"
-  ON practice_users FOR SELECT
+CREATE POLICY "users_select_self"
+  ON users FOR SELECT
   TO authenticated
   USING (uid = auth.uid());
 
-CREATE POLICY "practice_users_insert_admin"
-  ON practice_users FOR INSERT
+CREATE POLICY "users_insert_admin"
+  ON users FOR INSERT
   TO authenticated
   WITH CHECK (is_admin());
 
-CREATE POLICY "practice_users_update_admin"
-  ON practice_users FOR UPDATE
+CREATE POLICY "users_update_admin"
+  ON users FOR UPDATE
   TO authenticated
   USING (is_admin());
 
-CREATE POLICY "practice_users_delete_admin"
-  ON practice_users FOR DELETE
+CREATE POLICY "users_delete_admin"
+  ON users FOR DELETE
   TO authenticated
   USING (is_admin());
 

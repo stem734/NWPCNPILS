@@ -5,7 +5,7 @@ export type AdminRecord = {
   email: string;
   name: string;
   is_active: boolean;
-  role: 'owner' | 'admin';
+  global_role: 'owner' | 'admin';
   created_at: string;
   updated_at: string;
 };
@@ -22,9 +22,10 @@ export async function assertAdmin(authHeader: string | null): Promise<{ admin: A
 
   // Check if user is already an admin
   const { data: admin } = await supabase
-    .from('admins')
+    .from('users')
     .select('*')
     .eq('uid', user.id)
+    .in('global_role', ['owner', 'admin'])
     .single();
 
   if (admin) {
@@ -36,8 +37,9 @@ export async function assertAdmin(authHeader: string | null): Promise<{ admin: A
 
   // Bootstrap: if no admins exist, make this user the owner
   const { count } = await supabase
-    .from('admins')
-    .select('*', { count: 'exact', head: true });
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .in('global_role', ['owner', 'admin']);
 
   if ((count ?? 0) > 0) {
     throw new Error('Administrator access required');
@@ -49,12 +51,12 @@ export async function assertAdmin(authHeader: string | null): Promise<{ admin: A
     email: user.email || '',
     name: user.user_metadata?.name || user.email || 'Primary Administrator',
     is_active: true,
-    role: 'owner',
+    global_role: 'owner',
     created_at: now,
     updated_at: now,
   };
 
-  const { error } = await supabase.from('admins').insert(bootstrapAdmin);
+  const { error } = await supabase.from('users').insert(bootstrapAdmin);
   if (error) throw new Error(`Failed to bootstrap admin: ${error.message}`);
 
   return { admin: bootstrapAdmin, userId: user.id };

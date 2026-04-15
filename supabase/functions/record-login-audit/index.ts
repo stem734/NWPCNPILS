@@ -15,12 +15,15 @@ serve(async (req) => {
 
     const supabase = createServiceClient();
 
-    // Check if user is an admin
-    const { data: adminData } = await supabase
-      .from('admins')
-      .select('*')
+    const { data: appUserData } = await supabase
+      .from('users')
+      .select('uid, email, name, global_role')
       .eq('uid', user.id)
       .single();
+
+    if (!appUserData) {
+      return errorResponse('No linked account found for login audit', 404);
+    }
 
     // Get client IP from headers
     const forwarded = req.headers.get('x-forwarded-for');
@@ -28,33 +31,38 @@ serve(async (req) => {
 
     let auditRecord;
 
-    if (adminData) {
-      auditRecord = {
-        uid: user.id,
-        email: adminData.email,
-        actor_type: 'admin' as const,
-        actor_name: adminData.name || adminData.email,
-        admin_role: adminData.role,
-        portal: portal === 'practice' ? 'practice' as const : 'admin' as const,
-        user_agent: typeof userAgent === 'string' ? userAgent.slice(0, 500) : '',
-        ip_address: ipAddress,
-      };
-    } else {
-      const { data: practiceUserData } = await supabase
-        .from('practice_users')
-        .select('*')
-        .eq('uid', user.id)
-        .single();
-
-      if (!practiceUserData) {
-        return errorResponse('No linked account found for login audit', 404);
+    if (portal === 'admin') {
+      if (!appUserData.global_role) {
+        return errorResponse('Administrator access required for admin login audit', 403);
       }
 
       auditRecord = {
         uid: user.id,
-        email: typeof practiceUserData.email === 'string' ? practiceUserData.email : user.email || '',
+        email: appUserData.email,
+        actor_type: 'admin' as const,
+        actor_name: appUserData.name || appUserData.email,
+        admin_role: appUserData.global_role,
+        portal: 'admin' as const,
+        user_agent: typeof userAgent === 'string' ? userAgent.slice(0, 500) : '',
+        ip_address: ipAddress,
+      };
+    } else {
+      const { data: membership } = await supabase
+        .from('practice_memberships')
+        .select('practice_id')
+        .eq('user_uid', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!membership) {
+        return errorResponse('No linked practice membership found for login audit', 404);
+      }
+
+      auditRecord = {
+        uid: user.id,
+        email: typeof appUserData.email === 'string' ? appUserData.email : user.email || '',
         actor_type: 'practice' as const,
-        actor_name: typeof practiceUserData.name === 'string' ? practiceUserData.name : 'Practice user',
+        actor_name: typeof appUserData.name === 'string' ? appUserData.name : 'Practice user',
         actor_id: user.id,
         portal: 'practice' as const,
         user_agent: typeof userAgent === 'string' ? userAgent.slice(0, 500) : '',

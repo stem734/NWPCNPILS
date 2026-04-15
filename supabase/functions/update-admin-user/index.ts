@@ -19,9 +19,10 @@ serve(async (req) => {
 
     // Check target admin exists
     const { data: targetAdmin, error: fetchError } = await supabase
-      .from('admins')
+      .from('users')
       .select('*')
       .eq('uid', uid)
+      .in('global_role', ['owner', 'admin'])
       .single();
 
     if (fetchError || !targetAdmin) {
@@ -29,7 +30,7 @@ serve(async (req) => {
     }
 
     // Owner protection
-    if (targetAdmin.role === 'owner' && actingAdmin.role !== 'owner') {
+    if (targetAdmin.global_role === 'owner' && actingAdmin.global_role !== 'owner') {
       return errorResponse('Only the owner can modify the owner account', 403);
     }
 
@@ -46,7 +47,7 @@ serve(async (req) => {
 
     // Update admin record
     const { error: updateError } = await supabase
-      .from('admins')
+      .from('users')
       .update({
         email: email.trim(),
         name: name.trim(),

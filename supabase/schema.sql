@@ -55,43 +55,31 @@ CREATE TABLE medications (
 );
 
 -- ===================
--- ADMINS TABLE
--- Replaces Firestore /admins/{uid}
+-- USERS TABLE
+-- Unified application user records for both global admins and practice members
 -- ===================
-CREATE TABLE admins (
+CREATE TABLE users (
   uid        uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email      text NOT NULL,
   name       text NOT NULL,
   is_active  boolean NOT NULL DEFAULT true,
-  role       text NOT NULL CHECK (role IN ('owner', 'admin')),
+  global_role text CHECK (global_role IN ('owner', 'admin')),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
--- ===================
--- PRACTICE_USERS TABLE
--- Practice portal users that can belong to one or more practices
--- ===================
-CREATE TABLE practice_users (
-  uid        uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email      text NOT NULL,
-  name       text NOT NULL,
-  is_active  boolean NOT NULL DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
-CREATE UNIQUE INDEX idx_practice_users_email_lower ON practice_users (lower(email));
+CREATE UNIQUE INDEX idx_users_email_lower ON users (lower(email));
+CREATE INDEX idx_users_global_role ON users (global_role);
 
 -- ===================
 -- PRACTICE_MEMBERSHIPS TABLE
--- Links practice users to one or more practices
+-- Links application users to one or more practices
 -- ===================
 CREATE TABLE practice_memberships (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   practice_id uuid NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
-  user_uid    uuid NOT NULL REFERENCES practice_users(uid) ON DELETE CASCADE,
-  role        text NOT NULL DEFAULT 'editor' CHECK (role IN ('editor')),
+  user_uid    uuid NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+  role        text NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'editor')),
   is_default  boolean NOT NULL DEFAULT false,
   created_at  timestamptz DEFAULT now(),
   updated_at  timestamptz DEFAULT now(),

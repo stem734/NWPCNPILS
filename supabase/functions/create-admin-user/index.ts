@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { assertAdmin } from '../_shared/assert-admin.ts';
 import { createServiceClient, corsHeaders, jsonResponse, errorResponse } from '../_shared/supabase-client.ts';
 import { Resend } from 'https://esm.sh/resend@6';
+import { loadUserByEmail, normaliseEmail } from '../_shared/practice-user-management.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,14 +18,57 @@ serve(async (req) => {
     }
 
     const supabase = createServiceClient();
+    const normalisedEmail = normaliseEmail(email);
+    const displayName = typeof name === 'string' && name.trim() ? name.trim() : normalisedEmail;
+
+    const existingUser = await loadUserByEmail(supabase, normalisedEmail);
+    if (existingUser) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(existingUser.uid, {
+        email: normalisedEmail,
+        user_metadata: { name: displayName },
+      });
+
+      if (authError) {
+        return errorResponse(`Failed to update existing auth user: ${authError.message}`, 500);
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          email: normalisedEmail,
+          name: displayName,
+          is_active: true,
+          global_role: existingUser.global_role || 'admin',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('uid', existingUser.uid);
+
+      if (updateError) {
+        return errorResponse(`Failed to update user record: ${updateError.message}`, 500);
+      }
+
+      const appBaseUrl = (Deno.env.get('APP_BASE_URL') || 'https://www.mymedinfo.info').replace(/\/$/, '');
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: normalisedEmail,
+        options: { redirectTo: `${appBaseUrl}/reset-password` },
+      });
+
+      return jsonResponse({
+        success: true,
+        uid: existingUser.uid,
+        created: false,
+        resetLink: linkData?.properties?.action_link || '',
+      });
+    }
 
     // Create auth user with a random temp password
     const tempPassword = crypto.randomUUID() + crypto.randomUUID();
     const { data: userRecord, error: createError } = await supabase.auth.admin.createUser({
-      email: email.trim(),
+      email: normalisedEmail,
       password: tempPassword,
       email_confirm: true,
-      user_metadata: { name: typeof name === 'string' && name.trim() ? name.trim() : undefined },
+      user_metadata: { name: displayName },
     });
 
     if (createError || !userRecord.user) {
@@ -32,25 +76,25 @@ serve(async (req) => {
     }
 
     const now = new Date().toISOString();
-    const { error: insertError } = await supabase.from('admins').insert({
+    const { error: insertError } = await supabase.from('users').insert({
       uid: userRecord.user.id,
-      email: email.trim(),
-      name: typeof name === 'string' && name.trim() ? name.trim() : email.trim(),
+      email: normalisedEmail,
+      name: displayName,
       is_active: true,
-      role: 'admin',
+      global_role: 'admin',
       created_at: now,
       updated_at: now,
     });
 
     if (insertError) {
-      return errorResponse(`Failed to create admin record: ${insertError.message}`, 500);
+      return errorResponse(`Failed to create user record: ${insertError.message}`, 500);
     }
 
     // Generate password reset link
     const appBaseUrl = (Deno.env.get('APP_BASE_URL') || 'https://www.mymedinfo.info').replace(/\/$/, '');
     const { data: linkData } = await supabase.auth.admin.generateLink({
       type: 'recovery',
-      email: email.trim(),
+      email: normalisedEmail,
       options: { redirectTo: `${appBaseUrl}/reset-password` },
     });
 
@@ -61,10 +105,9 @@ serve(async (req) => {
     const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL');
     if (resendApiKey && resendFromEmail && resetLink) {
       const resend = new Resend(resendApiKey);
-      const displayName = typeof name === 'string' && name.trim() ? name.trim() : email.trim();
       await resend.emails.send({
         from: resendFromEmail,
-        to: email.trim(),
+        to: normalisedEmail,
         subject: 'Set up your MyMedInfo administrator account',
         text: `Hello ${displayName},\n\nYour MyMedInfo administrator account has been created. Set your password using this secure link:\n${resetLink}\n\nAfter setting your password, sign in at ${appBaseUrl}/admin\n`,
         html: `
@@ -83,7 +126,7 @@ serve(async (req) => {
       });
     }
 
-    return jsonResponse({ success: true, uid: userRecord.user.id, resetLink });
+    return jsonResponse({ success: true, uid: userRecord.user.id, created: true, resetLink });
   } catch (err) {
     return errorResponse(err instanceof Error ? err.message : 'Internal error', 500);
   }

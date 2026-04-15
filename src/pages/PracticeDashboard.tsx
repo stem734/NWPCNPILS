@@ -33,7 +33,7 @@ type PracticeMembershipRow = {
   id: string;
   practice_id: string;
   user_uid: string;
-  role: 'editor';
+  role: 'admin' | 'editor';
   is_default: boolean;
   practice: PracticeSummary | PracticeSummary[] | null;
 };
@@ -599,9 +599,17 @@ const PracticeDashboard: React.FC = () => {
 
       {memberships.length > 1 && (
         <section className="dashboard-section">
-          <div className="dashboard-panel">
+          <div className="dashboard-panel" style={{ borderLeft: '4px solid #005eb8' }}>
+            <div className="dashboard-panel-header">
+              <div>
+                <h2 className="dashboard-panel-title">Switch Editing Practice</h2>
+                <p className="dashboard-panel-subtitle">
+                  The selected practice below controls which drug cards, statistics, and disclaimers you are editing right now.
+                </p>
+              </div>
+            </div>
             <div className="dashboard-field" style={{ maxWidth: '420px' }}>
-              <label>Selected Practice</label>
+              <label>Editing Practice</label>
               <select value={selectedPracticeId} onChange={(event) => setSelectedPracticeId(event.target.value)}>
                 {memberships.map((membership) => (
                   <option key={membership.practice_id} value={membership.practice_id}>
@@ -609,6 +617,22 @@ const PracticeDashboard: React.FC = () => {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="dashboard-chip-row" style={{ marginTop: '0.75rem' }}>
+              {memberships.map((membership) => (
+                <span
+                  key={`${membership.practice_id}-chip`}
+                  className={`dashboard-chip${membership.practice_id === selectedPracticeId ? ' dashboard-chip--active' : ''}`}
+                >
+                  {membership.practice.name}
+                  {membership.practice_id === selectedPracticeId || membership.is_default
+                    ? ` (${[
+                        membership.practice_id === selectedPracticeId ? 'Current' : null,
+                        membership.is_default ? 'Default' : null,
+                      ].filter(Boolean).join(', ')})`
+                    : ''}
+                </span>
+              ))}
             </div>
           </div>
         </section>

@@ -23,9 +23,10 @@ serve(async (req) => {
 
     // Check target exists
     const { data: targetAdmin, error: fetchError } = await supabase
-      .from('admins')
+      .from('users')
       .select('*')
       .eq('uid', uid)
+      .in('global_role', ['owner', 'admin'])
       .single();
 
     if (fetchError || !targetAdmin) {
@@ -33,18 +34,41 @@ serve(async (req) => {
     }
 
     // Permission check: only owner can delete
-    if (targetAdmin.role === 'owner' || actingAdmin.role !== 'owner') {
+    if (targetAdmin.global_role === 'owner' || actingAdmin.global_role !== 'owner') {
       return errorResponse('Only the owner can delete administrator accounts', 403);
     }
 
-    // Delete auth user (cascades to admins table via FK)
+    const { count: membershipCount, error: membershipCountError } = await supabase
+      .from('practice_memberships')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_uid', uid);
+
+    if (membershipCountError) {
+      return errorResponse(`Failed to inspect practice memberships: ${membershipCountError.message}`, 500);
+    }
+
+    if ((membershipCount ?? 0) > 0) {
+      const { error: demoteError } = await supabase
+        .from('users')
+        .update({
+          global_role: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('uid', uid);
+
+      if (demoteError) {
+        return errorResponse(`Failed to remove global administrator access: ${demoteError.message}`, 500);
+      }
+
+      return jsonResponse({ success: true, demotedOnly: true });
+    }
+
     const { error: authError } = await supabase.auth.admin.deleteUser(uid);
     if (authError) {
       return errorResponse(`Failed to delete auth user: ${authError.message}`, 500);
     }
 
-    // Explicit delete from admins table (in case cascade not configured)
-    await supabase.from('admins').delete().eq('uid', uid);
+    await supabase.from('users').delete().eq('uid', uid);
 
     return jsonResponse({ success: true });
   } catch (err) {

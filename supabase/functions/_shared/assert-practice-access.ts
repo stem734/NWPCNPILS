@@ -21,17 +21,17 @@ export async function assertPracticeAccess(authHeader: string | null, practiceId
 
   const supabase = createServiceClient();
   const { data: practiceUser, error: practiceUserError } = await supabase
-    .from('practice_users')
+    .from('users')
     .select('uid, is_active')
     .eq('uid', user.id)
     .single();
 
   if (practiceUserError || !practiceUser) {
-    throw new Error('Practice user account not found');
+    throw new Error('User account not found');
   }
 
   if (!practiceUser.is_active) {
-    throw new Error('Practice user account is inactive');
+    throw new Error('User account is inactive');
   }
 
   return { userId: user.id };

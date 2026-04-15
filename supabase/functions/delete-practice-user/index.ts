@@ -8,22 +8,34 @@ serve(async (req) => {
   }
 
   try {
-    await assertAdmin(req.headers.get('Authorization'));
+    const { admin: actingAdmin, userId } = await assertAdmin(req.headers.get('Authorization'));
     const { uid } = await req.json() as { uid?: string };
 
     if (!uid) {
-      return errorResponse('Practice user uid is required');
+      return errorResponse('User uid is required');
+    }
+
+    if (uid === userId) {
+      return errorResponse('You cannot delete your own user account');
     }
 
     const supabase = createServiceClient();
     const { data: targetPracticeUser, error: fetchError } = await supabase
-      .from('practice_users')
-      .select('uid')
+      .from('users')
+      .select('uid, global_role')
       .eq('uid', uid)
       .single();
 
     if (fetchError || !targetPracticeUser) {
-      return errorResponse('Practice user account not found', 404);
+      return errorResponse('User account not found', 404);
+    }
+
+    if (targetPracticeUser.global_role === 'owner') {
+      return errorResponse('Owner accounts cannot be deleted from this action', 403);
+    }
+
+    if (targetPracticeUser.global_role && actingAdmin.global_role !== 'owner') {
+      return errorResponse('Only the owner can delete users who also have global administrator access', 403);
     }
 
     const { error: authError } = await supabase.auth.admin.deleteUser(uid);
@@ -31,7 +43,7 @@ serve(async (req) => {
       return errorResponse(`Failed to delete auth user: ${authError.message}`, 500);
     }
 
-    await supabase.from('practice_users').delete().eq('uid', uid);
+    await supabase.from('users').delete().eq('uid', uid);
 
     return jsonResponse({ success: true });
   } catch (err) {

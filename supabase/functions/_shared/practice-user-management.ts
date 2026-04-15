@@ -9,16 +9,12 @@ type PracticeIdRow = {
   id: string;
 };
 
-type AdminEmailRow = {
-  uid: string;
-  email: string;
-};
-
-type PracticeUserRow = {
+type AppUserRow = {
   uid: string;
   email: string;
   name: string;
   is_active: boolean;
+  global_role?: 'owner' | 'admin' | null;
 };
 
 type PracticeMembershipRow = {
@@ -49,9 +45,13 @@ export async function assertPracticeIdsExist(supabase: SupabaseClient, practiceI
   return ids;
 }
 
-export async function assertNoAdminConflict(supabase: SupabaseClient, email: string, ignoreUid?: string) {
+export async function assertNoOtherUserWithEmail(
+  supabase: SupabaseClient,
+  email: string,
+  ignoreUid?: string,
+) {
   let query = supabase
-    .from('admins')
+    .from('users')
     .select('uid, email')
     .ilike('email', email)
     .limit(1);
@@ -62,51 +62,48 @@ export async function assertNoAdminConflict(supabase: SupabaseClient, email: str
 
   const { data, error } = await query.maybeSingle();
   if (error) {
-    throw new Error(`Failed to validate administrator email: ${error.message}`);
+    throw new Error(`Failed to validate user email: ${error.message}`);
   }
 
-  if (((data as unknown) as AdminEmailRow | null)) {
-    throw new Error('This email address already belongs to an administrator account');
-  }
-}
-
-export async function assertNoPracticeUserConflict(supabase: SupabaseClient, email: string, ignoreUid?: string) {
-  let query = supabase
-    .from('practice_users')
-    .select('uid, email')
-    .ilike('email', email)
-    .limit(1);
-
-  if (ignoreUid) {
-    query = query.neq('uid', ignoreUid);
-  }
-
-  const { data, error } = await query.maybeSingle();
-  if (error) {
-    throw new Error(`Failed to validate practice user email: ${error.message}`);
-  }
-
-  if (((data as unknown) as AdminEmailRow | null)) {
-    throw new Error('This email address already belongs to another practice user');
+  if ((data as AppUserRow | null)?.uid) {
+    throw new Error('This email address already belongs to another user');
   }
 }
 
-export async function loadPracticeUserByEmail(supabase: SupabaseClient, email: string) {
+export async function loadUserByEmail(supabase: SupabaseClient, email: string) {
   const { data, error } = await supabase
-    .from('practice_users')
+    .from('users')
     .select('*')
     .ilike('email', email)
     .limit(1)
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Failed to load practice user: ${error.message}`);
+    throw new Error(`Failed to load user: ${error.message}`);
   }
 
-  return ((data as unknown) as PracticeUserRow | null);
+  return ((data as unknown) as AppUserRow | null);
 }
 
-function resolveDefaultPracticeId(practiceIds: string[], requestedDefaultPracticeId?: string, fallbackDefaultPracticeId?: string) {
+export async function loadUserByUid(supabase: SupabaseClient, uid: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('uid', uid)
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to load user: ${error.message}`);
+  }
+
+  return data as AppUserRow;
+}
+
+function resolveDefaultPracticeId(
+  practiceIds: string[],
+  requestedDefaultPracticeId?: string,
+  fallbackDefaultPracticeId?: string,
+) {
   if (requestedDefaultPracticeId && practiceIds.includes(requestedDefaultPracticeId)) {
     return requestedDefaultPracticeId;
   }
@@ -118,7 +115,12 @@ function resolveDefaultPracticeId(practiceIds: string[], requestedDefaultPractic
   return practiceIds[0];
 }
 
-export async function addPracticeMemberships(supabase: SupabaseClient, userUid: string, practiceIds: string[], defaultPracticeId?: string) {
+export async function addPracticeMemberships(
+  supabase: SupabaseClient,
+  userUid: string,
+  practiceIds: string[],
+  defaultPracticeId?: string,
+) {
   const ids = uniquePracticeIds(practiceIds);
   const now = new Date().toISOString();
 
@@ -149,7 +151,7 @@ export async function addPracticeMemberships(supabase: SupabaseClient, userUid: 
   const payload = mergedIds.map((practiceId) => ({
     practice_id: practiceId,
     user_uid: userUid,
-    role: 'editor',
+    role: 'admin',
     is_default: practiceId === resolvedDefaultPracticeId,
     updated_at: now,
   }));
@@ -163,7 +165,12 @@ export async function addPracticeMemberships(supabase: SupabaseClient, userUid: 
   }
 }
 
-export async function replacePracticeMemberships(supabase: SupabaseClient, userUid: string, practiceIds: string[], defaultPracticeId?: string) {
+export async function replacePracticeMemberships(
+  supabase: SupabaseClient,
+  userUid: string,
+  practiceIds: string[],
+  defaultPracticeId?: string,
+) {
   const ids = uniquePracticeIds(practiceIds);
   const now = new Date().toISOString();
   const resolvedDefaultPracticeId = resolveDefaultPracticeId(ids, defaultPracticeId);
@@ -177,7 +184,8 @@ export async function replacePracticeMemberships(supabase: SupabaseClient, userU
     throw new Error(`Failed to load memberships: ${existingError.message}`);
   }
 
-  const existingIds = (((existingMemberships || []) as unknown) as PracticeMembershipRow[]).map((membership) => membership.practice_id);
+  const existingIds = (((existingMemberships || []) as unknown) as PracticeMembershipRow[])
+    .map((membership) => membership.practice_id);
   const idsToDelete = existingIds.filter((practiceId: string) => !ids.includes(practiceId));
 
   if (idsToDelete.length > 0) {
@@ -204,7 +212,7 @@ export async function replacePracticeMemberships(supabase: SupabaseClient, userU
   const payload = ids.map((practiceId) => ({
     practice_id: practiceId,
     user_uid: userUid,
-    role: 'editor',
+    role: 'admin',
     is_default: practiceId === resolvedDefaultPracticeId,
     updated_at: now,
   }));

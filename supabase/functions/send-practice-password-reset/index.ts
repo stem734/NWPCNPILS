@@ -24,7 +24,7 @@ serve(async (req) => {
     }
 
     const { data: practiceUser } = await supabase
-      .from('practice_users')
+      .from('users')
       .select('name')
       .eq('uid', uid)
       .single();

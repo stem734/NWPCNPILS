@@ -2,28 +2,29 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Mail, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '../supabase';
 import ConfirmDialog from './ConfirmDialog';
-import type { PracticeSummary, PracticeUserSummary } from '../practicePortal';
+import type { AppUserSummary, PracticeSummary } from '../practicePortal';
 
 type PracticeUserManagementProps = {
   practices: PracticeSummary[];
 };
 
-type PracticeUserRow = {
+type UserRow = {
   uid: string;
   email: string;
   name: string;
   is_active: boolean;
+  global_role?: 'owner' | 'admin' | null;
   memberships: Array<{
     id: string;
     practice_id: string;
     user_uid: string;
-    role: 'editor';
+    role: 'admin' | 'editor';
     is_default: boolean;
     practice: Pick<PracticeSummary, 'id' | 'name' | 'is_active'> | Array<Pick<PracticeSummary, 'id' | 'name' | 'is_active'>> | null;
   }>;
 };
 
-type PracticeUserFormState = {
+type UserFormState = {
   uid?: string;
   name: string;
   email: string;
@@ -32,7 +33,7 @@ type PracticeUserFormState = {
   defaultPracticeId: string;
 };
 
-const emptyForm = (): PracticeUserFormState => ({
+const emptyForm = (): UserFormState => ({
   name: '',
   email: '',
   isActive: true,
@@ -41,18 +42,18 @@ const emptyForm = (): PracticeUserFormState => ({
 });
 
 const normalisePractice = (
-  value: PracticeUserRow['memberships'][number]['practice'],
+  value: UserRow['memberships'][number]['practice'],
 ): Pick<PracticeSummary, 'id' | 'name' | 'is_active'> | null => {
   const practice = Array.isArray(value) ? value[0] : value;
   return practice ?? null;
 };
 
 const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practices }) => {
-  const [practiceUsers, setPracticeUsers] = useState<PracticeUserSummary[]>([]);
+  const [users, setUsers] = useState<AppUserSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<PracticeUserSummary | null>(null);
-  const [form, setForm] = useState<PracticeUserFormState>(emptyForm());
+  const [editingUser, setEditingUser] = useState<AppUserSummary | null>(null);
+  const [form, setForm] = useState<UserFormState>(emptyForm());
   const [error, setError] = useState('');
   const [actionLink, setActionLink] = useState('');
   const [actionMessage, setActionMessage] = useState('');
@@ -65,7 +66,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
   } | null>(null);
 
   useEffect(() => {
-    void loadPracticeUsers();
+    void loadUsers();
   }, []);
 
   const activePractices = useMemo(
@@ -73,18 +74,19 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     [practices],
   );
 
-  const loadPracticeUsers = async () => {
+  const loadUsers = async () => {
     setLoading(true);
     setError('');
 
     try {
-      const { data, error: practiceUserError } = await supabase
-        .from('practice_users')
+      const { data, error: userError } = await supabase
+        .from('users')
         .select(`
           uid,
           email,
           name,
           is_active,
+          global_role,
           memberships:practice_memberships(
             id,
             practice_id,
@@ -100,15 +102,16 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
         `)
         .order('email');
 
-      if (practiceUserError) {
-        throw practiceUserError;
+      if (userError) {
+        throw userError;
       }
 
-      const mappedUsers = (((data || []) as unknown) as PracticeUserRow[]).map((row) => ({
+      const mappedUsers = (((data || []) as unknown) as UserRow[]).map((row) => ({
         uid: row.uid,
         email: row.email,
         name: row.name,
         is_active: row.is_active,
+        global_role: row.global_role || null,
         memberships: (row.memberships || [])
           .flatMap((membership) => {
             const practice = normalisePractice(membership.practice);
@@ -124,10 +127,10 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
           .sort((left, right) => Number(right.is_default) - Number(left.is_default) || left.practice.name.localeCompare(right.practice.name)),
       }));
 
-      setPracticeUsers(mappedUsers);
+      setUsers(mappedUsers);
     } catch (err) {
-      console.error('Error loading practice users:', err);
-      setError('Unable to load practice users.');
+      console.error('Error loading users:', err);
+      setError('Unable to load users.');
     } finally {
       setLoading(false);
     }
@@ -151,19 +154,19 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     setError('');
   };
 
-  const openEditForm = (practiceUser: PracticeUserSummary) => {
-    setEditingUser(practiceUser);
+  const openEditForm = (appUser: AppUserSummary) => {
+    setEditingUser(appUser);
     setShowAddForm(false);
     setError('');
     setForm({
-      uid: practiceUser.uid,
-      name: practiceUser.name,
-      email: practiceUser.email,
-      isActive: practiceUser.is_active,
-      practiceIds: practiceUser.memberships.map((membership) => membership.practice_id),
+      uid: appUser.uid,
+      name: appUser.name,
+      email: appUser.email,
+      isActive: appUser.is_active,
+      practiceIds: appUser.memberships.map((membership) => membership.practice_id),
       defaultPracticeId:
-        practiceUser.memberships.find((membership) => membership.is_default)?.practice_id ||
-        practiceUser.memberships[0]?.practice_id ||
+        appUser.memberships.find((membership) => membership.is_default)?.practice_id ||
+        appUser.memberships[0]?.practice_id ||
         '',
     });
   };
@@ -193,7 +196,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     setActionMessage('');
 
     if (!form.email.trim()) {
-      setError('Practice user email is required');
+      setError('User email is required');
       return;
     }
 
@@ -218,16 +221,16 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
 
       if (data?.resetLink) {
         setActionLink(data.resetLink);
-        setActionMessage(`Practice user created. Copy the setup link below and send it to ${form.email.trim()}.`);
+        setActionMessage(`User created and linked to practice access. Copy the setup link below and send it to ${form.email.trim()}.`);
       } else {
-        setActionMessage(`Existing practice user updated with access to ${form.practiceIds.length} practice${form.practiceIds.length === 1 ? '' : 's'}.`);
+        setActionMessage(`Existing user updated with access to ${form.practiceIds.length} practice${form.practiceIds.length === 1 ? '' : 's'}.`);
       }
 
       resetForm();
-      await loadPracticeUsers();
+      await loadUsers();
     } catch (err) {
-      console.error('Error creating practice user:', err);
-      setError(err instanceof Error ? err.message : 'Unable to save practice user.');
+      console.error('Error creating user:', err);
+      setError(err instanceof Error ? err.message : 'Unable to save user.');
     }
   };
 
@@ -237,7 +240,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
 
     if (!form.uid) return;
     if (!form.email.trim()) {
-      setError('Practice user email is required');
+      setError('User email is required');
       return;
     }
 
@@ -262,57 +265,57 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
         throw invokeError;
       }
 
-      setActionMessage(`Practice user ${form.email.trim()} updated successfully.`);
+      setActionMessage(`User ${form.email.trim()} updated successfully.`);
       setActionLink('');
       resetForm();
-      await loadPracticeUsers();
+      await loadUsers();
     } catch (err) {
-      console.error('Error updating practice user:', err);
-      setError(err instanceof Error ? err.message : 'Unable to update practice user.');
+      console.error('Error updating user:', err);
+      setError(err instanceof Error ? err.message : 'Unable to update user.');
     }
   };
 
-  const sendPasswordReset = async (practiceUser: PracticeUserSummary) => {
+  const sendPasswordReset = async (appUser: AppUserSummary) => {
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('send-practice-password-reset', {
-        body: { uid: practiceUser.uid },
+        body: { uid: appUser.uid },
       });
 
       if (invokeError) {
         throw invokeError;
       }
 
-      setActionMessage(`Password reset link prepared for ${practiceUser.email}. Copy and send it manually if needed.`);
+      setActionMessage(`Password reset link prepared for ${appUser.email}. Copy and send it manually if needed.`);
       setActionLink(data?.resetLink || '');
     } catch (err) {
-      console.error('Error sending practice password reset:', err);
+      console.error('Error sending password reset:', err);
       setError(err instanceof Error ? err.message : 'Unable to send password reset.');
     }
   };
 
-  const deletePracticeUser = (practiceUser: PracticeUserSummary) => {
+  const deleteUser = (appUser: AppUserSummary) => {
     setConfirmDialog({
-      title: 'Delete Practice User',
-      message: `Delete ${practiceUser.email}? This removes all practice memberships and deletes the underlying auth account.`,
+      title: 'Delete User',
+      message: `Delete ${appUser.email}? This removes all practice memberships and deletes the underlying auth account, including any global administrator access.`,
       confirmLabel: 'Delete User',
       isDangerous: true,
       onConfirm: () => {
         void (async () => {
           try {
             const { error: invokeError } = await supabase.functions.invoke('delete-practice-user', {
-              body: { uid: practiceUser.uid },
+              body: { uid: appUser.uid },
             });
 
             if (invokeError) {
               throw invokeError;
             }
 
-            setActionMessage(`Practice user ${practiceUser.email} deleted.`);
+            setActionMessage(`User ${appUser.email} deleted.`);
             setActionLink('');
-            await loadPracticeUsers();
+            await loadUsers();
           } catch (err) {
-            console.error('Error deleting practice user:', err);
-            setError(err instanceof Error ? err.message : 'Unable to delete practice user.');
+            console.error('Error deleting user:', err);
+            setError(err instanceof Error ? err.message : 'Unable to delete user.');
           } finally {
             setConfirmDialog(null);
           }
@@ -336,7 +339,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
 
       {(actionMessage || actionLink) && (
         <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
-          <h2 className="dashboard-panel-title">Practice User Action</h2>
+          <h2 className="dashboard-panel-title">User Action</h2>
           {actionMessage && <p className="dashboard-panel-subtitle" style={{ marginBottom: '1rem' }}>{actionMessage}</p>}
           {actionLink && (
             <>
@@ -354,7 +357,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       {(showAddForm || editingUser) && (
         <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
           <div className="dashboard-panel-header">
-            <h2 className="dashboard-panel-title">{editingUser ? 'Edit Practice User' : 'Add Practice User'}</h2>
+            <h2 className="dashboard-panel-title">{editingUser ? 'Edit User Practice Access' : 'Add User To Practices'}</h2>
             <button onClick={resetForm} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
               Cancel
             </button>
@@ -385,8 +388,14 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
                 onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
                 style={{ width: '18px', height: '18px' }}
               />
-              Practice user account active
+              User account active
             </label>
+
+            {editingUser?.global_role && (
+              <div className="dashboard-banner dashboard-banner--info">
+                This user also has global administrator access as <strong>{editingUser.global_role}</strong>. Any practice changes here will keep that global role in place.
+              </div>
+            )}
 
             <div className="dashboard-panel" style={{ background: '#f8fafb' }}>
               <h3 className="dashboard-panel-title" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Assigned Practices</h3>
@@ -427,7 +436,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
 
             <div className="dashboard-inline-actions" style={{ alignSelf: 'flex-start' }}>
               <button type="submit" className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                {editingUser ? 'Save Changes' : 'Create Practice User'}
+                {editingUser ? 'Save Changes' : 'Create User'}
               </button>
             </div>
           </form>
@@ -437,56 +446,69 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       <div className="dashboard-panel dashboard-section">
         <div className="dashboard-panel-header">
           <div>
-            <h2 className="dashboard-panel-title">Practice Users ({practiceUsers.length})</h2>
-            <p className="dashboard-panel-subtitle">Assign users to one or more practices, manage memberships, and send reset links.</p>
+            <h2 className="dashboard-panel-title">Users ({users.length})</h2>
+            <p className="dashboard-panel-subtitle">Assign users to one or more practices, including users who also have global administrator access.</p>
           </div>
           <div className="dashboard-inline-actions">
-            <button onClick={() => void loadPracticeUsers()} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+            <button onClick={() => void loadUsers()} className="action-button" style={{ backgroundColor: '#4c6272' }}>
               <RefreshCw size={16} /> Refresh
             </button>
             {!showAddForm && !editingUser && (
               <button onClick={openAddForm} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-                <Plus size={16} /> Add Practice User
+                <Plus size={16} /> Add User
               </button>
             )}
           </div>
         </div>
 
         {loading ? (
-          <p style={{ color: '#4c6272' }}>Loading practice users...</p>
-        ) : practiceUsers.length === 0 ? (
-          <p style={{ color: '#4c6272' }}>No practice users found yet.</p>
+          <p style={{ color: '#4c6272' }}>Loading users...</p>
+        ) : users.length === 0 ? (
+          <p style={{ color: '#4c6272' }}>No users found yet.</p>
         ) : (
           <div className="dashboard-list">
-            {practiceUsers.map((practiceUser) => (
-              <div key={practiceUser.uid} className="dashboard-list-card">
+            {users.map((appUser) => (
+              <div key={appUser.uid} className="dashboard-list-card">
                 <div className="dashboard-list-main">
-                  <div className="dashboard-list-title">{practiceUser.name || practiceUser.email}</div>
+                  <div className="dashboard-list-title">{appUser.name || appUser.email}</div>
                   <div className="dashboard-meta">
-                    <span>{practiceUser.email}</span>
-                    <span className={`dashboard-badge ${practiceUser.is_active ? 'dashboard-badge--green' : 'dashboard-badge--red'}`}>
-                      {practiceUser.is_active ? 'ACTIVE' : 'INACTIVE'}
+                    <span>{appUser.email}</span>
+                    <span className={`dashboard-badge ${appUser.is_active ? 'dashboard-badge--green' : 'dashboard-badge--red'}`}>
+                      {appUser.is_active ? 'ACTIVE' : 'INACTIVE'}
                     </span>
-                    <span>{practiceUser.memberships.length} practice{practiceUser.memberships.length === 1 ? '' : 's'}</span>
-                  </div>
-                  <div className="dashboard-chip-row" style={{ marginTop: '0.6rem' }}>
-                    {practiceUser.memberships.map((membership) => (
-                      <span key={membership.id} className={`dashboard-chip${membership.is_default ? ' dashboard-chip--active' : ''}`}>
-                        {membership.practice.name}{membership.is_default ? ' (Default)' : ''}
+                    {appUser.global_role && (
+                      <span className={`dashboard-badge ${appUser.global_role === 'owner' ? 'dashboard-badge--amber' : 'dashboard-badge--blue'}`}>
+                        {appUser.global_role.toUpperCase()}
                       </span>
-                    ))}
+                    )}
+                    <span>{appUser.memberships.length} practice{appUser.memberships.length === 1 ? '' : 's'}</span>
                   </div>
+                  {appUser.memberships.length > 0 ? (
+                    <div className="dashboard-chip-row" style={{ marginTop: '0.6rem' }}>
+                      {appUser.memberships.map((membership) => (
+                        <span key={membership.id} className={`dashboard-chip${membership.is_default ? ' dashboard-chip--active' : ''}`}>
+                          {membership.practice.name}{membership.is_default ? ' (Default)' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ marginTop: '0.6rem', color: '#4c6272', fontSize: '0.9rem' }}>
+                      No practice access assigned yet.
+                    </p>
+                  )}
                 </div>
                 <div className="dashboard-list-actions">
-                  <button onClick={() => openEditForm(practiceUser)} className="dashboard-pill-button dashboard-pill-button--primary">
+                  <button onClick={() => openEditForm(appUser)} className="dashboard-pill-button dashboard-pill-button--primary">
                     <Edit2 size={14} /> Edit
                   </button>
-                  <button onClick={() => void sendPasswordReset(practiceUser)} className="dashboard-pill-button">
+                  <button onClick={() => void sendPasswordReset(appUser)} className="dashboard-pill-button">
                     <Mail size={14} /> Reset Password
                   </button>
-                  <button onClick={() => deletePracticeUser(practiceUser)} className="dashboard-pill-button dashboard-pill-button--danger">
-                    <Trash2 size={14} /> Delete
-                  </button>
+                  {appUser.global_role !== 'owner' && (
+                    <button onClick={() => deleteUser(appUser)} className="dashboard-pill-button dashboard-pill-button--danger">
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

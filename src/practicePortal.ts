@@ -28,16 +28,17 @@ export type PracticeMembership = {
   id: string;
   practice_id: string;
   user_uid: string;
-  role: 'editor';
+  role: 'admin' | 'editor';
   is_default: boolean;
   practice: PracticeSummary;
 };
 
-export type PracticeUserSummary = {
+export type AppUserSummary = {
   uid: string;
   email: string;
   name: string;
   is_active: boolean;
+  global_role?: 'owner' | 'admin' | null;
   memberships: PracticeMembership[];
 };
 
