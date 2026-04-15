@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { resolvePath } from '../subdomainUtils';
 
 interface Practice {
   id: string;
@@ -118,7 +119,7 @@ const AdminDashboard: React.FC = () => {
         loadAudits();
         loadLoginAudit();
       } else {
-        navigate('/admin');
+        navigate(resolvePath('/admin'));
       }
     });
     return () => subscription.unsubscribe();
@@ -420,7 +421,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate('/admin');
+    navigate(resolvePath('/admin'));
   };
 
   const addAdmin = async (e: React.FormEvent) => {
@@ -542,7 +543,7 @@ const AdminDashboard: React.FC = () => {
           <p>Manage practices, administrators, and setup links from one place.</p>
         </div>
         <div className="dashboard-actions">
-          <button onClick={() => navigate('/admin/drug-builder')} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+          <button onClick={() => navigate(resolvePath('/admin/drug-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
             <FlaskConical size={16} /> Drug Builder
           </button>
           <button onClick={loadPractices} className="action-button" style={{ backgroundColor: '#4c6272' }}>

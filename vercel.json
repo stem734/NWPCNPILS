@@ -8,6 +8,9 @@
     { "source": "/admin/:path*", "destination": "/" },
     { "source": "/signup", "destination": "/" },
     { "source": "/practice", "destination": "/" },
-    { "source": "/practice/:path*", "destination": "/" }
+    { "source": "/practice/:path*", "destination": "/" },
+    { "source": "/dashboard", "destination": "/" },
+    { "source": "/drug-builder", "destination": "/" },
+    { "source": "/reset-password", "destination": "/" }
   ]
 }

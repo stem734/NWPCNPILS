@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
+import { resolvePath } from '../subdomainUtils';
 
 const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -102,14 +103,14 @@ const ResetPassword: React.FC = () => {
           <button
             className="action-button"
             style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate(resolvePath('/admin'))}
           >
             Go to Admin Login
           </button>
           <button
             className="action-button"
             style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem', background: '#4c6272' }}
-            onClick={() => navigate('/practice')}
+            onClick={() => navigate(resolvePath('/practice'))}
           >
             Go to Practice Login
           </button>

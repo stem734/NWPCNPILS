@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Stethoscope, Zap } from 'lucide-react';
+import { adminUrl, practiceUrl } from '../subdomainUtils';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const Landing: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem', marginTop: '3rem' }}>
           {/* Admin Login */}
           <button
-            onClick={() => navigate('/admin')}
+            onClick={() => { const url = adminUrl(); url.startsWith('http') ? window.location.href = url : navigate(url); }}
             style={{
               padding: '2rem',
               background: 'white',
@@ -59,7 +60,7 @@ const Landing: React.FC = () => {
 
           {/* Practice Login */}
           <button
-            onClick={() => navigate('/practice')}
+            onClick={() => { const url = practiceUrl(); url.startsWith('http') ? window.location.href = url : navigate(url); }}
             style={{
               padding: '2rem',
               background: 'white',

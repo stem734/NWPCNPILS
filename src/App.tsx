@@ -14,6 +14,7 @@ import ResetPassword from './pages/ResetPassword';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
+import { getSubdomain, adminUrl, practiceUrl } from './subdomainUtils';
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   NEW: 0,
@@ -546,6 +547,48 @@ const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
   );
 };
 
+const SubdomainRoutes: React.FC = () => {
+  const subdomain = getSubdomain();
+
+  if (subdomain === 'admin') {
+    return (
+      <Routes>
+        <Route path="/" element={<AdminLogin />} />
+        <Route path="/dashboard" element={<AdminDashboard />} />
+        <Route path="/drug-builder" element={<DrugBuilder />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+      </Routes>
+    );
+  }
+
+  if (subdomain === 'practice') {
+    return (
+      <Routes>
+        <Route path="/" element={<PracticeLogin />} />
+        <Route path="/dashboard" element={<PracticeDashboard />} />
+        <Route path="/signup" element={<PracticeSignup />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+      </Routes>
+    );
+  }
+
+  // Default: main domain (www.mymedinfo.info / localhost)
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/demo" element={<Demo />} />
+      <Route path="/patient" element={<ResourceView />} />
+      <Route path="/admin" element={<AdminLogin />} />
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/signup" element={<PracticeSignup />} />
+      <Route path="/admin/drug-builder" element={<DrugBuilder />} />
+      <Route path="/practice" element={<PracticeLogin />} />
+      <Route path="/practice/dashboard" element={<PracticeDashboard />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+    </Routes>
+  );
+};
+
 const AppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -586,24 +629,18 @@ const AppContent: React.FC = () => {
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
       <main id="main-content">
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/demo" element={<Demo />} />
-          <Route path="/patient" element={<ResourceView />} />
-          <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/signup" element={<PracticeSignup />} />
-          <Route path="/admin/drug-builder" element={<DrugBuilder />} />
-          <Route path="/practice" element={<PracticeLogin />} />
-          <Route path="/practice/dashboard" element={<PracticeDashboard />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Routes>
+        <SubdomainRoutes />
       </main>
 
       <footer className="footer">
         <p>© {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo</p>
         <p>
           This information is for guidance only. Always follow the specific advice from your GP or clinical team.
+        </p>
+        <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.5 }}>
+          <a href={adminUrl()} style={{ color: 'inherit', textDecoration: 'none' }}>Admin</a>
+          {' · '}
+          <a href={practiceUrl()} style={{ color: 'inherit', textDecoration: 'none' }}>Practice</a>
         </p>
       </footer>
 

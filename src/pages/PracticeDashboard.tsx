@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, FlaskConical, CheckCircle, Save, CheckSquare, Square, Eye, Star } from 'lucide-react';
 import type { MedContent } from '../medicationData';
+import { resolvePath } from '../subdomainUtils';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import { useMedicationCatalog } from '../medicationCatalog';
 import { getMedicationIcon } from '../medicationIcons';
@@ -32,7 +33,7 @@ const PracticeDashboard: React.FC = () => {
       if (session?.user) {
         loadPractice();
       } else {
-        navigate('/practice');
+        navigate(resolvePath('/practice'));
       }
     });
     return () => subscription.unsubscribe();
@@ -166,7 +167,7 @@ const PracticeDashboard: React.FC = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate('/practice');
+    navigate(resolvePath('/practice'));
   };
 
   const selectedMedicationSet = useMemo(() => new Set(selectedMeds), [selectedMeds]);

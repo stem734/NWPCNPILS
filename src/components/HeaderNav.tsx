@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { LogOut, Home, FlaskConical, Settings } from 'lucide-react';
+import { getSubdomain, resolvePath } from '../subdomainUtils';
 
 type UserRole = 'admin' | 'practice' | null;
 
@@ -9,15 +10,15 @@ const HeaderNav: React.FC = () => {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const subdomain = getSubdomain();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        // Determine role based on current path
-        const path = location.pathname;
-        if (path.startsWith('/admin')) {
+        // Determine role based on subdomain first, then path
+        if (subdomain === 'admin' || location.pathname.startsWith('/admin')) {
           setUserRole('admin');
-        } else if (path.startsWith('/practice')) {
+        } else if (subdomain === 'practice' || location.pathname.startsWith('/practice')) {
           setUserRole('practice');
         } else {
           setUserRole(null);
@@ -28,7 +29,7 @@ const HeaderNav: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [location.pathname]);
+  }, [location.pathname, subdomain]);
 
   if (!userRole) {
     return null;
@@ -37,7 +38,7 @@ const HeaderNav: React.FC = () => {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUserRole(null);
-    navigate('/');
+    navigate(resolvePath(subdomain === 'admin' ? '/admin' : subdomain === 'practice' ? '/practice' : '/'));
   };
 
   const isAdmin = userRole === 'admin';
@@ -48,15 +49,15 @@ const HeaderNav: React.FC = () => {
       {isAdmin && (
         <>
           <button
-            onClick={() => navigate('/admin/dashboard')}
-            className={`header-nav-link ${location.pathname === '/admin/dashboard' ? 'header-nav-link--active' : ''}`}
+            onClick={() => navigate(resolvePath('/admin/dashboard'))}
+            className={`header-nav-link ${['/admin/dashboard', '/dashboard'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
             title="Go to Admin Dashboard"
           >
             <Settings size={16} /> Dashboard
           </button>
           <button
-            onClick={() => navigate('/admin/drug-builder')}
-            className={`header-nav-link ${location.pathname === '/admin/drug-builder' ? 'header-nav-link--active' : ''}`}
+            onClick={() => navigate(resolvePath('/admin/drug-builder'))}
+            className={`header-nav-link ${['/admin/drug-builder', '/drug-builder'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
             title="Go to Drug Builder"
           >
             <FlaskConical size={16} /> Drug Builder
@@ -66,8 +67,8 @@ const HeaderNav: React.FC = () => {
 
       {isPractice && (
         <button
-          onClick={() => navigate('/practice/dashboard')}
-          className={`header-nav-link ${location.pathname === '/practice/dashboard' ? 'header-nav-link--active' : ''}`}
+          onClick={() => navigate(resolvePath('/practice/dashboard'))}
+          className={`header-nav-link ${['/practice/dashboard', '/dashboard'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
           title="Go to Practice Dashboard"
         >
           <Settings size={16} /> Dashboard

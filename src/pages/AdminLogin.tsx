@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
+import { resolvePath } from '../subdomainUtils';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -26,7 +27,7 @@ const AdminLogin: React.FC = () => {
       } catch (auditError) {
         console.warn('Login audit failed:', auditError);
       }
-      navigate('/admin/dashboard');
+      navigate(resolvePath('/admin/dashboard'));
     } catch {
       setError('Invalid email or password');
     }

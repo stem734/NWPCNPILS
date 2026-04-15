@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { FlaskConical } from 'lucide-react';
+import { resolvePath } from '../subdomainUtils';
 
 const PracticeLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ const PracticeLogin: React.FC = () => {
       } catch (auditError) {
         console.warn('Login audit failed:', auditError);
       }
-      navigate('/practice/dashboard');
+      navigate(resolvePath('/practice/dashboard'));
     } catch {
       setError('Invalid email or password');
     }

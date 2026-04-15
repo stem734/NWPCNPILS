@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
+import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 
@@ -62,7 +63,7 @@ const DrugBuilder: React.FC = () => {
       if (session?.user) {
         setAuthenticated(true);
       } else {
-        navigate('/admin');
+        navigate(resolvePath('/admin'));
       }
     });
     return () => subscription.unsubscribe();
@@ -371,7 +372,7 @@ const DrugBuilder: React.FC = () => {
             <button onClick={resetForm} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Plus size={16} /> Create Another
             </button>
-            <button onClick={() => navigate('/admin/dashboard')} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+            <button onClick={() => navigate(resolvePath('/admin/dashboard'))} className="action-button" style={{ backgroundColor: '#4c6272' }}>
               <ArrowLeft size={16} /> Back to Dashboard
             </button>
           </div>
@@ -399,7 +400,7 @@ const DrugBuilder: React.FC = () => {
       <div className="dashboard-header">
         <div className="dashboard-header-copy" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
         <button
-          onClick={() => navigate('/admin/dashboard')}
+          onClick={() => navigate(resolvePath('/admin/dashboard'))}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#005eb8', display: 'flex' }}
         >
           <ArrowLeft size={24} />
