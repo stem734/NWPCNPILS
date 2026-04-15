@@ -10,9 +10,22 @@ const ResetPassword: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [linkExpired, setLinkExpired] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendSent, setResendSent] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for expired link error in hash
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1));
+      if (params.get('error_code') === 'otp_expired') {
+        setLinkExpired(true);
+        return;
+      }
+    }
+
     // Supabase automatically picks up the recovery token from the URL hash
     // and establishes a session. We listen for that event.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -80,6 +93,67 @@ const ResetPassword: React.FC = () => {
           >
             Go to Practice Login
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (linkExpired) {
+    const handleResend = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      const { error: resendError } = await supabase.auth.resetPasswordForEmail(resendEmail, {
+        redirectTo: 'https://www.mymedinfo.info/reset-password',
+      });
+      if (resendError) {
+        setError(resendError.message);
+      } else {
+        setResendSent(true);
+      }
+    };
+
+    return (
+      <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <ShieldCheck size={48} color="#d5281b" style={{ marginBottom: '1rem' }} />
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Link Expired</h1>
+          <p style={{ color: '#4c6272', marginBottom: '1.5rem' }}>
+            This password reset link has expired. Enter your email below to receive a new one.
+          </p>
+
+          {resendSent ? (
+            <div style={{ padding: '0.75rem', background: '#e8f5e9', color: '#007f3b', borderRadius: '8px', fontSize: '0.9rem' }}>
+              A new reset link has been sent to {resendEmail}. Please check your inbox.
+            </div>
+          ) : (
+            <form onSubmit={handleResend}>
+              {error && (
+                <div style={{ padding: '0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                  {error}
+                </div>
+              )}
+              <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.9rem' }}>Email</label>
+                <input
+                  type="email"
+                  value={resendEmail}
+                  onChange={e => setResendEmail(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '0.75rem', border: '2px solid #d8dde0',
+                    borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                className="action-button"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                Send New Reset Link
+              </button>
+            </form>
+          )}
         </div>
       </div>
     );

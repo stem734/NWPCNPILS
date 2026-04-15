@@ -548,7 +548,29 @@ const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
 
 const AppContent: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
+
+  // Detect Supabase auth recovery tokens in the URL hash and redirect to /reset-password
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && location.pathname !== '/reset-password') {
+      const params = new URLSearchParams(hash.substring(1));
+      if (params.get('type') === 'recovery' || params.get('error_code') === 'otp_expired') {
+        navigate('/reset-password' + window.location.hash, { replace: true });
+      }
+    }
+  }, [location, navigate]);
+
+  // Listen for PASSWORD_RECOVERY event and redirect
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' && location.pathname !== '/reset-password') {
+        navigate('/reset-password', { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [location, navigate]);
 
   return (
     <div className="app-container">
