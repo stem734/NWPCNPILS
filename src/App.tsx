@@ -551,12 +551,22 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
 
-  // Detect Supabase auth recovery tokens in the URL hash and redirect to /reset-password
+  // Detect Supabase auth recovery tokens in URL and redirect to /reset-password
   useEffect(() => {
+    if (location.pathname === '/reset-password') return;
+
+    // PKCE flow: ?code= query param
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('code')) {
+      navigate('/reset-password' + window.location.search, { replace: true });
+      return;
+    }
+
+    // Implicit flow: #type=recovery or #error_code=otp_expired in hash
     const hash = window.location.hash;
-    if (hash && location.pathname !== '/reset-password') {
-      const params = new URLSearchParams(hash.substring(1));
-      if (params.get('type') === 'recovery' || params.get('error_code') === 'otp_expired') {
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      if (hashParams.get('type') === 'recovery' || hashParams.get('error_code') === 'otp_expired') {
         navigate('/reset-password' + window.location.hash, { replace: true });
       }
     }

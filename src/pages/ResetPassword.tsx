@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 
 const ResetPassword: React.FC = () => {
@@ -14,20 +14,40 @@ const ResetPassword: React.FC = () => {
   const [resendEmail, setResendEmail] = useState('');
   const [resendSent, setResendSent] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Check for expired link error in hash
+    // Check for expired link error in hash (implicit flow)
     const hash = window.location.hash;
     if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      if (params.get('error_code') === 'otp_expired') {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      if (hashParams.get('error_code') === 'otp_expired') {
         setLinkExpired(true);
         return;
       }
     }
 
-    // Supabase automatically picks up the recovery token from the URL hash
-    // and establishes a session. We listen for that event.
+    // Check for error in query params (PKCE flow)
+    if (searchParams.get('error_code') === 'otp_expired') {
+      setLinkExpired(true);
+      return;
+    }
+
+    // PKCE flow: exchange the ?code= param for a session
+    const code = searchParams.get('code');
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+        if (exchangeError) {
+          console.error('Code exchange failed:', exchangeError.message);
+          setLinkExpired(true);
+        } else {
+          setSessionReady(true);
+        }
+      });
+      return;
+    }
+
+    // Implicit flow: Supabase picks up recovery token from the URL hash
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
@@ -40,7 +60,7 @@ const ResetPassword: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [searchParams]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
