@@ -51,7 +51,7 @@ serve(async (req) => {
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email.trim(),
-      options: { redirectTo: `${appBaseUrl}/admin` },
+      options: { redirectTo: `${appBaseUrl}/reset-password` },
     });
 
     const resetLink = linkData?.properties?.action_link || '';

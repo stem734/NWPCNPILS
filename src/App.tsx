@@ -10,6 +10,7 @@ import PracticeDashboard from './pages/PracticeDashboard';
 import DrugBuilder from './pages/DrugBuilder';
 import Landing from './pages/Landing';
 import Demo from './pages/Demo';
+import ResetPassword from './pages/ResetPassword';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
@@ -563,6 +564,7 @@ const AppContent: React.FC = () => {
           <Route path="/admin/drug-builder" element={<DrugBuilder />} />
           <Route path="/practice" element={<PracticeLogin />} />
           <Route path="/practice/dashboard" element={<PracticeDashboard />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </main>
 
