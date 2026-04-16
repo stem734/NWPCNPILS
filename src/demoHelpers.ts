@@ -9,31 +9,31 @@ const DEMO_VARIATIONS: DemoVariation[] = [
   {
     forename: 'Steve',
     practiceName: 'Nottingham West GP Practices',
-    nhsNumber: '9990002649',
+    nhsNumber: '9990000001',
     codes: '101,302',
   },
   {
     forename: 'Anna',
     practiceName: 'Nottingham West GP Practices',
-    nhsNumber: '9990002657',
+    nhsNumber: '9990000002',
     codes: '201,202',
   },
   {
     forename: 'James',
     practiceName: 'Bramcote Surgery',
-    nhsNumber: '9990002665',
+    nhsNumber: '9990000003',
     codes: '401,402',
   },
   {
     forename: 'Priya',
     practiceName: 'Stapleford Health Centre',
-    nhsNumber: '9990002673',
+    nhsNumber: '9990000004',
     codes: '101,201,302',
   },
   {
     forename: 'Dawn',
     practiceName: 'Nottingham West GP Practices',
-    nhsNumber: '9990002681',
+    nhsNumber: '9990000005',
     codes: '501,502',
   },
 ];

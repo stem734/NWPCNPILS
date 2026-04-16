@@ -155,6 +155,13 @@ const ResourceView: React.FC = () => {
 
   // Validate organisation against database
   useEffect(() => {
+    if (isDemoMode) {
+      setIsAuthorised(true);
+      setAuthError(null);
+      setIsValidating(false);
+      return;
+    }
+
     let cancelled = false;
     let loadingTimer: number | undefined;
 
@@ -225,9 +232,14 @@ const ResourceView: React.FC = () => {
         window.clearTimeout(loadingTimer);
       }
     };
-  }, [orgName]);
+  }, [isDemoMode, orgName]);
 
   useEffect(() => {
+    if (isDemoMode) {
+      loggedAccessKeyRef.current = null;
+      return;
+    }
+
     if (!orgName || isAuthorised !== true) {
       loggedAccessKeyRef.current = null;
       return;
@@ -240,7 +252,7 @@ const ResourceView: React.FC = () => {
 
     loggedAccessKeyRef.current = accessKey;
     void recordPatientAccess(orgName);
-  }, [codesParam, isAuthorised, orgName, rawCode]);
+  }, [codesParam, isAuthorised, isDemoMode, orgName, rawCode]);
 
   const requestedCodes = useMemo(() => {
     if (codesParam) {
@@ -255,7 +267,30 @@ const ResourceView: React.FC = () => {
     let cancelled = false;
 
     const resolveCards = async () => {
-      if (!orgName || isAuthorised !== true || requestedCodes.length === 0) {
+      if (requestedCodes.length === 0) {
+        if (!cancelled) {
+          setResolvedContents([]);
+          setIsResolvingContents(false);
+        }
+        return;
+      }
+
+      if (isDemoMode || !orgName) {
+        if (!cancelled) {
+          setResolvedContents(
+            requestedCodes
+              .map((code) => {
+                const med = allMeds[code];
+                return med ? { ...med, code, state: 'global' as const } : null;
+              })
+              .filter((item): item is NonNullable<typeof item> => item !== null),
+          );
+          setIsResolvingContents(false);
+        }
+        return;
+      }
+
+      if (isAuthorised !== true) {
         if (!cancelled) {
           setResolvedContents([]);
           setIsResolvingContents(false);
@@ -282,9 +317,17 @@ const ResourceView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isAuthorised, orgName, requestedCodes]);
+  }, [allMeds, isAuthorised, isDemoMode, orgName, requestedCodes]);
 
   const contents = useMemo(() => {
+    if (isDemoMode || !orgName) {
+      return sortMedicationGroups(
+        requestedCodes
+          .map((code) => (allMeds[code] ? { id: code, icon: getMedicationIcon(code), state: 'global' as const, ...allMeds[code] } : null))
+          .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title),
+      );
+    }
+
     if (orgName) {
       if (isAuthorised !== true) {
         return [];
@@ -304,7 +347,7 @@ const ResourceView: React.FC = () => {
         .map((code) => (allMeds[code] ? { id: code, icon: getMedicationIcon(code), state: 'global' as const, ...allMeds[code] } : null))
         .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title),
     );
-  }, [allMeds, isAuthorised, orgName, requestedCodes, resolvedContents]);
+  }, [allMeds, isAuthorised, isDemoMode, orgName, requestedCodes, resolvedContents]);
 
   const groupedContents = useMemo(() => {
     const groups = new Map<'NEW' | 'REAUTH' | 'GENERAL', typeof contents>();
