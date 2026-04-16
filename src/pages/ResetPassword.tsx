@@ -14,8 +14,11 @@ const ResetPassword: React.FC = () => {
   const [linkExpired, setLinkExpired] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [resendSent, setResendSent] = useState(false);
+  // SafeLinks defence: user must click a button before we exchange the code
+  const [codeExchangeStarted, setCodeExchangeStarted] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   const urlHasExpiredLink = (() => {
     const hash = window.location.hash;
     if (hash) {
@@ -24,24 +27,27 @@ const ResetPassword: React.FC = () => {
         return true;
       }
     }
-
     return searchParams.get('error_code') === 'otp_expired';
   })();
+
+  const code = searchParams.get('code');
 
   useEffect(() => {
     if (urlHasExpiredLink) {
       return;
     }
 
-    let cancelled = false;
-
-    // PKCE flow: exchange the ?code= param for a session
-    const code = searchParams.get('code');
+    // PKCE flow: wait for user to click "Continue" before exchanging the code.
+    // This prevents NHS Outlook SafeLinks from consuming the one-time code
+    // by pre-fetching the URL before the real user arrives.
     if (code) {
+      if (!codeExchangeStarted) {
+        return; // show the landing screen, do nothing yet
+      }
+
+      let cancelled = false;
       void supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         if (exchangeError) {
           console.error('Code exchange failed:', exchangeError.message);
           setLinkExpired(true);
@@ -49,17 +55,17 @@ const ResetPassword: React.FC = () => {
           setSessionReady(true);
         }
       });
-      return;
+      return () => { cancelled = true; };
     }
 
     // Implicit flow: Supabase picks up recovery token from the URL hash
+    let cancelled = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
       }
     });
 
-    // Also check if there's already an active session (e.g. page refresh)
     void supabase.auth.getSession().then(({ data: { session } }) => {
       if (!cancelled && session) setSessionReady(true);
     });
@@ -68,7 +74,7 @@ const ResetPassword: React.FC = () => {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [searchParams, urlHasExpiredLink]);
+  }, [searchParams, urlHasExpiredLink, codeExchangeStarted, code]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +104,7 @@ const ResetPassword: React.FC = () => {
     setLoading(false);
   };
 
+  // ── Success ──────────────────────────────────────────────────────────────
   if (success) {
     return (
       <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
@@ -126,6 +133,7 @@ const ResetPassword: React.FC = () => {
     );
   }
 
+  // ── Expired link ─────────────────────────────────────────────────────────
   if (urlHasExpiredLink || linkExpired) {
     const handleResend = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -187,6 +195,32 @@ const ResetPassword: React.FC = () => {
     );
   }
 
+  // ── SafeLinks landing screen ──────────────────────────────────────────────
+  // Show this when a ?code= is present but the user hasn't clicked yet.
+  // Email scanners (NHS Outlook SafeLinks) load the page but never click,
+  // so the one-time code is preserved for the real user.
+  if (code && !codeExchangeStarted) {
+    return (
+      <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <ShieldCheck size={48} color="#005eb8" style={{ marginBottom: '1rem' }} />
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Reset Your Password</h1>
+          <p style={{ color: '#4c6272', marginBottom: '2rem' }}>
+            Click the button below to continue to the password reset form.
+          </p>
+          <button
+            className="action-button"
+            style={{ width: '100%', justifyContent: 'center' }}
+            onClick={() => setCodeExchangeStarted(true)}
+          >
+            Continue to Password Reset
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Exchanging code (brief spinner) ──────────────────────────────────────
   if (!sessionReady) {
     return (
       <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
@@ -194,14 +228,14 @@ const ResetPassword: React.FC = () => {
           <ShieldCheck size={48} color="#005eb8" style={{ marginBottom: '1rem' }} />
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Set Your Password</h1>
           <p style={{ color: '#4c6272' }}>
-            Verifying your reset link... If this takes too long, the link may have expired.
-            Please request a new password reset.
+            Verifying your reset link...
           </p>
         </div>
       </div>
     );
   }
 
+  // ── Password form ─────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
       <div className="card" style={{ textAlign: 'center' }}>
