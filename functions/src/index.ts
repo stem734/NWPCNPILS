@@ -8,6 +8,8 @@ import type { ResponseSchema } from '@google/generative-ai';
 
 const geminiKey = defineString('GEMINI_API_KEY', { default: '' });
 const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://www.mymedinfo.info' });
+const supabaseUrl = defineString('SUPABASE_URL', { default: '' });
+const supabaseServiceRoleKey = defineString('SUPABASE_SERVICE_ROLE_KEY', { default: '' });
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const BUILT_IN_MAX_FAMILY = 5;
 
@@ -207,6 +209,34 @@ const getClientIp = (request: {
     return forwarded[0].split(',')[0].trim();
   }
   return request.rawRequest?.ip || '';
+};
+
+const requireSupabaseConfig = () => {
+  const url = supabaseUrl.value().trim();
+  const key = supabaseServiceRoleKey.value().trim();
+  if (!url || !key) {
+    throw new HttpsError('failed-precondition', 'Supabase admin credentials are not configured');
+  }
+
+  return { url: url.replace(/\/$/, ''), key };
+};
+
+const supabaseAdminFetch = async <T>(path: string): Promise<T> => {
+  const { url, key } = requireSupabaseConfig();
+  const response = await fetch(`${url}/rest/v1/${path}`, {
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase request failed (${response.status}): ${text}`);
+  }
+
+  return response.json() as Promise<T>;
 };
 
 /**
@@ -410,15 +440,30 @@ export const listAdminUsers = onCall(
     await assertAdmin(request);
 
     try {
-      const snapshot = await db.collection('admins').orderBy('email', 'asc').get();
-      const admins = snapshot.docs.map((doc) => ({
-        uid: doc.id,
-        ...doc.data(),
-      }));
+      const admins = await supabaseAdminFetch<Array<Record<string, unknown>>>(
+        'users?select=uid,email,name,is_active,global_role,memberships:practice_memberships(id,practice_id,user_uid,role,is_default,practice:practices(id,name,is_active))&order=email.asc',
+      );
       return { admins };
     } catch (error) {
       console.error('Error listing admins:', error);
       throw new HttpsError('internal', 'Unable to load administrators');
+    }
+  }
+);
+
+export const listAllPractices = onCall(
+  { region: 'europe-west2' },
+  async (request): Promise<{ practices: Array<Record<string, unknown>> }> => {
+    await assertAdmin(request);
+
+    try {
+      const practices = await supabaseAdminFetch<Array<Record<string, unknown>>>(
+        'practices?select=*&order=name.asc',
+      );
+      return { practices };
+    } catch (error) {
+      console.error('Error listing practices:', error);
+      throw new HttpsError('internal', 'Unable to load practices');
     }
   }
 );

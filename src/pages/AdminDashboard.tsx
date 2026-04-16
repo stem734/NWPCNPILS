@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
-import { resolvePath } from '../subdomainUtils';
+import { practiceUrl, resolvePath } from '../subdomainUtils';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 
 interface Practice {
   id: string;
@@ -147,12 +149,10 @@ const AdminDashboard: React.FC = () => {
   const loadPractices = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('practices')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      setPractices((data || []) as Practice[]);
+      const listPractices = httpsCallable(functions, 'listAllPractices');
+      const result = await listPractices();
+      const data = result.data as { practices?: Practice[] };
+      setPractices((data?.practices || []) as Practice[]);
     } catch (error) {
       console.error('Error loading practices:', error);
     }
@@ -162,13 +162,10 @@ const AdminDashboard: React.FC = () => {
   const loadAdmins = async () => {
     setLoadingAdmins(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('uid, email, name, is_active, global_role')
-        .not('global_role', 'is', null)
-        .order('email');
-      if (error) throw error;
-      const mappedAdmins = (((data || []) as unknown) as AdminRow[])
+      const listAdmins = httpsCallable(functions, 'listAdminUsers');
+      const result = await listAdmins();
+      const data = result.data as { admins?: AdminRow[] };
+      const mappedAdmins = (((data?.admins || []) as unknown) as AdminRow[])
         .filter((row) => row.global_role === 'owner' || row.global_role === 'admin')
         .map((row) => ({
           uid: row.uid,
@@ -1023,7 +1020,7 @@ const AdminDashboard: React.FC = () => {
           fontFamily: 'monospace', fontSize: '0.85rem', wordBreak: 'break-all',
           border: '1px solid #005eb8'
         }}>
-          {window.location.origin}/signup
+          {practiceUrl('/signup')}
         </div>
         <div className="dashboard-banner dashboard-banner--info" style={{ marginTop: '1rem' }}>
           Use the Users tab to create accounts, assign users to multiple practices, and send reset links after accounts are created.

@@ -30,12 +30,6 @@ export function resolvePath(path: string): string {
 export function adminUrl(path = '/'): string {
   const sub = getSubdomain();
   if (sub === 'admin') return path;
-  // On main domain or practice subdomain, link to admin subdomain
-  const hostname = window.location.hostname;
-  if (hostname.includes('mymedinfo.info')) {
-    return `https://admin.mymedinfo.info${path}`;
-  }
-  // Local dev fallback
   return `/admin${path === '/' ? '' : path}`;
 }
 
@@ -43,9 +37,5 @@ export function adminUrl(path = '/'): string {
 export function practiceUrl(path = '/'): string {
   const sub = getSubdomain();
   if (sub === 'practice') return path;
-  const hostname = window.location.hostname;
-  if (hostname.includes('mymedinfo.info')) {
-    return `https://practice.mymedinfo.info${path}`;
-  }
   return `/practice${path === '/' ? '' : path}`;
 }

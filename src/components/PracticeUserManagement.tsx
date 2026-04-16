@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Mail, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '../supabase';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 import ConfirmDialog from './ConfirmDialog';
 import type { AppUserSummary, PracticeSummary } from '../practicePortal';
 
@@ -79,34 +81,11 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     setError('');
 
     try {
-      const { data, error: userError } = await supabase
-        .from('users')
-        .select(`
-          uid,
-          email,
-          name,
-          is_active,
-          global_role,
-          memberships:practice_memberships(
-            id,
-            practice_id,
-            user_uid,
-            role,
-            is_default,
-            practice:practices(
-              id,
-              name,
-              is_active
-            )
-          )
-        `)
-        .order('email');
+      const listUsers = httpsCallable(functions, 'listAdminUsers');
+      const result = await listUsers();
+      const data = result.data as { admins?: UserRow[] };
 
-      if (userError) {
-        throw userError;
-      }
-
-      const mappedUsers = (((data || []) as unknown) as UserRow[]).map((row) => ({
+      const mappedUsers = (((data?.admins || []) as unknown) as UserRow[]).map((row) => ({
         uid: row.uid,
         email: row.email,
         name: row.name,
