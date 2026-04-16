@@ -9,7 +9,25 @@ const AdminLogin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('Enter your email address first');
+      return;
+    }
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (resetError) throw resetError;
+      setResetSent(true);
+      setError('');
+    } catch {
+      setError('Unable to send reset email. Check the address and try again.');
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +65,12 @@ const AdminLogin: React.FC = () => {
           </div>
         )}
 
+        {resetSent && (
+          <div style={{ padding: '0.75rem', background: '#f0f9f0', color: '#007f3b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem' }}>
+            Password reset email sent. Check your inbox.
+          </div>
+        )}
+
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
             <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.9rem' }}>Email</label>
@@ -61,7 +85,7 @@ const AdminLogin: React.FC = () => {
               }}
             />
           </div>
-          <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+          <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
             <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.9rem' }}>Password</label>
             <input
               type="password"
@@ -78,11 +102,17 @@ const AdminLogin: React.FC = () => {
             type="submit"
             disabled={loading}
             className="action-button"
-            style={{ width: '100%', justifyContent: 'center', opacity: loading ? 0.7 : 1 }}
+            style={{ width: '100%', justifyContent: 'center', marginBottom: '1rem', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+        <button
+          onClick={handleResetPassword}
+          style={{ background: 'none', border: 'none', color: '#005eb8', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
+        >
+          Forgot password? Reset it here
+        </button>
       </div>
     </div>
   );
