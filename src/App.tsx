@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ExternalLink, Info, ShieldAlert, FlaskConical, Monitor, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
+import { ExternalLink, Info, ShieldAlert, FlaskConical, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -15,7 +15,7 @@ import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
 import { getSubdomain, adminUrl, practiceUrl } from './subdomainUtils';
-import { buildDemoPatientUrl, getDemoNoticeText, getRandomDemoVariation } from './demoHelpers';
+import { getDemoNoticeText } from './demoHelpers';
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   NEW: 0,
@@ -605,22 +605,9 @@ const ResourceView: React.FC = () => {
 };
 
 const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
-  const navigate = useNavigate();
-
   if (!show) return null;
 
-  const openRandomDemo = () => {
-    const variation = getRandomDemoVariation();
-    navigate(`${buildDemoPatientUrl(variation)}&demo=1`);
-  };
-
-  return (
-    <>
-      <button className="demo-fab" onClick={openRandomDemo} title="Show a new demo variation">
-        <Monitor size={28} />
-      </button>
-    </>
-  );
+  return null;
 };
 
 const SubdomainRoutes: React.FC = () => {

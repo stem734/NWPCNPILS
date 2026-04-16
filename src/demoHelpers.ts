@@ -5,7 +5,7 @@ type DemoVariation = {
   codes: string;
 };
 
-const DEMO_VARIATIONS: DemoVariation[] = [
+export const DEMO_VARIATIONS: DemoVariation[] = [
   {
     forename: 'Steve',
     practiceName: 'Nottingham West GP Practices',
