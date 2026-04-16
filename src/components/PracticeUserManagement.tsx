@@ -121,7 +121,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       setUsers(mappedUsers);
     } catch (err) {
       console.error('Error loading users:', err);
-      setError('Unable to load users.');
+      setError(await getFunctionErrorMessage(err, 'Unable to load users.'));
     } finally {
       setLoading(false);
     }

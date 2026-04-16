@@ -15,17 +15,27 @@ type ResponseLike = {
 
 type FunctionsHttpErrorLike = Error & {
   context?: ResponseLike;
+  name?: string;
 };
+
+function hasResponseContext(value: unknown): value is FunctionsHttpErrorLike {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as FunctionsHttpErrorLike;
+  return Boolean(candidate.context && typeof candidate.context.clone === 'function');
+}
 
 export async function getFunctionErrorMessage(
   error: unknown,
   fallback: string,
 ): Promise<string> {
-  const functionError = error as FunctionsHttpErrorLike;
+  const functionError = error as FunctionsHttpErrorLike | undefined;
 
-  if (functionError?.context && typeof functionError.context.clone === 'function') {
+  if (hasResponseContext(error)) {
     try {
-      const response = functionError.context;
+      const response = error.context;
       const contentType = response.headers.get('content-type') || '';
 
       if (contentType.includes('application/json')) {
@@ -43,11 +53,11 @@ export async function getFunctionErrorMessage(
         return text;
       }
     } catch {
-      return functionError.message || fallback;
+      return error.message || fallback;
     }
   }
 
-  if (functionError instanceof Error && functionError.message.trim()) {
+  if (functionError?.message && functionError.message.trim()) {
     return functionError.message;
   }
 

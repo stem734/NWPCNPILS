@@ -20,6 +20,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import DisclaimerDialog from '../components/DisclaimerDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getMedicationIcon } from '../medicationIcons';
+import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import {
   CUSTOM_CARD_DISCLAIMER_TEXT,
   GLOBAL_TEMPLATE_DISCLAIMER_TEXT,
@@ -425,7 +426,7 @@ const PracticeDashboard: React.FC = () => {
       setSuccessMessage(success);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(await getFunctionErrorMessage(err, 'Something went wrong.'));
     } finally {
       setSaving(false);
       setDisclaimerRequest(null);
@@ -452,7 +453,7 @@ const PracticeDashboard: React.FC = () => {
           });
 
           if (invokeError) {
-            throw new Error(invokeError.message);
+            throw invokeError;
           }
         }, `${medication.code} is now using the global template.`);
       },
@@ -474,7 +475,7 @@ const PracticeDashboard: React.FC = () => {
           });
 
           if (invokeError) {
-            throw new Error(invokeError.message);
+            throw invokeError;
           }
         }, `${medication.code} is now unconfigured for this practice.`);
       },
@@ -515,7 +516,7 @@ const PracticeDashboard: React.FC = () => {
           });
 
           if (invokeError) {
-            throw new Error(invokeError.message);
+            throw invokeError;
           }
         }, `${draft.code} is now using a practice-specific version.`);
 

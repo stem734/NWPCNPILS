@@ -235,7 +235,7 @@ const AdminDashboard: React.FC = () => {
       );
     } catch (error) {
       console.error('Error loading admin dashboard:', error);
-      const message = error instanceof Error ? error.message : 'Unable to load admin dashboard data.';
+      const message = await getFunctionErrorMessage(error, 'Unable to load admin dashboard data.');
       setLoadError(message);
       setPractices([]);
       setAdminUsers([]);
