@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ExternalLink, Info, ShieldAlert, FlaskConical, X, Monitor, ChevronRight, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
+import { ExternalLink, Info, ShieldAlert, FlaskConical, Monitor, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -15,6 +15,7 @@ import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
 import { getSubdomain, adminUrl, practiceUrl } from './subdomainUtils';
+import { buildDemoPatientUrl, getDemoNoticeText, getRandomDemoVariation } from './demoHelpers';
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   NEW: 0,
@@ -69,6 +70,7 @@ const ResourceView: React.FC = () => {
   const nhsNumberParam = searchParams.get('nhs_number') || searchParams.get('nhsNumber') || searchParams.get('nhs');
   const codesParam = searchParams.get('codes');
   const dateParam = searchParams.get('date');
+  const isDemoMode = searchParams.get('demo') === '1';
   const unnamedValues = useMemo(() => {
     const values: string[] = [];
 
@@ -373,6 +375,11 @@ const ResourceView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view">
+      {isDemoMode && (
+        <div className="patient-demo-banner no-print" role="note" aria-live="polite">
+          {getDemoNoticeText()}
+        </div>
+      )}
       <div className="patient-greeting-card" role="status" aria-live="polite" style={{ marginBottom: '1rem' }}>
         <div className="patient-greeting-icon">
           <Info size={20} aria-hidden="true" />
@@ -392,7 +399,10 @@ const ResourceView: React.FC = () => {
           <ShieldCheck size={20} style={{ flexShrink: 0 }} />
           <span>This information has been sent to you directly from your GP practice. All information is stored on this device only. If you clear your browser this information will be removed.</span>
         </div>
-        <button onClick={() => window.print()} className="action-button" style={{ backgroundColor: '#4c6272', color: 'white', padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}>
+      </div>
+
+      <div className="patient-print-bar no-print">
+        <button onClick={() => window.print()} className="action-button patient-print-button" style={{ backgroundColor: '#4c6272', color: 'white', padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}>
           <Printer size={16} /> Print to PDF
         </button>
       </div>
@@ -552,75 +562,20 @@ const ResourceView: React.FC = () => {
 };
 
 const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchParams] = useSearchParams();
-  const currentCode = searchParams.get('code');
-  const { medicationMap } = useMedicationCatalog();
   const navigate = useNavigate();
 
   if (!show) return null;
 
-  const selectScenario = (code: string) => {
-    navigate(`/patient?code=${encodeURIComponent(code)}`);
-    setIsOpen(false);
+  const openRandomDemo = () => {
+    const variation = getRandomDemoVariation();
+    navigate(`${buildDemoPatientUrl(variation)}&demo=1`);
   };
 
   return (
     <>
-      <button className="demo-fab" onClick={() => setIsOpen(true)} title="Clinician Demo Mode">
+      <button className="demo-fab" onClick={openRandomDemo} title="Show a new demo variation">
         <Monitor size={28} />
       </button>
-
-      {isOpen && (
-        <div className="demo-modal-overlay" onClick={() => setIsOpen(false)}>
-          <div className="demo-modal" onClick={e => e.stopPropagation()}>
-            <div className="demo-header">
-              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Clinician Demo Scenarios</h2>
-              <button
-                onClick={() => setIsOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-            <div className="demo-body">
-              <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-                Select a scenario to demonstrate how the portal appears to patients based on different SystmOne protocols.
-              </p>
-              {Object.entries(medicationMap).map(([code, med]) => (
-                <button
-                  key={code}
-                  className={`scenario-card ${currentCode === code ? 'active' : ''}`}
-                  onClick={() => selectScenario(code)}
-                >
-                  <div className="scenario-icon">
-                    {getMedicationIcon(code)}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, color: '#212b32' }}>{med.title}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#4c6272' }}>SystmOne Code: {code}</div>
-                  </div>
-                  <ChevronRight size={18} color="#d8dde0" />
-                </button>
-              ))}
-              <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff9c4', borderRadius: '8px', border: '1px solid #fbc02d' }}>
-                <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Multi-Med Test</div>
-                <p style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Test a clinical string with multiple medications and placeholders.</p>
-                <button
-                  className="action-button"
-                  style={{ width: '100%', backgroundColor: '#fbc02d', color: '#212b32', justifyContent: 'center' }}
-                  onClick={() => selectScenario('101????301??')}
-                >
-                  Load 101????301??
-                </button>
-              </div>
-            </div>
-            <div style={{ padding: '1rem 1.5rem', background: '#f8fafb', fontSize: '0.8rem', color: '#4c6272', borderTop: '1px solid #d8dde0' }}>
-              <strong>Tip:</strong> In a live setting, SystmOne will automatically redirect the patient to these URLs.
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

@@ -290,6 +290,29 @@ p {
   font-size: 1.1rem;
 }
 
+.patient-demo-banner {
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  background: #fff4ce;
+  border: 1px solid #f0b429;
+  color: #6b4e00;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.patient-print-bar {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1000;
+}
+
+.patient-print-button {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
 .patient-content-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -1206,6 +1229,17 @@ p {
 
   .patient-greeting-text {
     font-size: 1rem;
+  }
+
+  .patient-print-bar {
+    right: 16px;
+    left: 16px;
+    bottom: 16px;
+  }
+
+  .patient-print-button {
+    width: 100%;
+    justify-content: center;
   }
 
   .patient-medication-title {
