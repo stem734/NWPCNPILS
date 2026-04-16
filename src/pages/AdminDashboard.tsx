@@ -130,6 +130,22 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const hydrate = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setAuthenticated(true);
+        loadPractices();
+        loadAdmins();
+        loadAudits();
+        loadLoginAudit();
+        return;
+      }
+
+      navigate(resolvePath('/admin'));
+    };
+
+    void hydrate();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setAuthenticated(true);

@@ -69,6 +69,12 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     void loadUsers();
   }, []);
 
+  useEffect(() => {
+    if (practices.length > 0) {
+      void loadUsers();
+    }
+  }, [practices.length]);
+
   const activePractices = useMemo(
     () => [...practices].sort((left, right) => left.name.localeCompare(right.name)),
     [practices],
