@@ -38,12 +38,19 @@ export async function getAuthUser(authHeader: string | null) {
     Deno.env.get('SUPABASE_ANON_KEY')!,
   );
 
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
+  const { data, error } = await supabase.auth.getClaims(token);
+  const userId = data?.claims?.sub;
+  const email = typeof data?.claims?.email === 'string' ? data.claims.email : undefined;
+
+  if (error || !userId) {
     throw new Error('Invalid or expired token');
   }
 
-  return user;
+  return {
+    id: userId,
+    email,
+    user_metadata: {},
+  };
 }
 
 /** Standard CORS headers for Edge Functions. */
