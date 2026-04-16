@@ -24,6 +24,10 @@ type UserRow = {
   }>;
 };
 
+type PracticeUsersPayload = {
+  users?: UserRow[];
+};
+
 type UserFormState = {
   uid?: string;
   name: string;
@@ -85,34 +89,14 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     setError('');
 
     try {
-      const { data, error: userError } = await supabase
-        .from('users')
-        .select(`
-          uid,
-          email,
-          name,
-          is_active,
-          global_role,
-          memberships:practice_memberships(
-            id,
-            practice_id,
-            user_uid,
-            role,
-            is_default,
-            practice:practices(
-              id,
-              name,
-              is_active
-            )
-          )
-        `)
-        .order('email');
+      const { data, error: userError } = await supabase.functions.invoke('list-practice-users');
 
       if (userError) {
         throw userError;
       }
 
-      const mappedUsers = (((data || []) as unknown) as UserRow[]).map((row) => ({
+      const payload = (data || {}) as PracticeUsersPayload;
+      const mappedUsers = (payload.users || []).map((row) => ({
         uid: row.uid,
         email: row.email,
         name: row.name,

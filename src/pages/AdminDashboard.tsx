@@ -74,6 +74,33 @@ interface LoginAuditGroup {
   entries: LoginAuditEntry[];
 }
 
+type AdminDashboardPayload = {
+  practices?: Practice[];
+  admins?: AdminRow[];
+  auditLogs?: Array<{
+    id: string;
+    action: 'created' | 'updated' | 'deleted';
+    actor_uid: string;
+    code: string;
+    timestamp: string;
+    previous_state: unknown;
+    new_state: unknown;
+  }>;
+  loginAudit?: Array<{
+    id: string;
+    uid: string;
+    email: string;
+    actor_type: 'admin' | 'practice';
+    actor_name: string;
+    actor_id?: string | null;
+    admin_role?: 'owner' | 'admin' | null;
+    portal: 'admin' | 'practice';
+    user_agent?: string | null;
+    ip_address?: string | null;
+    created_at: string;
+  }>;
+};
+
 const getAuditStateTitle = (value: unknown): string | null => {
   if (!value || typeof value !== 'object') {
     return null;
@@ -99,6 +126,7 @@ const AdminDashboard: React.FC = () => {
   const [loadingLoginAudit, setLoadingLoginAudit] = useState(true);
   const [expandedLoginAudit, setExpandedLoginAudit] = useState<Record<string, boolean>>({});
   const [authenticated, setAuthenticated] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
   const [newName, setNewName] = useState('');
@@ -134,10 +162,7 @@ const AdminDashboard: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setAuthenticated(true);
-        loadPractices();
-        loadAdmins();
-        loadAudits();
-        loadLoginAudit();
+        loadDashboardData();
         return;
       }
 
@@ -149,10 +174,7 @@ const AdminDashboard: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setAuthenticated(true);
-        loadPractices();
-        loadAdmins();
-        loadAudits();
-        loadLoginAudit();
+        loadDashboardData();
       } else {
         navigate(resolvePath('/admin'));
       }
@@ -160,98 +182,82 @@ const AdminDashboard: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const loadPractices = async () => {
+  const loadDashboardData = async () => {
     setLoading(true);
+    setLoadingAdmins(true);
+    setLoadingAudits(true);
+    setLoadingLoginAudit(true);
+    setLoadError('');
+
     try {
-      const { data, error } = await supabase
-        .from('practices')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.functions.invoke('list-admin-dashboard');
       if (error) throw error;
-      setPractices((data || []) as Practice[]);
+
+      const payload = (data || {}) as AdminDashboardPayload;
+      setPractices(payload.practices || []);
+      setAdminUsers(
+        (payload.admins || [])
+          .filter((row) => row.global_role === 'owner' || row.global_role === 'admin')
+          .map((row) => ({
+            uid: row.uid,
+            email: row.email,
+            name: row.name,
+            is_active: row.is_active,
+            role: row.global_role as 'owner' | 'admin',
+          })),
+      );
+      setAuditLogs(
+        (payload.auditLogs || []).map((row) => ({
+          id: row.id,
+          action: row.action,
+          actorUid: row.actor_uid,
+          code: row.code,
+          timestampMs: new Date(row.timestamp).getTime(),
+          previous_state: row.previous_state,
+          new_state: row.new_state,
+        })),
+      );
+      setLoginAudit(
+        (payload.loginAudit || []).map((row) => ({
+          id: row.id,
+          uid: row.uid,
+          email: row.email,
+          actorType: row.actor_type,
+          actorName: row.actor_name,
+          actorId: row.actor_id,
+          adminRole: row.admin_role,
+          portal: row.portal,
+          userAgent: row.user_agent || '',
+          ipAddress: row.ip_address || '',
+          createdAtMs: new Date(row.created_at).getTime(),
+        })),
+      );
     } catch (error) {
-      console.error('Error loading practices:', error);
+      console.error('Error loading admin dashboard:', error);
+      const message = error instanceof Error ? error.message : 'Unable to load admin dashboard data.';
+      setLoadError(message);
+      setPractices([]);
+      setAdminUsers([]);
+      setAuditLogs([]);
+      setLoginAudit([]);
+    } finally {
+      setLoading(false);
+      setLoadingAdmins(false);
+      setLoadingAudits(false);
+      setLoadingLoginAudit(false);
     }
-    setLoading(false);
   };
 
   const loadAdmins = async () => {
-    setLoadingAdmins(true);
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('uid, email, name, is_active, global_role')
-        .not('global_role', 'is', null)
-        .order('email');
-      if (error) throw error;
-      const mappedAdmins = (((data || []) as unknown) as AdminRow[])
-        .filter((row) => row.global_role === 'owner' || row.global_role === 'admin')
-        .map((row) => ({
-          uid: row.uid,
-          email: row.email,
-          name: row.name,
-          is_active: row.is_active,
-          role: row.global_role as 'owner' | 'admin',
-        }));
-      setAdminUsers(mappedAdmins);
-    } catch (error) {
-      console.error('Error loading admins:', error);
-    }
-    setLoadingAdmins(false);
+    await loadDashboardData();
   };
 
   const loadAudits = async () => {
-    setLoadingAudits(true);
-    try {
-      const { data, error } = await supabase
-        .from('audit_log')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      const audits: AuditLog[] = (data || []).map((row) => ({
-        id: row.id,
-        action: row.action,
-        actorUid: row.actor_uid,
-        code: row.code,
-        timestampMs: new Date(row.timestamp).getTime(),
-        previous_state: row.previous_state,
-        new_state: row.new_state,
-      }));
-      setAuditLogs(audits);
-    } catch (error) {
-      console.error('Error loading audits:', error);
-    }
-    setLoadingAudits(false);
+    await loadDashboardData();
   };
 
   const loadLoginAudit = async () => {
-    setLoadingLoginAudit(true);
-    try {
-      const { data, error } = await supabase
-        .from('login_audit')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      const entries: LoginAuditEntry[] = (data || []).map((row) => ({
-        id: row.id,
-        uid: row.uid,
-        email: row.email,
-        actorType: row.actor_type,
-        actorName: row.actor_name,
-        actorId: row.actor_id,
-        adminRole: row.admin_role,
-        portal: row.portal,
-        userAgent: row.user_agent || '',
-        ipAddress: row.ip_address || '',
-        createdAtMs: new Date(row.created_at).getTime(),
-      }));
-      setLoginAudit(entries);
-    } catch (error) {
-      console.error('Error loading login audit:', error);
-    }
-    setLoadingLoginAudit(false);
+    await loadDashboardData();
   };
 
   const groupedLoginAudit = useMemo<LoginAuditGroup[]>(() => {
@@ -307,7 +313,7 @@ const AdminDashboard: React.FC = () => {
         .from('practices')
         .update({ is_active: !practice.is_active })
         .eq('id', practice.id);
-      loadPractices();
+      await loadDashboardData();
     } catch (error) {
       console.error('Error updating practice:', error);
     }
@@ -322,7 +328,7 @@ const AdminDashboard: React.FC = () => {
       onConfirm: async () => {
         try {
           await supabase.from('practices').delete().eq('id', practice.id);
-          loadPractices();
+          await loadDashboardData();
         } catch (error) {
           console.error('Error deleting practice:', error);
         }
@@ -346,7 +352,7 @@ const AdminDashboard: React.FC = () => {
             last_accessed: null,
             updated_at: new Date().toISOString(),
           }).eq('id', practice.id);
-          loadPractices();
+          await loadDashboardData();
         } catch (error) {
           console.error('Error resetting counters:', error);
         }
@@ -404,7 +410,7 @@ const AdminDashboard: React.FC = () => {
       setNewOds('');
       setNewEmail('');
       setShowAddForm(false);
-      loadPractices();
+      await loadDashboardData();
     } catch (error) {
       console.error('Error adding practice:', error);
       setAddError('Failed to add practice. Please try again.');
@@ -444,7 +450,7 @@ const AdminDashboard: React.FC = () => {
       }).eq('id', editingPractice.id);
 
       setEditingPractice(null);
-      loadPractices();
+      await loadDashboardData();
     } catch (error) {
       console.error('Error updating practice:', error);
       setEditError('Failed to update practice. Please try again.');
@@ -589,7 +595,7 @@ const AdminDashboard: React.FC = () => {
           <button onClick={() => navigate(resolvePath('/admin/drug-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
             <FlaskConical size={16} /> Drug Builder
           </button>
-          <button onClick={loadPractices} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+          <button onClick={loadDashboardData} className="action-button" style={{ backgroundColor: '#4c6272' }}>
             <RefreshCw size={16} /> Refresh
           </button>
           <button onClick={handleSignOut} className="action-button" style={{ backgroundColor: '#d5281b' }}>
@@ -615,6 +621,12 @@ const AdminDashboard: React.FC = () => {
           Audit Log
         </button>
       </div>
+
+      {loadError && (
+        <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
+          {loadError}
+        </div>
+      )}
 
       {(adminActionMessage || adminActionLink) && (
         <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
