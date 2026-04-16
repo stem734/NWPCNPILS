@@ -1,0 +1,53 @@
+[functions.accept-global-medication-card]
+verify_jwt = false
+
+[functions.clear-practice-medication-card]
+verify_jwt = false
+
+[functions.create-admin-user]
+verify_jwt = false
+
+[functions.create-practice-user]
+verify_jwt = false
+
+[functions.delete-admin-user]
+verify_jwt = false
+
+[functions.delete-medication]
+verify_jwt = false
+
+[functions.delete-practice-user]
+verify_jwt = false
+
+[functions.generate-medication-content]
+verify_jwt = false
+
+[functions.list-admin-dashboard]
+verify_jwt = false
+
+[functions.list-practice-users]
+verify_jwt = false
+
+[functions.record-login-audit]
+verify_jwt = false
+
+[functions.save-medication]
+verify_jwt = false
+
+[functions.save-practice-medication-card]
+verify_jwt = false
+
+[functions.send-admin-password-reset]
+verify_jwt = false
+
+[functions.send-practice-password-reset]
+verify_jwt = false
+
+[functions.update-admin-user]
+verify_jwt = false
+
+[functions.update-practice-user]
+verify_jwt = false
+
+[functions.upsert-practice-user]
+verify_jwt = false
