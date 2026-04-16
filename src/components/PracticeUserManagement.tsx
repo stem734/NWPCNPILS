@@ -3,6 +3,7 @@ import { Edit2, Mail, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '../supabase';
 import ConfirmDialog from './ConfirmDialog';
 import type { AppUserSummary, PracticeSummary } from '../practicePortal';
+import { getFunctionErrorMessage } from '../supabaseFunctionError';
 
 type PracticeUserManagementProps = {
   practices: PracticeSummary[];
@@ -220,7 +221,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       await loadUsers();
     } catch (err) {
       console.error('Error creating user:', err);
-      setError(err instanceof Error ? err.message : 'Unable to save user.');
+      setError(await getFunctionErrorMessage(err, 'Unable to save user.'));
     }
   };
 
@@ -261,7 +262,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       await loadUsers();
     } catch (err) {
       console.error('Error updating user:', err);
-      setError(err instanceof Error ? err.message : 'Unable to update user.');
+      setError(await getFunctionErrorMessage(err, 'Unable to update user.'));
     }
   };
 
@@ -279,7 +280,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       setActionLink(data?.resetLink || '');
     } catch (err) {
       console.error('Error sending password reset:', err);
-      setError(err instanceof Error ? err.message : 'Unable to send password reset.');
+      setError(await getFunctionErrorMessage(err, 'Unable to send password reset.'));
     }
   };
 
@@ -305,7 +306,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
             await loadUsers();
           } catch (err) {
             console.error('Error deleting user:', err);
-            setError(err instanceof Error ? err.message : 'Unable to delete user.');
+            setError(await getFunctionErrorMessage(err, 'Unable to delete user.'));
           } finally {
             setConfirmDialog(null);
           }

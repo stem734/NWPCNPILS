@@ -6,6 +6,7 @@ import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
+import { getFunctionErrorMessage } from '../supabaseFunctionError';
 
 interface TrendLink {
   title: string;
@@ -185,7 +186,7 @@ const DrugBuilder: React.FC = () => {
       }
     } catch (err) {
       console.error('Generation error:', err);
-      const message = err instanceof Error ? err.message : 'AI generation failed.';
+      const message = await getFunctionErrorMessage(err, 'AI generation failed.');
       setGenError(message);
       // Still show the editor so they can fill manually
       setTitle(medName);
@@ -230,7 +231,7 @@ const DrugBuilder: React.FC = () => {
       }
     } catch (err) {
       console.error('Save error:', err);
-      const message = err instanceof Error ? err.message : 'Failed to save medication. Please try again.';
+      const message = await getFunctionErrorMessage(err, 'Failed to save medication. Please try again.');
       setSaveError(message);
     }
     setSaving(false);

@@ -5,6 +5,7 @@ import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, 
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
 import { practiceUrl, resolvePath } from '../subdomainUtils';
+import { getFunctionErrorMessage } from '../supabaseFunctionError';
 
 interface Practice {
   id: string;
@@ -491,7 +492,7 @@ const AdminDashboard: React.FC = () => {
       loadAdmins();
     } catch (error) {
       console.error('Error adding admin:', error);
-      setAddAdminError(error instanceof Error ? error.message : 'Failed to add administrator');
+      setAddAdminError(await getFunctionErrorMessage(error, 'Failed to add administrator'));
     }
   };
 
@@ -523,7 +524,7 @@ const AdminDashboard: React.FC = () => {
       loadAdmins();
     } catch (error) {
       console.error('Error updating admin:', error);
-      setEditAdminError(error instanceof Error ? error.message : 'Failed to update administrator');
+      setEditAdminError(await getFunctionErrorMessage(error, 'Failed to update administrator'));
     }
   };
 
@@ -537,7 +538,7 @@ const AdminDashboard: React.FC = () => {
       setAdminActionLink(data.resetLink || '');
     } catch (error) {
       console.error('Error sending reset:', error);
-      alert(error instanceof Error ? error.message : 'Failed to send password reset');
+      alert(await getFunctionErrorMessage(error, 'Failed to send password reset'));
     }
   };
 
@@ -562,7 +563,7 @@ const AdminDashboard: React.FC = () => {
           loadAdmins();
         } catch (error) {
           console.error('Error deleting admin:', error);
-          alert(error instanceof Error ? error.message : 'Failed to remove administrator');
+          alert(await getFunctionErrorMessage(error, 'Failed to remove administrator'));
         }
         setConfirmDialog(null);
       },
