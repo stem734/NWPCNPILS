@@ -672,18 +672,14 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
 
-  // Detect Supabase auth recovery tokens in URL and redirect to /reset-password
+  // Detect implicit-flow Supabase auth recovery tokens in the URL hash
+  // and redirect to /reset-password. The PKCE ?code= flow is NOT handled
+  // here — the reset email links directly to /reset-password?code=... so
+  // no redirect is needed, and intercepting it here would cause a re-render
+  // that re-initialises the Supabase client and consumes the one-time code.
   useEffect(() => {
     if (location.pathname === '/reset-password') return;
 
-    // PKCE flow: ?code= query param
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('code')) {
-      navigate('/reset-password' + window.location.search, { replace: true });
-      return;
-    }
-
-    // Implicit flow: #type=recovery or #error_code=otp_expired in hash
     const hash = window.location.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash.substring(1));
