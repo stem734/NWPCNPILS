@@ -131,7 +131,7 @@ const ResetPassword: React.FC = () => {
       e.preventDefault();
       setError('');
       const { error: resendError } = await supabase.auth.resetPasswordForEmail(resendEmail, {
-        redirectTo: 'https://www.mymedinfo.info/reset-password',
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (resendError) {
         setError(resendError.message);

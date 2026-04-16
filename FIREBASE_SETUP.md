@@ -87,7 +87,7 @@ To use Gemini for the admin Drug Builder, add your personal Gemini API key to th
 GEMINI_API_KEY=your_gemini_api_key_here
 RESEND_API_KEY=your_resend_api_key_here
 RESEND_FROM_EMAIL=MyMedInfo <noreply@yourdomain.com>
-APP_BASE_URL=https://mymedinfo.vercel.app
+APP_BASE_URL=https://www.mymedinfo.info
 ```
 
 Notes:
