@@ -36,6 +36,9 @@ export async function getFunctionErrorMessage(
   if (hasResponseContext(error)) {
     try {
       const response = error.context;
+      if (!response) {
+        return error.message || fallback;
+      }
       const contentType = response.headers.get('content-type') || '';
 
       if (contentType.includes('application/json')) {
