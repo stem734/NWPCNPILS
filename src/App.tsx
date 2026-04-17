@@ -11,6 +11,7 @@ import DrugBuilder from './pages/DrugBuilder';
 import Landing from './pages/Landing';
 import Demo from './pages/Demo';
 import ResetPassword from './pages/ResetPassword';
+import PatientRouter from './pages/PatientRouter';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
@@ -61,7 +62,7 @@ const sortMedicationGroups = <
     return Number.parseInt(left.id, 10) - Number.parseInt(right.id, 10);
   });
 
-const ResourceView: React.FC = () => {
+export const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
   const orgParam = searchParams.get('org');
@@ -640,7 +641,7 @@ const SubdomainRoutes: React.FC = () => {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/demo" element={<Demo />} />
-      <Route path="/patient" element={<ResourceView />} />
+      <Route path="/patient" element={<PatientRouter />} />
       <Route path="/admin" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/signup" element={<PracticeSignup />} />
