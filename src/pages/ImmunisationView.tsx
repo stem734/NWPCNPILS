@@ -15,7 +15,6 @@ import { ShieldPlus, ShieldCheck } from 'lucide-react';
 const ImmunisationView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
-  const forename = searchParams.get('forename') || searchParams.get('first_name') || '';
   const vaccines = (searchParams.get('vaccine') || searchParams.get('jab') || searchParams.get('imms') || '')
     .split(',')
     .map(v => v.trim())
@@ -26,7 +25,7 @@ const ImmunisationView: React.FC = () => {
       <div className="patient-greeting-card" role="status" style={{ marginBottom: '1rem' }}>
         <div className="patient-greeting-icon"><ShieldPlus size={20} /></div>
         <p className="patient-greeting-text">
-          {forename ? `Hi ${forename},` : 'Hi,'} {org ? `${org} has` : 'your practice has'} sent
+          Hi, {org ? `${org} has` : 'your practice has'} sent
           you information about your {vaccines.length > 0 ? vaccines.join(' and ') : ''} immunisation{vaccines.length !== 1 ? 's' : ''}.
         </p>
       </div>

@@ -15,7 +15,6 @@ import { Search, ShieldCheck } from 'lucide-react';
 const ScreeningView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
-  const forename = searchParams.get('forename') || searchParams.get('first_name') || '';
   const screenType = searchParams.get('screen') || searchParams.get('screening') || '';
 
   return (
@@ -23,7 +22,7 @@ const ScreeningView: React.FC = () => {
       <div className="patient-greeting-card" role="status" style={{ marginBottom: '1rem' }}>
         <div className="patient-greeting-icon"><Search size={20} /></div>
         <p className="patient-greeting-text">
-          {forename ? `Hi ${forename},` : 'Hi,'} {org ? `${org} has` : 'your practice has'} sent
+          Hi, {org ? `${org} has` : 'your practice has'} sent
           you information about {screenType || 'a screening programme'}.
         </p>
       </div>

@@ -20,7 +20,6 @@ import { Activity, AlertCircle, ShieldCheck } from 'lucide-react';
 const HealthCheckView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
-  const forename = searchParams.get('forename') || searchParams.get('first_name') || '';
 
   // Detect which param format is in use
   const s1Payload = searchParams.get('s1') || searchParams.get('s1csv') || searchParams.get('payload') || '';
@@ -50,8 +49,7 @@ const HealthCheckView: React.FC = () => {
       <div className="patient-greeting-card" role="status" style={{ marginBottom: '1rem' }}>
         <div className="patient-greeting-icon"><Activity size={20} /></div>
         <p className="patient-greeting-text">
-          {forename ? `Hi ${forename},` : 'Hi,'} here are your NHS Health Check results
-          {org ? ` from ${org}` : ''}.
+          Hi, here are your NHS Health Check results{org ? ` from ${org}` : ''}.
         </p>
       </div>
 

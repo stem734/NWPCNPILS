@@ -67,30 +67,10 @@ export const ResourceView: React.FC = () => {
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
   const orgParam = searchParams.get('org');
   const orgName = orgParam?.trim() || '';
-  const forenameParam = searchParams.get('forename') || searchParams.get('first_name') || searchParams.get('firstname');
-  const nhsNumberParam = searchParams.get('nhs_number') || searchParams.get('nhsNumber') || searchParams.get('nhs');
   const codesParam = searchParams.get('codes');
   const dateParam = searchParams.get('date');
   const isDemoMode = searchParams.get('demo') === '1';
-  const unnamedValues = useMemo(() => {
-    const values: string[] = [];
 
-    searchParams.forEach((value, key) => {
-      if (key === 'org' || key === 'code' || key === 'med' || key === 'codes' || key === 'forename' || key === 'first_name' || key === 'firstname' || key === 'nhs_number' || key === 'nhsNumber' || key === 'nhs' || key === 'date') {
-        return;
-      }
-
-      if (value === '') {
-        values.push(key);
-      }
-    });
-
-    return values;
-  }, [searchParams]);
-  const fallbackForename = unnamedValues[0];
-  const fallbackNhsNumber = unnamedValues[1];
-  const forename = (forenameParam || fallbackForename || '').trim();
-  const nhsNumber = (nhsNumberParam || fallbackNhsNumber || '').trim();
 
   const isOutOfDate = useMemo(() => {
     if (!dateParam) return false;
@@ -363,9 +343,9 @@ export const ResourceView: React.FC = () => {
     );
   }, [contents]);
 
-  const patientGreeting = `${forename ? `Hi ${forename},` : 'Hi,'} ${
-    orgName ? `${orgName} has shared the information below about your medication.` : 'has shared the information below about your medication.'
-  }${nhsNumber ? ` If you need it your NHS Number is ${nhsNumber}.` : ''}`;
+  const patientGreeting = orgName
+    ? `Hi, ${orgName} has shared the information below about your medication.`
+    : 'Hi, your practice has shared the information below about your medication.';
 
   // Show loading while validating
   if ((isValidating || isResolvingContents) && orgName) {
