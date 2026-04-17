@@ -12,6 +12,7 @@ import Landing from './pages/Landing';
 import Demo from './pages/Demo';
 import ResetPassword from './pages/ResetPassword';
 import PatientRouter from './pages/PatientRouter';
+import LegalPage from './pages/LegalPage';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
@@ -622,6 +623,7 @@ const SubdomainRoutes: React.FC = () => {
       <Route path="/" element={<Landing />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/patient" element={<PatientRouter />} />
+      <Route path="/legal" element={<LegalPage />} />
       <Route path="/admin" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/signup" element={<PracticeSignup />} />
@@ -678,6 +680,8 @@ const AppContent: React.FC = () => {
           This information is for guidance only. Always follow the specific advice from your GP or clinical team.
         </p>
         <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.5 }}>
+          <a href="/legal" style={{ color: 'inherit', textDecoration: 'none' }}>Legal & Privacy</a>
+          {' · '}
           <a href={adminUrl()} style={{ color: 'inherit', textDecoration: 'none' }}>Admin</a>
           {' · '}
           <a href={practiceUrl()} style={{ color: 'inherit', textDecoration: 'none' }}>Practice</a>
