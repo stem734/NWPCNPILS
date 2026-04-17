@@ -11,6 +11,7 @@
     { "source": "/practice/:path*", "destination": "/" },
     { "source": "/dashboard", "destination": "/" },
     { "source": "/drug-builder", "destination": "/" },
-    { "source": "/reset-password", "destination": "/" }
+    { "source": "/reset-password", "destination": "/" },
+    { "source": "/legal", "destination": "/" }
   ]
 }
