@@ -7,6 +7,8 @@
 -- Enable RLS on all tables
 ALTER TABLE practices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE medications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE card_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE card_template_revisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_medication_cards ENABLE ROW LEVEL SECURITY;
@@ -131,6 +133,50 @@ CREATE POLICY "medications_delete_admin"
   ON medications FOR DELETE
   TO authenticated
   USING (is_admin());
+
+-- =============================================================================
+-- CARD_TEMPLATES policies
+-- =============================================================================
+DROP POLICY IF EXISTS "card_templates_select_anyone" ON card_templates;
+DROP POLICY IF EXISTS "card_templates_insert_admin" ON card_templates;
+DROP POLICY IF EXISTS "card_templates_update_admin" ON card_templates;
+DROP POLICY IF EXISTS "card_templates_delete_admin" ON card_templates;
+
+CREATE POLICY "card_templates_select_anyone"
+  ON card_templates FOR SELECT
+  TO authenticated, anon
+  USING (true);
+
+CREATE POLICY "card_templates_insert_admin"
+  ON card_templates FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin());
+
+CREATE POLICY "card_templates_update_admin"
+  ON card_templates FOR UPDATE
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "card_templates_delete_admin"
+  ON card_templates FOR DELETE
+  TO authenticated
+  USING (is_admin());
+
+-- =============================================================================
+-- CARD_TEMPLATE_REVISIONS policies
+-- =============================================================================
+DROP POLICY IF EXISTS "card_template_revisions_select_admin" ON card_template_revisions;
+DROP POLICY IF EXISTS "card_template_revisions_insert_admin" ON card_template_revisions;
+
+CREATE POLICY "card_template_revisions_select_admin"
+  ON card_template_revisions FOR SELECT
+  TO authenticated
+  USING (is_admin());
+
+CREATE POLICY "card_template_revisions_insert_admin"
+  ON card_template_revisions FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin());
 
 -- =============================================================================
 -- USERS policies

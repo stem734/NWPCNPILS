@@ -144,6 +144,39 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log (timestamp DESC);
 
+CREATE TABLE IF NOT EXISTS card_templates (
+  template_key text PRIMARY KEY,
+  builder_type text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
+  template_id text NOT NULL,
+  label text NOT NULL,
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  version integer NOT NULL DEFAULT 1,
+  created_at timestamptz DEFAULT now(),
+  created_by uuid,
+  updated_at timestamptz DEFAULT now(),
+  updated_by uuid
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_card_templates_builder_type_template_id
+  ON card_templates (builder_type, template_id);
+CREATE INDEX IF NOT EXISTS idx_card_templates_builder_type
+  ON card_templates (builder_type);
+
+CREATE TABLE IF NOT EXISTS card_template_revisions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_key text NOT NULL REFERENCES card_templates(template_key) ON DELETE CASCADE,
+  builder_type text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
+  template_id text NOT NULL,
+  label text NOT NULL,
+  version integer NOT NULL,
+  action text NOT NULL CHECK (action IN ('created', 'updated', 'restored')),
+  payload jsonb NOT NULL,
+  restored_from_revision_id uuid REFERENCES card_template_revisions(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now(),
+  created_by uuid
+);
+CREATE INDEX IF NOT EXISTS idx_card_template_revisions_template_key_created_at
+  ON card_template_revisions (template_key, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS firebase_uid_map (
   firebase_uid text PRIMARY KEY,
   supabase_uid uuid NOT NULL,
@@ -236,6 +269,8 @@ GRANT EXECUTE ON FUNCTION resolve_patient_medication_cards(text, text[]) TO anon
 -- RLS ENABLE
 ALTER TABLE practices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE medications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE card_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE card_template_revisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_medication_cards ENABLE ROW LEVEL SECURITY;
@@ -298,6 +333,22 @@ CREATE POLICY "medications_select_anyone" ON medications FOR SELECT TO authentic
 CREATE POLICY "medications_insert_admin" ON medications FOR INSERT TO authenticated WITH CHECK (is_admin());
 CREATE POLICY "medications_update_admin" ON medications FOR UPDATE TO authenticated USING (is_admin());
 CREATE POLICY "medications_delete_admin" ON medications FOR DELETE TO authenticated USING (is_admin());
+
+DROP POLICY IF EXISTS "card_templates_select_anyone" ON card_templates;
+DROP POLICY IF EXISTS "card_templates_insert_admin" ON card_templates;
+DROP POLICY IF EXISTS "card_templates_update_admin" ON card_templates;
+DROP POLICY IF EXISTS "card_templates_delete_admin" ON card_templates;
+
+CREATE POLICY "card_templates_select_anyone" ON card_templates FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "card_templates_insert_admin" ON card_templates FOR INSERT TO authenticated WITH CHECK (is_admin());
+CREATE POLICY "card_templates_update_admin" ON card_templates FOR UPDATE TO authenticated USING (is_admin());
+CREATE POLICY "card_templates_delete_admin" ON card_templates FOR DELETE TO authenticated USING (is_admin());
+
+DROP POLICY IF EXISTS "card_template_revisions_select_admin" ON card_template_revisions;
+DROP POLICY IF EXISTS "card_template_revisions_insert_admin" ON card_template_revisions;
+
+CREATE POLICY "card_template_revisions_select_admin" ON card_template_revisions FOR SELECT TO authenticated USING (is_admin());
+CREATE POLICY "card_template_revisions_insert_admin" ON card_template_revisions FOR INSERT TO authenticated WITH CHECK (is_admin());
 
 DROP POLICY IF EXISTS "users_select_admin" ON users;
 DROP POLICY IF EXISTS "users_select_self" ON users;

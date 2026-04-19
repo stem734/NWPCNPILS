@@ -1,13 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ClipboardList, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
-import { LONG_TERM_CONDITION_TEMPLATES } from '../patientTemplateCatalog';
+import { LONG_TERM_CONDITION_TEMPLATES, type LongTermConditionTemplate } from '../patientTemplateCatalog';
+import { fetchCardTemplates } from '../cardTemplateStore';
 
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
   const conditionType = (searchParams.get('ltc') || searchParams.get('condition') || '').trim().toLowerCase();
-  const selectedTemplate = LONG_TERM_CONDITION_TEMPLATES[conditionType] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+  const fallbackTemplate = LONG_TERM_CONDITION_TEMPLATES[conditionType] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+  const [selectedTemplate, setSelectedTemplate] = useState<LongTermConditionTemplate>(fallbackTemplate);
+
+  useEffect(() => {
+    setSelectedTemplate(fallbackTemplate);
+    const loadTemplate = async () => {
+      try {
+        const [row] = await fetchCardTemplates<LongTermConditionTemplate>('ltc', [fallbackTemplate.id]);
+        if (row?.payload) {
+          setSelectedTemplate(row.payload);
+        }
+      } catch (error) {
+        console.error('Failed to load long term condition template override', error);
+      }
+    };
+    loadTemplate();
+  }, [fallbackTemplate]);
 
   return (
     <div className="animation-container patient-view">

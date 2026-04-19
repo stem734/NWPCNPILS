@@ -55,6 +55,49 @@ CREATE TABLE medications (
 );
 
 -- ===================
+-- CARD_TEMPLATES TABLE
+-- Shared non-medication card templates used by the builder and patient views
+-- ===================
+CREATE TABLE card_templates (
+  template_key        text PRIMARY KEY,
+  builder_type        text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
+  template_id         text NOT NULL,
+  label               text NOT NULL,
+  payload             jsonb NOT NULL DEFAULT '{}'::jsonb,
+  version             integer NOT NULL DEFAULT 1,
+  created_at          timestamptz DEFAULT now(),
+  created_by          uuid,
+  updated_at          timestamptz DEFAULT now(),
+  updated_by          uuid
+);
+
+CREATE UNIQUE INDEX idx_card_templates_builder_type_template_id
+  ON card_templates (builder_type, template_id);
+CREATE INDEX idx_card_templates_builder_type
+  ON card_templates (builder_type);
+
+-- ===================
+-- CARD_TEMPLATE_REVISIONS TABLE
+-- Immutable revision history for shared non-medication card templates
+-- ===================
+CREATE TABLE card_template_revisions (
+  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_key            text NOT NULL REFERENCES card_templates(template_key) ON DELETE CASCADE,
+  builder_type            text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
+  template_id             text NOT NULL,
+  label                   text NOT NULL,
+  version                 integer NOT NULL,
+  action                  text NOT NULL CHECK (action IN ('created', 'updated', 'restored')),
+  payload                 jsonb NOT NULL,
+  restored_from_revision_id uuid REFERENCES card_template_revisions(id) ON DELETE SET NULL,
+  created_at              timestamptz DEFAULT now(),
+  created_by              uuid
+);
+
+CREATE INDEX idx_card_template_revisions_template_key_created_at
+  ON card_template_revisions (template_key, created_at DESC);
+
+-- ===================
 -- USERS TABLE
 -- Unified application user records for both global admins and practice members
 -- ===================

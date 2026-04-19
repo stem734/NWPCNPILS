@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe } from 'lucide-react';
-import { IMMUNISATION_TEMPLATES } from '../patientTemplateCatalog';
+import { IMMUNISATION_TEMPLATES, type ImmunisationTemplate } from '../patientTemplateCatalog';
+import { fetchCardTemplates } from '../cardTemplateStore';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -24,9 +25,31 @@ const ImmunisationView: React.FC = () => {
   const localPhone = searchParams.get('localPhone') || '';
   const localEmail = searchParams.get('localEmail') || '';
   const localWebsite = searchParams.get('localWebsite') || '';
-  const selectedVaccines = (vaccines.length > 0 ? vaccines : ['flu'])
+  const requestedVaccines = (vaccines.length > 0 ? vaccines : ['flu']);
+  const requestedVaccinesKey = requestedVaccines.join(',');
+  const defaultSelectedVaccines = requestedVaccines
     .map((vaccineCode) => IMMUNISATION_TEMPLATES[vaccineCode])
     .filter(Boolean);
+  const [selectedVaccines, setSelectedVaccines] = useState<ImmunisationTemplate[]>(defaultSelectedVaccines);
+
+  useEffect(() => {
+    setSelectedVaccines(defaultSelectedVaccines);
+    const loadTemplates = async () => {
+      try {
+        const rows = await fetchCardTemplates<ImmunisationTemplate>('immunisation', requestedVaccines);
+        if (rows.length === 0) return;
+        const rowMap = Object.fromEntries(rows.map((row) => [row.template_id, row.payload]));
+        setSelectedVaccines(
+          requestedVaccines
+            .map((vaccineCode) => rowMap[vaccineCode] || IMMUNISATION_TEMPLATES[vaccineCode])
+            .filter(Boolean),
+        );
+      } catch (error) {
+        console.error('Failed to load immunisation template overrides', error);
+      }
+    };
+    loadTemplates();
+  }, [requestedVaccinesKey]);
 
   return (
     <div className="animation-container patient-view">

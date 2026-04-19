@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Activity, ShieldCheck, AlertTriangle, CircleCheck, CircleAlert, CalendarClock, ChevronRight, Printer } from 'lucide-react';
 import { parseHealthCheckParams } from '../healthCheckParser';
 import { METRIC_ORDER, METRIC_DEFINITIONS, type ParsedMetric } from '../healthCheckData';
 import HealthCheckCard from '../components/HealthCheckCard';
+import { fetchCardTemplates } from '../cardTemplateStore';
+import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
 
 // ─── Helpers (ported from NHSHealthCheck/App.tsx) ─────────────────────────────
 
@@ -60,11 +62,14 @@ const getDisplayMetrics = (metrics: ParsedMetric[]): ParsedMetric[] =>
     };
   });
 
+const metricIdToTemplateId = (metricId: string) => (metricId === 'ldl' ? 'ldl' : metricId);
+
 // ─── Main HealthCheckView ─────────────────────────────────────────────────────
 
 const HealthCheckView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
+  const previewOnly = searchParams.get('previewOnly') === '1';
   const localSupportName = searchParams.get('localName') || `${org || 'Your practice'} support team`;
   const localSupportPhone = searchParams.get('localPhone') || '';
   const localSupportEmail = searchParams.get('localEmail') || '';
@@ -72,8 +77,44 @@ const HealthCheckView: React.FC = () => {
 
   const metrics = useMemo(() => parseHealthCheckParams(searchParams), [searchParams]);
   const hasData = metrics.length > 0;
+  const [templateOverrides, setTemplateOverrides] = useState<Record<string, HealthCheckTemplatePayload>>({});
 
-  const displayMetrics = useMemo(() => getDisplayMetrics(metrics), [metrics]);
+  useEffect(() => {
+    const templateIds = Array.from(new Set(metrics.map((metric) => metricIdToTemplateId(metric.id))));
+    if (templateIds.length === 0) {
+      setTemplateOverrides({});
+      return;
+    }
+    const loadOverrides = async () => {
+      try {
+        const rows = await fetchCardTemplates<HealthCheckTemplatePayload>('healthcheck', templateIds);
+        setTemplateOverrides(Object.fromEntries(rows.map((row) => [row.template_id, row.payload])));
+      } catch (error) {
+        console.error('Failed to load health check template overrides', error);
+        setTemplateOverrides({});
+      }
+    };
+    loadOverrides();
+  }, [metrics]);
+
+  const displayMetrics = useMemo(() => {
+    const baseMetrics = previewOnly ? metrics : getDisplayMetrics(metrics);
+    return baseMetrics.map((metric) => {
+      const templatePayload = templateOverrides[metricIdToTemplateId(metric.id)];
+      const resultCode = (metric.resultCode || '').trim();
+      const variant = templatePayload?.variants?.[resultCode];
+      if (!variant) return metric;
+      return {
+        ...metric,
+        whatTitle: variant.whatIsTitle || metric.whatTitle,
+        what: variant.whatIsText || metric.what,
+        pathway: variant.resultsMessage || metric.pathway,
+        helpLinks: (variant.links || [])
+          .filter((link) => (link.title || '').trim() && (link.website || '').trim())
+          .map((link) => ({ title: link.title, url: link.website || '' })),
+      };
+    });
+  }, [metrics, previewOnly, templateOverrides]);
 
   const groupedMetrics = useMemo(() => {
     const withIndex = displayMetrics.map((metric, index) => ({ metric, index }));
@@ -247,6 +288,8 @@ const HealthCheckView: React.FC = () => {
             </div>
             <div className="hc-grid">
               {group.items.map((metric) => {
+                const templatePayload = templateOverrides[metricIdToTemplateId(metric.id)];
+                const variant = templatePayload?.variants?.[(metric.resultCode || '').trim()];
                 const cholBreakdown = metric.id === 'ldl' && metric.components ? [
                   { label: 'HDL',     value: metric.components.hdl || '', unit: 'mmol/L' },
                   { label: 'LDL',     value: metric.components.ldl || '', unit: 'mmol/L' },
@@ -275,14 +318,18 @@ const HealthCheckView: React.FC = () => {
                           ? 'HDL is often called "good" cholesterol and LDL "bad" cholesterol. Together with your total cholesterol, they help assess your heart and stroke risk.'
                           : undefined,
                       }}
-                      resultsMessage={metric.pathway}
+                      resultsMessage={variant?.resultsMessage || metric.pathway}
+                      importantText={variant?.importantText || ''}
+                      nextStepsTitle={variant?.nextStepsTitle}
+                      nextStepsText={variant?.nextStepsText}
                       links={[
-                        ...(metric.helpLinks || []).map((link) => ({
+                        ...((variant?.links || []).filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim()))),
+                        ...(!(variant?.links || []).length ? (metric.helpLinks || []).map((link) => ({
                           title: link.title,
                           showTitleOnCard: true,
                           website: link.url,
                           websiteLabel: 'Read',
-                        })),
+                        })) : []),
                         ...(localSupportLink ? [localSupportLink] : []),
                       ]}
                       expanded={expandedCards[metric.id] ?? false}

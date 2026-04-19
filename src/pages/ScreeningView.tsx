@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ShieldCheck, ExternalLink } from 'lucide-react';
-import { SCREENING_TEMPLATES } from '../patientTemplateCatalog';
+import { SCREENING_TEMPLATES, type ScreeningTemplate } from '../patientTemplateCatalog';
+import { fetchCardTemplates } from '../cardTemplateStore';
 
 /**
  * ScreeningView — renders screening invitation / result info.
@@ -17,7 +18,23 @@ const ScreeningView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
   const screenType = (searchParams.get('screen') || searchParams.get('screening') || '').trim().toLowerCase();
-  const selectedTemplate = SCREENING_TEMPLATES[screenType] || SCREENING_TEMPLATES.cervical;
+  const fallbackTemplate = SCREENING_TEMPLATES[screenType] || SCREENING_TEMPLATES.cervical;
+  const [selectedTemplate, setSelectedTemplate] = useState<ScreeningTemplate>(fallbackTemplate);
+
+  useEffect(() => {
+    setSelectedTemplate(fallbackTemplate);
+    const loadTemplate = async () => {
+      try {
+        const [row] = await fetchCardTemplates<ScreeningTemplate>('screening', [fallbackTemplate.id]);
+        if (row?.payload) {
+          setSelectedTemplate(row.payload);
+        }
+      } catch (error) {
+        console.error('Failed to load screening template override', error);
+      }
+    };
+    loadTemplate();
+  }, [fallbackTemplate]);
 
   return (
     <div className="animation-container patient-view">

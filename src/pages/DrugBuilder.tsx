@@ -11,7 +11,26 @@ import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalo
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { HEALTH_CHECK_CARD_LABELS, type HealthCheckCodeFamily } from '../healthCheckCodes';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
-import { SCREENING_TEMPLATES, IMMUNISATION_TEMPLATES, LONG_TERM_CONDITION_TEMPLATES } from '../patientTemplateCatalog';
+import {
+  SCREENING_TEMPLATES,
+  IMMUNISATION_TEMPLATES,
+  LONG_TERM_CONDITION_TEMPLATES,
+  type ScreeningTemplate,
+  type ImmunisationTemplate,
+  type LongTermConditionTemplate,
+  type PatientResourceLink,
+} from '../patientTemplateCatalog';
+import {
+  fetchCardTemplateRevisions,
+  fetchCardTemplates,
+} from '../cardTemplateStore';
+import type {
+  CardTemplateBuilderType,
+  CardTemplateRevisionRecord,
+  HealthCheckBuilderLink,
+  HealthCheckBuilderVariant,
+  HealthCheckTemplatePayload,
+} from '../cardTemplateTypes';
 
 interface TrendLink {
   title: string;
@@ -19,28 +38,6 @@ interface TrendLink {
 }
 
 type OutputBuilderType = 'medication' | 'healthcheck' | 'screening' | 'immunisation' | 'ltc';
-
-type HealthCheckBuilderLink = {
-  title: string;
-  showTitleOnCard?: boolean;
-  phone?: string;
-  phoneLabel?: string;
-  email?: string;
-  emailLabel?: string;
-  website?: string;
-  websiteLabel?: string;
-};
-
-type HealthCheckBuilderVariant = {
-  resultCode: string;
-  resultsMessage: string;
-  importantText: string;
-  whatIsTitle: string;
-  whatIsText: string;
-  nextStepsTitle: string;
-  nextStepsText: string;
-  links: HealthCheckBuilderLink[];
-};
 
 const HEALTH_CHECK_PARAM_KEYS: Record<HealthCheckCodeFamily, string> = {
   bp: 'bps',
@@ -52,28 +49,6 @@ const HEALTH_CHECK_PARAM_KEYS: Record<HealthCheckCodeFamily, string> = {
   alc: 'alcs',
   smk: 'smks',
 };
-
-const SCREENING_OPTIONS = Object.values(SCREENING_TEMPLATES).map((template) => ({
-  value: template.id,
-  label: template.label,
-}));
-
-const IMMUNISATION_OPTIONS = Object.values(IMMUNISATION_TEMPLATES).map((template) => ({
-  value: template.id,
-  label: template.label,
-}));
-
-const LONG_TERM_CONDITION_OPTIONS = Object.values(LONG_TERM_CONDITION_TEMPLATES).map((template) => ({
-  value: template.id,
-  label: template.label,
-}));
-
-const BUILDER_STORAGE_KEYS = {
-  healthcheck: 'card-builder:healthcheck',
-  screening: 'card-builder:screening',
-  immunisation: 'card-builder:immunisation',
-  ltc: 'card-builder:ltc',
-} as const;
 
 const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>> =>
   CLINICAL_DOMAIN_IDS.reduce((domainAcc, domainId) => {
@@ -94,6 +69,34 @@ const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record
     }, {} as Record<string, HealthCheckBuilderVariant>);
     return domainAcc;
   }, {} as Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>);
+
+const cloneResourceLinks = (links: PatientResourceLink[]) => links.map((link) => ({ ...link }));
+const cloneScreeningTemplate = (template: ScreeningTemplate): ScreeningTemplate => ({
+  ...template,
+  guidance: [...template.guidance],
+  nhsLinks: cloneResourceLinks(template.nhsLinks),
+});
+const cloneImmunisationTemplate = (template: ImmunisationTemplate): ImmunisationTemplate => ({
+  ...template,
+  guidance: [...template.guidance],
+  nhsLinks: cloneResourceLinks(template.nhsLinks),
+});
+const cloneLongTermConditionTemplate = (template: LongTermConditionTemplate): LongTermConditionTemplate => ({
+  ...template,
+  guidance: [...template.guidance],
+  nhsLinks: cloneResourceLinks(template.nhsLinks),
+  zones: template.zones?.map((zone) => ({ ...zone, when: [...zone.when], actions: [...zone.actions] })),
+  additionalSections: template.additionalSections?.map((section) => ({ ...section, points: [...section.points] })),
+});
+
+const createDefaultScreeningState = (): Record<string, ScreeningTemplate> =>
+  Object.fromEntries(Object.entries(SCREENING_TEMPLATES).map(([key, template]) => [key, cloneScreeningTemplate(template)]));
+
+const createDefaultImmunisationState = (): Record<string, ImmunisationTemplate> =>
+  Object.fromEntries(Object.entries(IMMUNISATION_TEMPLATES).map(([key, template]) => [key, cloneImmunisationTemplate(template)]));
+
+const createDefaultLongTermConditionState = (): Record<string, LongTermConditionTemplate> =>
+  Object.fromEntries(Object.entries(LONG_TERM_CONDITION_TEMPLATES).map(([key, template]) => [key, cloneLongTermConditionTemplate(template)]));
 
 const DrugBuilder: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(false);
@@ -138,27 +141,31 @@ const DrugBuilder: React.FC = () => {
   const [healthCheckLocalSupportPhone, setHealthCheckLocalSupportPhone] = useState('');
   const [healthCheckLocalSupportEmail, setHealthCheckLocalSupportEmail] = useState('');
   const [healthCheckLocalSupportWebsite, setHealthCheckLocalSupportWebsite] = useState('');
-  const [healthCheckSelections] = useState<Record<HealthCheckCodeFamily, string>>({
-    bp: '',
-    bmi: '',
-    cvd: '',
-    chol: '',
-    hba1c: '',
-    act: '',
-    alc: '',
-    smk: '',
-  });
   const [selectedHealthCheckDomain, setSelectedHealthCheckDomain] = useState<ClinicalDomainId>('bp');
   const [selectedHealthCheckVariantCode, setSelectedHealthCheckVariantCode] = useState('BPNORMAL');
   const [healthCheckEditorOpen, setHealthCheckEditorOpen] = useState(false);
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
+  const [screeningTemplates, setScreeningTemplates] = useState<Record<string, ScreeningTemplate>>(() => createDefaultScreeningState());
   const [screeningType, setScreeningType] = useState('cervical');
+  const [screeningEditorOpen, setScreeningEditorOpen] = useState(false);
+  const [immunisationTemplates, setImmunisationTemplates] = useState<Record<string, ImmunisationTemplate>>(() => createDefaultImmunisationState());
   const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
+  const [immunisationEditorOpen, setImmunisationEditorOpen] = useState(false);
+  const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
+  const [ltcEditorOpen, setLtcEditorOpen] = useState(false);
   const [localSupportName, setLocalSupportName] = useState('');
   const [localSupportPhone, setLocalSupportPhone] = useState('');
   const [localSupportEmail, setLocalSupportEmail] = useState('');
   const [localSupportWebsite, setLocalSupportWebsite] = useState('');
+  const [templateActionKey, setTemplateActionKey] = useState('');
+  const [historyState, setHistoryState] = useState<{
+    builderType: CardTemplateBuilderType;
+    templateId: string;
+    label: string;
+    revisions: CardTemplateRevisionRecord[];
+    loading: boolean;
+  } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -187,60 +194,67 @@ const DrugBuilder: React.FC = () => {
   }, [selectedHealthCheckDomain, selectedHealthCheckVariantCode]);
 
   useEffect(() => {
-    try {
-      const hcRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.healthcheck);
-      if (hcRaw) {
-        const parsed = JSON.parse(hcRaw) as {
-          selectedDomain?: ClinicalDomainId;
-          selectedCode?: string;
-          configs?: Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>;
-          localSupportName?: string;
-          localSupportPhone?: string;
-          localSupportEmail?: string;
-          localSupportWebsite?: string;
-        };
-        if (parsed.selectedDomain) setSelectedHealthCheckDomain(parsed.selectedDomain);
-        if (parsed.selectedCode) setSelectedHealthCheckVariantCode(parsed.selectedCode);
-        if (parsed.configs) setHealthCheckBuilderConfigs(parsed.configs);
-        setHealthCheckLocalSupportName(parsed.localSupportName || '');
-        setHealthCheckLocalSupportPhone(parsed.localSupportPhone || '');
-        setHealthCheckLocalSupportEmail(parsed.localSupportEmail || '');
-        setHealthCheckLocalSupportWebsite(parsed.localSupportWebsite || '');
-      }
+    if (!authenticated) return;
 
-      const screeningRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.screening);
-      if (screeningRaw) {
-        const parsed = JSON.parse(screeningRaw) as { screeningType?: string };
-        if (parsed.screeningType) setScreeningType(parsed.screeningType);
-      }
+    const loadTemplates = async () => {
+      try {
+        const [healthcheckRows, screeningRows, immunisationRows, ltcRows] = await Promise.all([
+          fetchCardTemplates<HealthCheckTemplatePayload>('healthcheck'),
+          fetchCardTemplates<ScreeningTemplate>('screening'),
+          fetchCardTemplates<ImmunisationTemplate>('immunisation'),
+          fetchCardTemplates<LongTermConditionTemplate>('ltc'),
+        ]);
 
-      const immsRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.immunisation);
-      if (immsRaw) {
-        const parsed = JSON.parse(immsRaw) as {
-          immunisationSelections?: string[];
-          localSupportName?: string;
-          localSupportPhone?: string;
-          localSupportEmail?: string;
-          localSupportWebsite?: string;
-        };
-        if (Array.isArray(parsed.immunisationSelections) && parsed.immunisationSelections.length > 0) {
-          setImmunisationSelections(parsed.immunisationSelections);
+        if (healthcheckRows.length > 0) {
+          const next = createDefaultHealthCheckBuilderState();
+          healthcheckRows.forEach((row) => {
+            const domainId = row.template_id as ClinicalDomainId;
+            if (next[domainId]) {
+              next[domainId] = {
+                ...next[domainId],
+                ...((row.payload as HealthCheckTemplatePayload)?.variants || {}),
+              };
+            }
+          });
+          setHealthCheckBuilderConfigs(next);
         }
-        setLocalSupportName(parsed.localSupportName || '');
-        setLocalSupportPhone(parsed.localSupportPhone || '');
-        setLocalSupportEmail(parsed.localSupportEmail || '');
-        setLocalSupportWebsite(parsed.localSupportWebsite || '');
-      }
 
-      const ltcRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.ltc);
-      if (ltcRaw) {
-        const parsed = JSON.parse(ltcRaw) as { selectedLongTermCondition?: string };
-        if (parsed.selectedLongTermCondition) setSelectedLongTermCondition(parsed.selectedLongTermCondition);
+        if (screeningRows.length > 0) {
+          setScreeningTemplates((current) => {
+            const next = { ...current };
+            screeningRows.forEach((row) => {
+              next[row.template_id] = cloneScreeningTemplate(row.payload as ScreeningTemplate);
+            });
+            return next;
+          });
+        }
+
+        if (immunisationRows.length > 0) {
+          setImmunisationTemplates((current) => {
+            const next = { ...current };
+            immunisationRows.forEach((row) => {
+              next[row.template_id] = cloneImmunisationTemplate(row.payload as ImmunisationTemplate);
+            });
+            return next;
+          });
+        }
+
+        if (ltcRows.length > 0) {
+          setLongTermConditionTemplates((current) => {
+            const next = { ...current };
+            ltcRows.forEach((row) => {
+              next[row.template_id] = cloneLongTermConditionTemplate(row.payload as LongTermConditionTemplate);
+            });
+            return next;
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load card templates', error);
       }
-    } catch {
-      // Ignore local template hydration errors and continue with defaults.
-    }
-  }, []);
+    };
+
+    loadTemplates();
+  }, [authenticated]);
 
   const previewDraft = useMemo<MedicationRecord | null>(() => {
     if (!hasContent) {
@@ -333,25 +347,6 @@ const DrugBuilder: React.FC = () => {
     await navigator.clipboard.writeText(value);
   };
 
-  const healthCheckPreviewUrl = useMemo(() => {
-    const params = new URLSearchParams({ type: 'healthcheck' });
-    (Object.entries(healthCheckSelections) as Array<[HealthCheckCodeFamily, string]>).forEach(([family, code]) => {
-      if (!code) return;
-      params.set(HEALTH_CHECK_PARAM_KEYS[family], code);
-    });
-    if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
-    if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
-    if (healthCheckLocalSupportEmail.trim()) params.set('localEmail', healthCheckLocalSupportEmail.trim());
-    if (healthCheckLocalSupportWebsite.trim()) params.set('localWebsite', healthCheckLocalSupportWebsite.trim());
-    return buildPatientUrl(params);
-  }, [
-    healthCheckLocalSupportEmail,
-    healthCheckLocalSupportName,
-    healthCheckLocalSupportPhone,
-    healthCheckLocalSupportWebsite,
-    healthCheckSelections,
-  ]);
-
   const screeningPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'screening', screen: screeningType });
     return buildPatientUrl(params);
@@ -382,11 +377,17 @@ const DrugBuilder: React.FC = () => {
     return buildPatientUrl(params);
   }, [selectedLongTermCondition]);
 
-  const buildHealthCheckVariantPreviewUrl = (domainId: ClinicalDomainId, resultCode: string) => {
+  const selectedScreeningTemplate = screeningTemplates[screeningType] || SCREENING_TEMPLATES.cervical;
+  const selectedImmunisationTemplate = immunisationTemplates[immunisationSelections[0]] || IMMUNISATION_TEMPLATES.flu;
+  const selectedLongTermConditionTemplate =
+    longTermConditionTemplates[selectedLongTermCondition] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+
+  const buildHealthCheckVariantPreviewUrl = (domainId: ClinicalDomainId, resultCode: string, previewOnly = false) => {
     const params = new URLSearchParams({ type: 'healthcheck' });
     const family = domainId === 'ldl' ? 'chol' : domainId;
     const key = HEALTH_CHECK_PARAM_KEYS[family as HealthCheckCodeFamily];
     params.set(key, resultCode);
+    if (previewOnly) params.set('previewOnly', '1');
     if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
     if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
     if (healthCheckLocalSupportEmail.trim()) params.set('localEmail', healthCheckLocalSupportEmail.trim());
@@ -407,7 +408,7 @@ const DrugBuilder: React.FC = () => {
       label: HEALTH_CHECK_CARD_LABELS[(domainId === 'ldl' ? 'chol' : domainId) as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[domainId].heading,
       summary: `${resultCodes.length} result type${resultCodes.length === 1 ? '' : 's'}`,
       resultCodes,
-      previewUrl: buildHealthCheckVariantPreviewUrl(domainId, previewResultCode),
+      previewUrl: buildHealthCheckVariantPreviewUrl(domainId, previewResultCode, true),
     };
   });
 
@@ -416,6 +417,16 @@ const DrugBuilder: React.FC = () => {
   const resolvedSelectedHealthCheckVariantCode = selectedHealthCheckDomainCodes.includes(selectedHealthCheckVariantCode)
     ? selectedHealthCheckVariantCode
     : (selectedHealthCheckDomainCodes[0] || '');
+  const healthCheckPreviewUrl = useMemo(() => {
+    return buildHealthCheckVariantPreviewUrl(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, true);
+  }, [
+    healthCheckLocalSupportEmail,
+    healthCheckLocalSupportName,
+    healthCheckLocalSupportPhone,
+    healthCheckLocalSupportWebsite,
+    resolvedSelectedHealthCheckVariantCode,
+    selectedHealthCheckDomain,
+  ]);
   const defaultHealthCheckConfigs = createDefaultHealthCheckBuilderState();
   const selectedHealthCheckVariant =
     healthCheckBuilderConfigs[selectedHealthCheckDomain]?.[resolvedSelectedHealthCheckVariantCode] ||
@@ -502,6 +513,97 @@ const DrugBuilder: React.FC = () => {
     updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
       links: selectedHealthCheckVariantSafe.links.filter((_, linkIndex) => linkIndex !== index),
     });
+  };
+
+  const updateScreeningTemplate = (templateId: string, patch: Partial<ScreeningTemplate>) => {
+    setScreeningTemplates((current) => ({
+      ...current,
+      [templateId]: {
+        ...(current[templateId] || cloneScreeningTemplate(SCREENING_TEMPLATES.cervical)),
+        ...patch,
+      },
+    }));
+  };
+
+  const updateScreeningGuidance = (templateId: string, index: number, value: string) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    const guidance = [...template.guidance];
+    guidance[index] = value;
+    updateScreeningTemplate(templateId, { guidance });
+  };
+
+  const updateScreeningLink = (templateId: string, index: number, field: keyof PatientResourceLink, value: string) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    const nhsLinks = template.nhsLinks.map((link, linkIndex) => linkIndex === index ? { ...link, [field]: value } : link);
+    updateScreeningTemplate(templateId, { nhsLinks });
+  };
+
+  const updateImmunisationTemplate = (templateId: string, patch: Partial<ImmunisationTemplate>) => {
+    setImmunisationTemplates((current) => ({
+      ...current,
+      [templateId]: {
+        ...(current[templateId] || cloneImmunisationTemplate(IMMUNISATION_TEMPLATES.flu)),
+        ...patch,
+      },
+    }));
+  };
+
+  const updateImmunisationGuidance = (templateId: string, index: number, value: string) => {
+    const template = immunisationTemplates[templateId] || IMMUNISATION_TEMPLATES.flu;
+    const guidance = [...template.guidance];
+    guidance[index] = value;
+    updateImmunisationTemplate(templateId, { guidance });
+  };
+
+  const updateImmunisationLink = (templateId: string, index: number, field: keyof PatientResourceLink, value: string) => {
+    const template = immunisationTemplates[templateId] || IMMUNISATION_TEMPLATES.flu;
+    const nhsLinks = template.nhsLinks.map((link, linkIndex) => linkIndex === index ? { ...link, [field]: value } : link);
+    updateImmunisationTemplate(templateId, { nhsLinks });
+  };
+
+  const updateLongTermConditionTemplate = (templateId: string, patch: Partial<LongTermConditionTemplate>) => {
+    setLongTermConditionTemplates((current) => ({
+      ...current,
+      [templateId]: {
+        ...(current[templateId] || cloneLongTermConditionTemplate(LONG_TERM_CONDITION_TEMPLATES.asthma)),
+        ...patch,
+      },
+    }));
+  };
+
+  const updateLongTermGuidance = (templateId: string, index: number, value: string) => {
+    const template = longTermConditionTemplates[templateId] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+    const guidance = [...template.guidance];
+    guidance[index] = value;
+    updateLongTermConditionTemplate(templateId, { guidance });
+  };
+
+  const updateLongTermLink = (templateId: string, index: number, field: keyof PatientResourceLink, value: string) => {
+    const template = longTermConditionTemplates[templateId] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+    const nhsLinks = template.nhsLinks.map((link, linkIndex) => linkIndex === index ? { ...link, [field]: value } : link);
+    updateLongTermConditionTemplate(templateId, { nhsLinks });
+  };
+
+  const updateLongTermZone = (
+    templateId: string,
+    zoneIndex: number,
+    field: 'title' | 'when' | 'actions',
+    value: string | string[],
+  ) => {
+    const template = longTermConditionTemplates[templateId] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+    const zones = (template.zones || []).map((zone, index) => index === zoneIndex ? { ...zone, [field]: value } : zone);
+    updateLongTermConditionTemplate(templateId, { zones });
+  };
+
+  const updateLongTermAdditionalSection = (
+    templateId: string,
+    sectionIndex: number,
+    field: 'title' | 'points',
+    value: string | string[],
+  ) => {
+    const template = longTermConditionTemplates[templateId] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+    const additionalSections = (template.additionalSections || []).map((section, index) => index === sectionIndex ? { ...section, [field]: value } : section);
+    updateLongTermConditionTemplate(templateId, { additionalSections });
   };
 
   const handleGenerate = async () => {
@@ -674,20 +776,112 @@ const DrugBuilder: React.FC = () => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const saveHealthCheckTemplate = () => {
-    window.localStorage.setItem(
-      BUILDER_STORAGE_KEYS.healthcheck,
-      JSON.stringify({
-        selectedDomain: selectedHealthCheckDomain,
-        selectedCode: resolvedSelectedHealthCheckVariantCode,
-        configs: healthCheckBuilderConfigs,
-        localSupportName: healthCheckLocalSupportName.trim(),
-        localSupportPhone: healthCheckLocalSupportPhone.trim(),
-        localSupportEmail: healthCheckLocalSupportEmail.trim(),
-        localSupportWebsite: healthCheckLocalSupportWebsite.trim(),
-      }),
+  const persistCardTemplate = async (
+    builderType: CardTemplateBuilderType,
+    templateId: string,
+    label: string,
+    payload: unknown,
+    successMessage: string,
+  ) => {
+    const actionKey = `${builderType}:${templateId}`;
+    setTemplateActionKey(actionKey);
+    try {
+      const { data, error } = await supabase.functions.invoke('save-card-template', {
+        body: { builderType, templateId, label, payload },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error('Template save did not complete');
+      showBuilderNotice(builderType as OutputBuilderType, successMessage);
+    } catch (err) {
+      const message = await getFunctionErrorMessage(err, 'Failed to save card template.');
+      showBuilderNotice(builderType as OutputBuilderType, message);
+    } finally {
+      setTemplateActionKey('');
+    }
+  };
+
+  const loadTemplateHistory = async (builderType: CardTemplateBuilderType, templateId: string, label: string) => {
+    setHistoryState({ builderType, templateId, label, revisions: [], loading: true });
+    try {
+      const revisions = await fetchCardTemplateRevisions(builderType, templateId);
+      setHistoryState({ builderType, templateId, label, revisions, loading: false });
+    } catch (error) {
+      console.error('Failed to load template history', error);
+      setHistoryState({ builderType, templateId, label, revisions: [], loading: false });
+    }
+  };
+
+  const applyTemplatePayloadToState = (
+    builderType: CardTemplateBuilderType,
+    templateId: string,
+    payload: unknown,
+  ) => {
+    if (builderType === 'healthcheck') {
+      const next = createDefaultHealthCheckBuilderState();
+      const domainId = templateId as ClinicalDomainId;
+      next[domainId] = {
+        ...next[domainId],
+        ...((payload as HealthCheckTemplatePayload)?.variants || {}),
+      };
+      setHealthCheckBuilderConfigs((current) => ({ ...current, [domainId]: next[domainId] }));
+      return;
+    }
+    if (builderType === 'screening') {
+      setScreeningTemplates((current) => ({
+        ...current,
+        [templateId]: cloneScreeningTemplate(payload as ScreeningTemplate),
+      }));
+      return;
+    }
+    if (builderType === 'immunisation') {
+      setImmunisationTemplates((current) => ({
+        ...current,
+        [templateId]: cloneImmunisationTemplate(payload as ImmunisationTemplate),
+      }));
+      return;
+    }
+    setLongTermConditionTemplates((current) => ({
+      ...current,
+      [templateId]: cloneLongTermConditionTemplate(payload as LongTermConditionTemplate),
+    }));
+  };
+
+  const restoreTemplateRevision = async (revision: CardTemplateRevisionRecord) => {
+    if (!historyState) return;
+    setTemplateActionKey(`${historyState.builderType}:${historyState.templateId}:restore:${revision.id}`);
+    try {
+      const { data, error } = await supabase.functions.invoke('restore-card-template', {
+        body: {
+          builderType: historyState.builderType,
+          templateId: historyState.templateId,
+          revisionId: revision.id,
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error('Template restore did not complete');
+      applyTemplatePayloadToState(historyState.builderType, historyState.templateId, revision.payload);
+
+      const revisions = await fetchCardTemplateRevisions(historyState.builderType, historyState.templateId);
+      setHistoryState((current) => current ? { ...current, revisions, loading: false } : current);
+      showBuilderNotice(historyState.builderType as OutputBuilderType, `${historyState.label} restored.`);
+    } catch (err) {
+      const message = await getFunctionErrorMessage(err, 'Failed to restore template.');
+      showBuilderNotice(historyState.builderType as OutputBuilderType, message);
+    } finally {
+      setTemplateActionKey('');
+    }
+  };
+
+  const saveHealthCheckTemplate = async (domainId = selectedHealthCheckDomain) => {
+    const familyLabel = HEALTH_CHECK_CARD_LABELS[(domainId === 'ldl' ? 'chol' : domainId) as HealthCheckCodeFamily]
+      || PREVIEW_DOMAIN_CONFIGS[domainId].heading;
+    await persistCardTemplate(
+      'healthcheck',
+      domainId,
+      familyLabel,
+      { variants: healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId] },
+      `${familyLabel} template saved.`,
     );
-    showBuilderNotice('healthcheck', 'Health check template saved.');
   };
 
   const resetHealthCheckTemplate = () => {
@@ -701,28 +895,20 @@ const DrugBuilder: React.FC = () => {
     showBuilderNotice('healthcheck', 'Health check template reset.');
   };
 
-  const saveScreeningTemplate = () => {
-    window.localStorage.setItem(BUILDER_STORAGE_KEYS.screening, JSON.stringify({ screeningType }));
-    showBuilderNotice('screening', 'Screening template saved.');
+  const saveScreeningTemplate = async (templateId = screeningType) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    await persistCardTemplate('screening', templateId, template.label, template, `${template.label} saved.`);
   };
 
   const resetScreeningTemplate = () => {
     setScreeningType('cervical');
+    setScreeningTemplates(createDefaultScreeningState());
     showBuilderNotice('screening', 'Screening template reset.');
   };
 
-  const saveImmunisationTemplate = () => {
-    window.localStorage.setItem(
-      BUILDER_STORAGE_KEYS.immunisation,
-      JSON.stringify({
-        immunisationSelections,
-        localSupportName: localSupportName.trim(),
-        localSupportPhone: localSupportPhone.trim(),
-        localSupportEmail: localSupportEmail.trim(),
-        localSupportWebsite: localSupportWebsite.trim(),
-      }),
-    );
-    showBuilderNotice('immunisation', 'Immunisation template saved.');
+  const saveImmunisationTemplate = async (templateId = immunisationSelections[0] || 'flu') => {
+    const template = immunisationTemplates[templateId] || IMMUNISATION_TEMPLATES.flu;
+    await persistCardTemplate('immunisation', templateId, template.label, template, `${template.label} saved.`);
   };
 
   const resetImmunisationTemplate = () => {
@@ -731,16 +917,18 @@ const DrugBuilder: React.FC = () => {
     setLocalSupportPhone('');
     setLocalSupportEmail('');
     setLocalSupportWebsite('');
+    setImmunisationTemplates(createDefaultImmunisationState());
     showBuilderNotice('immunisation', 'Immunisation template reset.');
   };
 
-  const saveLtcTemplate = () => {
-    window.localStorage.setItem(BUILDER_STORAGE_KEYS.ltc, JSON.stringify({ selectedLongTermCondition }));
-    showBuilderNotice('ltc', 'Long term condition template saved.');
+  const saveLtcTemplate = async (templateId = selectedLongTermCondition) => {
+    const template = longTermConditionTemplates[templateId] || LONG_TERM_CONDITION_TEMPLATES.asthma;
+    await persistCardTemplate('ltc', templateId, template.label, template, `${template.label} saved.`);
   };
 
   const resetLtcTemplate = () => {
     setSelectedLongTermCondition('asthma');
+    setLongTermConditionTemplates(createDefaultLongTermConditionState());
     showBuilderNotice('ltc', 'Long term condition template reset.');
   };
 
@@ -1287,7 +1475,7 @@ const DrugBuilder: React.FC = () => {
               <button onClick={() => openPreview(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
                 <Eye size={16} /> Preview
               </button>
-              <button onClick={saveHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+              <button onClick={() => saveHealthCheckTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
                 <Save size={16} /> Save Template
               </button>
               <button onClick={resetHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
@@ -1338,6 +1526,21 @@ const DrugBuilder: React.FC = () => {
                       style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
                     >
                       <Edit2 size={14} /> Edit
+                    </button>
+                    <button
+                      onClick={() => saveHealthCheckTemplate(row.domainId)}
+                      disabled={templateActionKey === `healthcheck:${row.domainId}`}
+                      className="action-button-sm"
+                      style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                    >
+                      <Save size={14} /> Save
+                    </button>
+                    <button
+                      onClick={() => loadTemplateHistory('healthcheck', row.domainId, row.label)}
+                      className="action-button-sm"
+                      style={{ background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                    >
+                      Audit
                     </button>
                     <button onClick={() => copyText(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                       <Copy size={14} /> Copy
@@ -1643,7 +1846,7 @@ const DrugBuilder: React.FC = () => {
             <button onClick={() => openPreview(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Eye size={16} /> Preview
             </button>
-            <button onClick={saveScreeningTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+            <button onClick={() => saveScreeningTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
               <Save size={16} /> Save Template
             </button>
             <button onClick={resetScreeningTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
@@ -1656,22 +1859,40 @@ const DrugBuilder: React.FC = () => {
 
           <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
           <div className="dashboard-list">
-              {SCREENING_OPTIONS.map((option) => {
-                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: option.value }));
+              {Object.values(screeningTemplates).map((template) => {
+                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: template.id }));
                 return (
-                  <div key={option.value} className="dashboard-list-card">
+                  <div key={template.id} className="dashboard-list-card">
                     <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
-                      {option.value.toUpperCase()}
+                      {template.id.toUpperCase()}
                     </div>
                     <div className="dashboard-list-main">
-                      <div className="dashboard-list-title">{option.label}</div>
+                      <div className="dashboard-list-title">{template.label}</div>
+                      <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
+                      </div>
                     </div>
                     <div className="dashboard-list-actions">
                       <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Eye size={14} /> Preview
                       </button>
-                      <button onClick={() => setScreeningType(option.value)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <button onClick={() => { setScreeningType(template.id); setScreeningEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Edit2 size={14} /> Edit
+                      </button>
+                      <button
+                        onClick={() => saveScreeningTemplate(template.id)}
+                        disabled={templateActionKey === `screening:${template.id}`}
+                        className="action-button-sm"
+                        style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                      >
+                        <Save size={14} /> Save
+                      </button>
+                      <button
+                        onClick={() => loadTemplateHistory('screening', template.id, template.label)}
+                        className="action-button-sm"
+                        style={{ background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                      >
+                        Audit
                       </button>
                       <button onClick={() => copyText(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Copy size={14} /> Copy
@@ -1697,7 +1918,7 @@ const DrugBuilder: React.FC = () => {
             <button onClick={() => openPreview(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Eye size={16} /> Preview
             </button>
-            <button onClick={saveImmunisationTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+            <button onClick={() => saveImmunisationTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
               <Save size={16} /> Save Template
             </button>
             <button onClick={resetImmunisationTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
@@ -1710,26 +1931,44 @@ const DrugBuilder: React.FC = () => {
 
           <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Immunisation Card Catalogue</h3>
           <div className="dashboard-list">
-              {IMMUNISATION_OPTIONS.map((option) => {
-                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'imms', vaccine: option.value }));
+              {Object.values(immunisationTemplates).map((template) => {
+                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'imms', vaccine: template.id }));
                 return (
-                  <div key={option.value} className="dashboard-list-card">
+                  <div key={template.id} className="dashboard-list-card">
                     <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
-                      {option.value.toUpperCase()}
+                      {template.id.toUpperCase()}
                     </div>
                     <div className="dashboard-list-main">
-                      <div className="dashboard-list-title">{option.label}</div>
+                      <div className="dashboard-list-title">{template.label}</div>
+                      <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
+                      </div>
                     </div>
                     <div className="dashboard-list-actions">
                       <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Eye size={14} /> Preview
                       </button>
                       <button
-                        onClick={() => setImmunisationSelections([option.value])}
+                        onClick={() => { setImmunisationSelections([template.id]); setImmunisationEditorOpen(true); }}
                         className="action-button-sm"
                         style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
                       >
                         <Edit2 size={14} /> Edit
+                      </button>
+                      <button
+                        onClick={() => saveImmunisationTemplate(template.id)}
+                        disabled={templateActionKey === `immunisation:${template.id}`}
+                        className="action-button-sm"
+                        style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                      >
+                        <Save size={14} /> Save
+                      </button>
+                      <button
+                        onClick={() => loadTemplateHistory('immunisation', template.id, template.label)}
+                        className="action-button-sm"
+                        style={{ background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                      >
+                        Audit
                       </button>
                       <button onClick={() => copyText(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Copy size={14} /> Copy
@@ -1756,7 +1995,7 @@ const DrugBuilder: React.FC = () => {
             <button onClick={() => openPreview(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Eye size={16} /> Preview
             </button>
-            <button onClick={saveLtcTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+            <button onClick={() => saveLtcTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
               <Save size={16} /> Save Template
             </button>
             <button onClick={resetLtcTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
@@ -1769,22 +2008,40 @@ const DrugBuilder: React.FC = () => {
 
           <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Long Term Condition Card Catalogue</h3>
           <div className="dashboard-list">
-              {LONG_TERM_CONDITION_OPTIONS.map((option) => {
-                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'ltc', ltc: option.value }));
+              {Object.values(longTermConditionTemplates).map((template) => {
+                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'ltc', ltc: template.id }));
                 return (
-                  <div key={option.value} className="dashboard-list-card">
+                  <div key={template.id} className="dashboard-list-card">
                     <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
-                      {option.value.toUpperCase()}
+                      {template.id.toUpperCase()}
                     </div>
                     <div className="dashboard-list-main">
-                      <div className="dashboard-list-title">{option.label}</div>
+                      <div className="dashboard-list-title">{template.label}</div>
+                      <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
+                      </div>
                     </div>
                     <div className="dashboard-list-actions">
                       <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Eye size={14} /> Preview
                       </button>
-                      <button onClick={() => setSelectedLongTermCondition(option.value)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <button onClick={() => { setSelectedLongTermCondition(template.id); setLtcEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Edit2 size={14} /> Edit
+                      </button>
+                      <button
+                        onClick={() => saveLtcTemplate(template.id)}
+                        disabled={templateActionKey === `ltc:${template.id}`}
+                        className="action-button-sm"
+                        style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                      >
+                        <Save size={14} /> Save
+                      </button>
+                      <button
+                        onClick={() => loadTemplateHistory('ltc', template.id, template.label)}
+                        className="action-button-sm"
+                        style={{ background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                      >
+                        Audit
                       </button>
                       <button onClick={() => copyText(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Copy size={14} /> Copy
@@ -1793,6 +2050,188 @@ const DrugBuilder: React.FC = () => {
                   </div>
                 );
               })}
+          </div>
+        </div>
+      )}
+
+      {screeningEditorOpen && (
+        <div onClick={() => setScreeningEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1100 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#003087' }}>Edit Screening Card</h3>
+                <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedScreeningTemplate.label}</p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => saveScreeningTemplate(screeningType)} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                  <Save size={16} /> Save
+                </button>
+                <button onClick={() => setScreeningEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                  Close
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input type="text" value={selectedScreeningTemplate.label} onChange={(e) => updateScreeningTemplate(screeningType, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <input type="text" value={selectedScreeningTemplate.headline} onChange={(e) => updateScreeningTemplate(screeningType, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <textarea value={selectedScreeningTemplate.explanation} onChange={(e) => updateScreeningTemplate(screeningType, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
+                {selectedScreeningTemplate.guidance.map((item, index) => (
+                  <input key={index} type="text" value={item} onChange={(e) => updateScreeningGuidance(screeningType, index, e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                ))}
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
+                {selectedScreeningTemplate.nhsLinks.map((link, index) => (
+                  <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
+                    <input type="text" value={link.title} onChange={(e) => updateScreeningLink(screeningType, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <input type="text" value={link.url} onChange={(e) => updateScreeningLink(screeningType, index, 'url', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <textarea value={link.description} onChange={(e) => updateScreeningLink(screeningType, index, 'description', e.target.value)} rows={2} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {immunisationEditorOpen && (
+        <div onClick={() => setImmunisationEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1100 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#003087' }}>Edit Immunisation Card</h3>
+                <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedImmunisationTemplate.label}</p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => saveImmunisationTemplate(immunisationSelections[0] || 'flu')} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                  <Save size={16} /> Save
+                </button>
+                <button onClick={() => setImmunisationEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                  Close
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input type="text" value={selectedImmunisationTemplate.label} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <input type="text" value={selectedImmunisationTemplate.headline} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <textarea value={selectedImmunisationTemplate.explanation} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
+                {selectedImmunisationTemplate.guidance.map((item, index) => (
+                  <input key={index} type="text" value={item} onChange={(e) => updateImmunisationGuidance(selectedImmunisationTemplate.id, index, e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                ))}
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
+                {selectedImmunisationTemplate.nhsLinks.map((link, index) => (
+                  <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
+                    <input type="text" value={link.title} onChange={(e) => updateImmunisationLink(selectedImmunisationTemplate.id, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <input type="text" value={link.url} onChange={(e) => updateImmunisationLink(selectedImmunisationTemplate.id, index, 'url', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <textarea value={link.description} onChange={(e) => updateImmunisationLink(selectedImmunisationTemplate.id, index, 'description', e.target.value)} rows={2} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ltcEditorOpen && (
+        <div onClick={() => setLtcEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1100 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(1040px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#003087' }}>Edit Long Term Condition Card</h3>
+                <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedLongTermConditionTemplate.label}</p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => saveLtcTemplate(selectedLongTermCondition)} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                  <Save size={16} /> Save
+                </button>
+                <button onClick={() => setLtcEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                  Close
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input type="text" value={selectedLongTermConditionTemplate.label} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <input type="text" value={selectedLongTermConditionTemplate.headline} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <textarea value={selectedLongTermConditionTemplate.explanation} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <textarea value={selectedLongTermConditionTemplate.importantMessage || ''} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { importantMessage: e.target.value })} rows={3} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
+                {selectedLongTermConditionTemplate.guidance.map((item, index) => (
+                  <input key={index} type="text" value={item} onChange={(e) => updateLongTermGuidance(selectedLongTermCondition, index, e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                ))}
+              </div>
+              {(selectedLongTermConditionTemplate.zones || []).map((zone, zoneIndex) => (
+                <div key={`${zone.color}-${zoneIndex}`} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
+                  <input type="text" value={zone.title} onChange={(e) => updateLongTermZone(selectedLongTermCondition, zoneIndex, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                  <textarea value={zone.when.join('\n')} onChange={(e) => updateLongTermZone(selectedLongTermCondition, zoneIndex, 'when', e.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                  <textarea value={zone.actions.join('\n')} onChange={(e) => updateLongTermZone(selectedLongTermCondition, zoneIndex, 'actions', e.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                </div>
+              ))}
+              {(selectedLongTermConditionTemplate.additionalSections || []).map((section, sectionIndex) => (
+                <div key={`${section.title}-${sectionIndex}`} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
+                  <input type="text" value={section.title} onChange={(e) => updateLongTermAdditionalSection(selectedLongTermCondition, sectionIndex, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                  <textarea value={section.points.join('\n')} onChange={(e) => updateLongTermAdditionalSection(selectedLongTermCondition, sectionIndex, 'points', e.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                </div>
+              ))}
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
+                {selectedLongTermConditionTemplate.nhsLinks.map((link, index) => (
+                  <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
+                    <input type="text" value={link.title} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <input type="text" value={link.url} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'url', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <textarea value={link.description} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'description', e.target.value)} rows={2} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyState && (
+        <div onClick={() => setHistoryState(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1200 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(760px, 100%)', maxHeight: '85vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#003087' }}>Template Audit History</h3>
+                <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{historyState.label}</p>
+              </div>
+              <button onClick={() => setHistoryState(null)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                Close
+              </button>
+            </div>
+            {historyState.loading ? (
+              <p style={{ color: '#4c6272' }}>Loading history...</p>
+            ) : historyState.revisions.length === 0 ? (
+              <p style={{ color: '#4c6272' }}>No saved revisions yet.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {historyState.revisions.map((revision) => (
+                  <div key={revision.id} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd', display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#1d2a33' }}>Version {revision.version} • {revision.action}</div>
+                      <div style={{ color: '#4c6272', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                        {new Date(revision.created_at).toLocaleString('en-GB')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => restoreTemplateRevision(revision)}
+                      disabled={templateActionKey === `${historyState.builderType}:${historyState.templateId}:restore:${revision.id}`}
+                      className="action-button-sm"
+                      style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.55rem 0.75rem' }}
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
