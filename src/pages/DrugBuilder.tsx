@@ -68,6 +68,13 @@ const LONG_TERM_CONDITION_OPTIONS = Object.values(LONG_TERM_CONDITION_TEMPLATES)
   label: template.label,
 }));
 
+const BUILDER_STORAGE_KEYS = {
+  healthcheck: 'card-builder:healthcheck',
+  screening: 'card-builder:screening',
+  immunisation: 'card-builder:immunisation',
+  ltc: 'card-builder:ltc',
+} as const;
+
 const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>> =>
   CLINICAL_DOMAIN_IDS.reduce((domainAcc, domainId) => {
     const domainConfig = PREVIEW_DOMAIN_CONFIGS[domainId];
@@ -158,6 +165,7 @@ const DrugBuilder: React.FC = () => {
     isDangerous: boolean;
     onConfirm: () => void;
   } | null>(null);
+  const [builderNotice, setBuilderNotice] = useState<{ type: OutputBuilderType; message: string } | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
@@ -176,6 +184,62 @@ const DrugBuilder: React.FC = () => {
       setSelectedHealthCheckVariantCode(domainCodes[0] || '');
     }
   }, [selectedHealthCheckDomain, selectedHealthCheckVariantCode]);
+
+  useEffect(() => {
+    try {
+      const hcRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.healthcheck);
+      if (hcRaw) {
+        const parsed = JSON.parse(hcRaw) as {
+          selectedDomain?: ClinicalDomainId;
+          selectedCode?: string;
+          configs?: Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>;
+          localSupportName?: string;
+          localSupportPhone?: string;
+          localSupportEmail?: string;
+          localSupportWebsite?: string;
+        };
+        if (parsed.selectedDomain) setSelectedHealthCheckDomain(parsed.selectedDomain);
+        if (parsed.selectedCode) setSelectedHealthCheckVariantCode(parsed.selectedCode);
+        if (parsed.configs) setHealthCheckBuilderConfigs(parsed.configs);
+        setHealthCheckLocalSupportName(parsed.localSupportName || '');
+        setHealthCheckLocalSupportPhone(parsed.localSupportPhone || '');
+        setHealthCheckLocalSupportEmail(parsed.localSupportEmail || '');
+        setHealthCheckLocalSupportWebsite(parsed.localSupportWebsite || '');
+      }
+
+      const screeningRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.screening);
+      if (screeningRaw) {
+        const parsed = JSON.parse(screeningRaw) as { screeningType?: string };
+        if (parsed.screeningType) setScreeningType(parsed.screeningType);
+      }
+
+      const immsRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.immunisation);
+      if (immsRaw) {
+        const parsed = JSON.parse(immsRaw) as {
+          immunisationSelections?: string[];
+          localSupportName?: string;
+          localSupportPhone?: string;
+          localSupportEmail?: string;
+          localSupportWebsite?: string;
+        };
+        if (Array.isArray(parsed.immunisationSelections) && parsed.immunisationSelections.length > 0) {
+          setImmunisationSelections(parsed.immunisationSelections);
+        }
+        setLocalSupportName(parsed.localSupportName || '');
+        setLocalSupportPhone(parsed.localSupportPhone || '');
+        setLocalSupportEmail(parsed.localSupportEmail || '');
+        setLocalSupportWebsite(parsed.localSupportWebsite || '');
+      }
+
+      const ltcRaw = window.localStorage.getItem(BUILDER_STORAGE_KEYS.ltc);
+      if (ltcRaw) {
+        const parsed = JSON.parse(ltcRaw) as { selectedLongTermCondition?: string };
+        if (parsed.selectedLongTermCondition) setSelectedLongTermCondition(parsed.selectedLongTermCondition);
+      }
+    } catch {
+      // Ignore local template hydration errors and continue with defaults.
+    }
+  }, []);
 
   const previewDraft = useMemo<MedicationRecord | null>(() => {
     if (!hasContent) {
@@ -579,6 +643,87 @@ const DrugBuilder: React.FC = () => {
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
+  };
+
+  const showBuilderNotice = (type: OutputBuilderType, message: string) => {
+    setBuilderNotice({ type, message });
+    window.setTimeout(() => {
+      setBuilderNotice((current) => (current?.type === type ? null : current));
+    }, 2200);
+  };
+
+  const openPreview = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const saveHealthCheckTemplate = () => {
+    window.localStorage.setItem(
+      BUILDER_STORAGE_KEYS.healthcheck,
+      JSON.stringify({
+        selectedDomain: selectedHealthCheckDomain,
+        selectedCode: resolvedSelectedHealthCheckVariantCode,
+        configs: healthCheckBuilderConfigs,
+        localSupportName: healthCheckLocalSupportName.trim(),
+        localSupportPhone: healthCheckLocalSupportPhone.trim(),
+        localSupportEmail: healthCheckLocalSupportEmail.trim(),
+        localSupportWebsite: healthCheckLocalSupportWebsite.trim(),
+      }),
+    );
+    showBuilderNotice('healthcheck', 'Health check template saved.');
+  };
+
+  const resetHealthCheckTemplate = () => {
+    setHealthCheckBuilderConfigs(createDefaultHealthCheckBuilderState());
+    setSelectedHealthCheckDomain('bp');
+    setSelectedHealthCheckVariantCode('BPNORMAL');
+    setHealthCheckLocalSupportName('');
+    setHealthCheckLocalSupportPhone('');
+    setHealthCheckLocalSupportEmail('');
+    setHealthCheckLocalSupportWebsite('');
+    showBuilderNotice('healthcheck', 'Health check template reset.');
+  };
+
+  const saveScreeningTemplate = () => {
+    window.localStorage.setItem(BUILDER_STORAGE_KEYS.screening, JSON.stringify({ screeningType }));
+    showBuilderNotice('screening', 'Screening template saved.');
+  };
+
+  const resetScreeningTemplate = () => {
+    setScreeningType('cervical');
+    showBuilderNotice('screening', 'Screening template reset.');
+  };
+
+  const saveImmunisationTemplate = () => {
+    window.localStorage.setItem(
+      BUILDER_STORAGE_KEYS.immunisation,
+      JSON.stringify({
+        immunisationSelections,
+        localSupportName: localSupportName.trim(),
+        localSupportPhone: localSupportPhone.trim(),
+        localSupportEmail: localSupportEmail.trim(),
+        localSupportWebsite: localSupportWebsite.trim(),
+      }),
+    );
+    showBuilderNotice('immunisation', 'Immunisation template saved.');
+  };
+
+  const resetImmunisationTemplate = () => {
+    setImmunisationSelections(['flu']);
+    setLocalSupportName('');
+    setLocalSupportPhone('');
+    setLocalSupportEmail('');
+    setLocalSupportWebsite('');
+    showBuilderNotice('immunisation', 'Immunisation template reset.');
+  };
+
+  const saveLtcTemplate = () => {
+    window.localStorage.setItem(BUILDER_STORAGE_KEYS.ltc, JSON.stringify({ selectedLongTermCondition }));
+    showBuilderNotice('ltc', 'Long term condition template saved.');
+  };
+
+  const resetLtcTemplate = () => {
+    setSelectedLongTermCondition('asthma');
+    showBuilderNotice('ltc', 'Long term condition template reset.');
   };
 
   if (!authenticated) return null;
@@ -1075,7 +1220,7 @@ const DrugBuilder: React.FC = () => {
       {selectedOutputType === 'healthcheck' && (
         <>
           <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>NHS Health Check Card Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. NHS Health Check Card Builder</h2>
             <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
               Build each health check card variation separately. Every result type can carry its own explanation, follow-up guidance, and a mix of national NHS links and local support links.
             </p>
@@ -1173,7 +1318,7 @@ const DrugBuilder: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0' }}>
-                  <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
+                  <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>3. Preview Link</div>
                   <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33', marginBottom: '0.75rem' }}>{healthCheckPreviewUrl}</code>
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <button onClick={() => copyText(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
@@ -1368,7 +1513,7 @@ const DrugBuilder: React.FC = () => {
                 </div>
 
                 <div className="card" style={{ margin: 0, borderLeft: '4px solid #005eb8' }}>
-                  <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Patient preview</h3>
+                  <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Edit + Patient preview</h3>
                   <HealthCheckCard
                     metric={{
                       label: selectedHealthCheckMetric.label,
@@ -1393,6 +1538,24 @@ const DrugBuilder: React.FC = () => {
                     expanded
                   />
                 </div>
+                <div className="card" style={{ margin: 0 }}>
+                  {builderNotice?.type === 'healthcheck' && (
+                    <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
+                      {builderNotice.message}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button onClick={() => openPreview(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+                      <Eye size={16} /> Preview
+                    </button>
+                    <button onClick={saveHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                      <Save size={16} /> Save Template
+                    </button>
+                    <button onClick={resetHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                      Reset
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1401,7 +1564,7 @@ const DrugBuilder: React.FC = () => {
 
       {selectedOutputType === 'screening' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Screening Card Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Screening Card Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
             Build a reusable generic screening template and generate a patient preview link.
           </p>
@@ -1431,20 +1594,31 @@ const DrugBuilder: React.FC = () => {
             <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
             <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{screeningPreviewUrl}</code>
           </div>
+          {builderNotice?.type === 'screening' && (
+            <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
+              {builderNotice.message}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button onClick={() => copyText(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Copy size={16} /> Copy Preview Link
+            <button onClick={() => openPreview(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Eye size={16} /> Preview
             </button>
-            <a href={screeningPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
-              <ExternalLink size={16} /> Open Preview
-            </a>
+            <button onClick={saveScreeningTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+              <Save size={16} /> Save Template
+            </button>
+            <button onClick={resetScreeningTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+              Reset
+            </button>
+            <button onClick={() => copyText(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Copy size={16} /> Copy Link
+            </button>
           </div>
         </div>
       )}
 
       {selectedOutputType === 'immunisation' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Immunisation Card Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Immunisation Card Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
             Build reusable immunisation templates, then apply local support details for practice-specific deployment links.
           </p>
@@ -1528,20 +1702,31 @@ const DrugBuilder: React.FC = () => {
             <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
             <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{immunisationPreviewUrl}</code>
           </div>
+          {builderNotice?.type === 'immunisation' && (
+            <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
+              {builderNotice.message}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button onClick={() => copyText(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Copy size={16} /> Copy Preview Link
+            <button onClick={() => openPreview(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Eye size={16} /> Preview
             </button>
-            <a href={immunisationPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
-              <ExternalLink size={16} /> Open Preview
-            </a>
+            <button onClick={saveImmunisationTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+              <Save size={16} /> Save Template
+            </button>
+            <button onClick={resetImmunisationTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+              Reset
+            </button>
+            <button onClick={() => copyText(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Copy size={16} /> Copy Link
+            </button>
           </div>
         </div>
       )}
 
       {selectedOutputType === 'ltc' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Long Term Conditions Card Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Long Term Conditions Card Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
             Create reusable long-term condition cards. Starter templates are preloaded for Asthma and Diabetes.
           </p>
@@ -1603,13 +1788,24 @@ const DrugBuilder: React.FC = () => {
             <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{longTermConditionPreviewUrl}</code>
           </div>
 
+          {builderNotice?.type === 'ltc' && (
+            <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
+              {builderNotice.message}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button onClick={() => copyText(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Copy size={16} /> Copy Preview Link
+            <button onClick={() => openPreview(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Eye size={16} /> Preview
             </button>
-            <a href={longTermConditionPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
-              <ExternalLink size={16} /> Open Preview
-            </a>
+            <button onClick={saveLtcTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+              <Save size={16} /> Save Template
+            </button>
+            <button onClick={resetLtcTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+              Reset
+            </button>
+            <button onClick={() => copyText(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Copy size={16} /> Copy Link
+            </button>
           </div>
         </div>
       )}
