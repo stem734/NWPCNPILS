@@ -150,6 +150,7 @@ const DrugBuilder: React.FC = () => {
   });
   const [selectedHealthCheckDomain, setSelectedHealthCheckDomain] = useState<ClinicalDomainId>('bp');
   const [selectedHealthCheckVariantCode, setSelectedHealthCheckVariantCode] = useState('BPNORMAL');
+  const [healthCheckEditorOpen, setHealthCheckEditorOpen] = useState(false);
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
   const [screeningType, setScreeningType] = useState('cervical');
   const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
@@ -1232,12 +1233,10 @@ const DrugBuilder: React.FC = () => {
       {selectedOutputType === 'healthcheck' && (
         <>
           <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. NHS Health Check Card Builder</h2>
+            <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. NHS Health Check Card Builder</h2>
             <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
-              Build each health check card variation separately. Every result type can carry its own explanation, follow-up guidance, and a mix of national NHS links and local support links.
+              Use the row list below to preview, edit, and copy each health check card variation.
             </p>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            </div>
             <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
               <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
               <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
@@ -1271,84 +1270,154 @@ const DrugBuilder: React.FC = () => {
                 />
               </div>
             </div>
-            <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(260px, 320px) minmax(0, 1fr)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
-                  <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>1. Choose section</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {CLINICAL_DOMAIN_IDS.map((domainId) => (
-                      <button
-                        key={domainId}
-                        type="button"
-                        onClick={() => {
-                          const nextCodes = Object.keys(PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode);
-                          setSelectedHealthCheckDomain(domainId);
-                          setSelectedHealthCheckVariantCode(nextCodes[0] || '');
-                        }}
-                        style={{
-                          textAlign: 'left',
-                          padding: '0.75rem 0.85rem',
-                          borderRadius: '8px',
-                          border: selectedHealthCheckDomain === domainId ? '2px solid #005eb8' : '1px solid #d8dde0',
-                          background: selectedHealthCheckDomain === domainId ? '#eef7ff' : '#ffffff',
-                          cursor: 'pointer',
-                          color: '#1d2a33',
-                        }}
-                      >
-                        <div style={{ fontWeight: 700 }}>{HEALTH_CHECK_CARD_LABELS[domainId as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[domainId].heading}</div>
-                        <div style={{ fontSize: '0.82rem', color: '#4c6272', marginTop: '0.2rem' }}>
-                          {Object.keys(PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode).length} result type{Object.keys(PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode).length === 1 ? '' : 's'}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
-                  <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>2. Choose result type</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {Object.keys(selectedHealthCheckDomainConfig.metricByCode).map((resultCode) => (
-                      <button
-                        key={resultCode}
-                        type="button"
-                        onClick={() => setSelectedHealthCheckVariantCode(resultCode)}
-                        style={{
-                          textAlign: 'left',
-                          padding: '0.75rem 0.85rem',
-                          borderRadius: '8px',
-                          border: resolvedSelectedHealthCheckVariantCode === resultCode ? '2px solid #005eb8' : '1px solid #d8dde0',
-                          background: resolvedSelectedHealthCheckVariantCode === resultCode ? '#eef7ff' : '#ffffff',
-                          cursor: 'pointer',
-                          color: '#1d2a33',
-                        }}
-                      >
-                        <div style={{ fontWeight: 700 }}>{resultCode}</div>
-                        <div style={{ fontSize: '0.82rem', color: '#4c6272', marginTop: '0.2rem' }}>
-                          {selectedHealthCheckDomainConfig.metricByCode[resultCode].pathway}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0' }}>
-                  <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>3. Preview Link</div>
-                  <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33', marginBottom: '0.75rem' }}>{healthCheckPreviewUrl}</code>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <button onClick={() => copyText(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-                      <Copy size={16} /> Copy Preview Link
-                    </button>
-                    <a href={healthCheckPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
-                      <ExternalLink size={16} /> Open Preview
-                    </a>
-                  </div>
-                </div>
+            {builderNotice?.type === 'healthcheck' && (
+              <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
+                {builderNotice.message}
               </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <button onClick={() => setHealthCheckEditorOpen(true)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                <Edit2 size={16} /> Edit
+              </button>
+              <button onClick={() => openPreview(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+                <Eye size={16} /> Preview
+              </button>
+              <button onClick={saveHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                <Save size={16} /> Save Template
+              </button>
+              <button onClick={resetHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                Reset
+              </button>
+              <button onClick={() => copyText(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+                <Copy size={16} /> Copy Link
+              </button>
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="card" style={{ margin: 0, borderLeft: '4px solid #007f3b' }}>
-                  <h3 style={{ marginTop: 0, marginBottom: '0.35rem' }}>{selectedHealthCheckDomainConfig.heading}</h3>
-                  <p style={{ margin: '0 0 1rem', color: '#4c6272' }}>{selectedHealthCheckDomainConfig.subheading}</p>
+            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>3. Health Check Card Catalogue</h3>
+            <div className="dashboard-list">
+              {healthCheckCatalogueRows.map((row) => (
+                <div key={row.id} className="dashboard-list-card">
+                  <div style={{
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    fontFamily: 'monospace',
+                    background: '#005eb8',
+                    color: 'white',
+                    minWidth: '72px',
+                    textAlign: 'center',
+                  }}>
+                    {row.resultCode}
+                  </div>
+                  <div className="dashboard-list-main">
+                    <div className="dashboard-list-title">{row.label}</div>
+                    <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{row.summary}</span>
+                    </div>
+                  </div>
+                  <div className="dashboard-list-actions">
+                    <button onClick={() => openPreview(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <Eye size={14} /> Preview
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedHealthCheckDomain(row.domainId);
+                        setSelectedHealthCheckVariantCode(row.resultCode);
+                        setHealthCheckEditorOpen(true);
+                      }}
+                      className="action-button-sm"
+                      style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                    >
+                      <Edit2 size={14} /> Edit
+                    </button>
+                    <button onClick={() => copyText(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <Copy size={14} /> Copy
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
+          {healthCheckEditorOpen && (
+            <div
+              onClick={() => setHealthCheckEditorOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(15, 32, 45, 0.55)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1.5rem',
+                zIndex: 1100,
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: 'min(1120px, 100%)',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
+                  padding: '1.5rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ margin: 0, color: '#003087' }}>Edit Health Check Card</h3>
+                    <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>
+                      {selectedHealthCheckMetric.label} - {resolvedSelectedHealthCheckVariantCode}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setHealthCheckEditorOpen(false)}
+                    className="action-button-sm"
+                    style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.5rem 0.75rem' }}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                      <div>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Section</label>
+                        <select
+                          value={selectedHealthCheckDomain}
+                          onChange={(e) => {
+                            const nextDomain = e.target.value as ClinicalDomainId;
+                            const nextCodes = Object.keys(PREVIEW_DOMAIN_CONFIGS[nextDomain].metricByCode);
+                            setSelectedHealthCheckDomain(nextDomain);
+                            setSelectedHealthCheckVariantCode(nextCodes[0] || '');
+                          }}
+                          style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff', boxSizing: 'border-box' }}
+                        >
+                          {CLINICAL_DOMAIN_IDS.map((domainId) => (
+                            <option key={domainId} value={domainId}>
+                              {HEALTH_CHECK_CARD_LABELS[(domainId === 'ldl' ? 'chol' : domainId) as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[domainId].heading}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Result type</label>
+                        <select
+                          value={resolvedSelectedHealthCheckVariantCode}
+                          onChange={(e) => setSelectedHealthCheckVariantCode(e.target.value)}
+                          style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff', boxSizing: 'border-box' }}
+                        >
+                          {Object.keys(selectedHealthCheckDomainConfig.metricByCode).map((resultCode) => (
+                            <option key={resultCode} value={resultCode}>{resultCode}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
                     <div>
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>What does this result mean?</label>
                       <textarea
@@ -1410,214 +1479,146 @@ const DrugBuilder: React.FC = () => {
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
                       />
                     </div>
-                  </div>
-                </div>
 
-                <div className="card" style={{ margin: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div>
-                      <h3 style={{ margin: 0 }}>Resource and Support Links</h3>
-                      <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>Add national NHS links and local support contacts. These are shown inside the card’s next-steps section.</p>
-                    </div>
-                    <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-                      <Plus size={16} /> Add Link
-                    </button>
-                  </div>
-
-                  {selectedHealthCheckVariantSafe.links.length === 0 ? (
-                    <p style={{ color: '#4c6272', margin: 0 }}>No links added yet for this result type.</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {selectedHealthCheckVariantSafe.links.map((link, index) => (
-                        <div key={index} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                            <strong>Link {index + 1}</strong>
-                            <button onClick={() => removeHealthCheckLink(index)} style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '6px', padding: '0.45rem', cursor: 'pointer' }}>
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-
-                          <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Card title</label>
-                              <input
-                                type="text"
-                                value={link.title || ''}
-                                onChange={(e) => updateHealthCheckLink(index, 'title', e.target.value)}
-                                style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                              />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'end' }}>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={link.showTitleOnCard !== false}
-                                  onChange={(e) => updateHealthCheckLink(index, 'showTitleOnCard', e.target.checked)}
-                                />
-                                Show title on card
-                              </label>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: '0.75rem' }}>
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Phone size={14} /> Phone</span></label>
-                              <input
-                                type="text"
-                                value={link.phone || ''}
-                                onChange={(e) => updateHealthCheckLink(index, 'phone', e.target.value)}
-                                style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Phone label</label>
-                              <input
-                                type="text"
-                                value={link.phoneLabel || ''}
-                                onChange={(e) => updateHealthCheckLink(index, 'phoneLabel', e.target.value)}
-                                placeholder="Call"
-                                style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Mail size={14} /> Email</span></label>
-                              <input
-                                type="text"
-                                value={link.email || ''}
-                                onChange={(e) => updateHealthCheckLink(index, 'email', e.target.value)}
-                                style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Email label</label>
-                              <input
-                                type="text"
-                                value={link.emailLabel || ''}
-                                onChange={(e) => updateHealthCheckLink(index, 'emailLabel', e.target.value)}
-                                placeholder="Email"
-                                style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Globe size={14} /> Website</span></label>
-                              <input
-                                type="text"
-                                value={link.website || ''}
-                                onChange={(e) => updateHealthCheckLink(index, 'website', e.target.value)}
-                                style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Website label</label>
-                              <input
-                                type="text"
-                                value={link.websiteLabel || ''}
-                                onChange={(e) => updateHealthCheckLink(index, 'websiteLabel', e.target.value)}
-                                placeholder="Website"
-                                style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="card" style={{ margin: 0, borderLeft: '4px solid #005eb8' }}>
-                  <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Edit + Patient preview</h3>
-                  <HealthCheckCard
-                    metric={{
-                      label: selectedHealthCheckMetric.label,
-                      value: selectedHealthCheckMetric.value,
-                      unit: selectedHealthCheckMetric.unit,
-                      badge: selectedHealthCheckMetric.badge,
-                      badgeClass: selectedHealthCheckMetric.badgeClass,
-                      whatTitle: selectedHealthCheckVariantSafe.whatIsTitle,
-                      what: selectedHealthCheckVariantSafe.whatIsText,
-                      pathway: selectedHealthCheckMetric.pathway,
-                      breakdown: selectedHealthCheckMetric.breakdown,
-                      oneLiner: selectedHealthCheckMetric.oneLiner,
-                    }}
-                    resultsMessage={selectedHealthCheckVariantSafe.resultsMessage}
-                    importantText={selectedHealthCheckVariantSafe.importantText}
-                    nextStepsTitle={selectedHealthCheckVariantSafe.nextStepsTitle}
-                    nextStepsText={selectedHealthCheckVariantSafe.nextStepsText}
-                    links={[
-                      ...selectedHealthCheckVariantSafe.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim())),
-                      ...(healthCheckLocalSupportLink ? [healthCheckLocalSupportLink] : []),
-                    ]}
-                    expanded
-                  />
-                </div>
-                <div className="card" style={{ margin: 0 }}>
-                  {builderNotice?.type === 'healthcheck' && (
-                    <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
-                      {builderNotice.message}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <button onClick={() => openPreview(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-                      <Eye size={16} /> Preview
-                    </button>
-                    <button onClick={saveHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                      <Save size={16} /> Save Template
-                    </button>
-                    <button onClick={resetHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                      Reset
-                    </button>
-                  </div>
-                </div>
-
-                <div className="card" style={{ margin: 0 }}>
-                  <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>3. Health Check Card Catalogue</h3>
-                  <div className="dashboard-list">
-                    {healthCheckCatalogueRows.map((row) => (
-                      <div key={row.id} className="dashboard-list-card">
-                        <div style={{
-                          padding: '0.3rem 0.6rem',
-                          borderRadius: '6px',
-                          fontSize: '0.78rem',
-                          fontWeight: 800,
-                          fontFamily: 'monospace',
-                          background: '#005eb8',
-                          color: 'white',
-                          minWidth: '72px',
-                          textAlign: 'center',
-                        }}>
-                          {row.resultCode}
-                        </div>
-                        <div className="dashboard-list-main">
-                          <div className="dashboard-list-title">{row.label}</div>
-                          <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
-                            <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{row.summary}</span>
-                          </div>
-                        </div>
-                        <div className="dashboard-list-actions">
-                          <button onClick={() => openPreview(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                            <Eye size={14} /> Preview
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedHealthCheckDomain(row.domainId);
-                              setSelectedHealthCheckVariantCode(row.resultCode);
-                            }}
-                            className="action-button-sm"
-                            style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
-                          >
-                            <Edit2 size={14} /> Edit
-                          </button>
-                          <button onClick={() => copyText(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                            <Copy size={14} /> Copy
-                          </button>
-                        </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div>
+                        <h4 style={{ margin: 0 }}>Resource and Support Links</h4>
+                        <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>Add national NHS links and local support contacts shown in the next-steps section.</p>
                       </div>
-                    ))}
+                      <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+                        <Plus size={16} /> Add Link
+                      </button>
+                    </div>
+
+                    {selectedHealthCheckVariantSafe.links.length === 0 ? (
+                      <p style={{ color: '#4c6272', margin: 0 }}>No links added yet for this result type.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {selectedHealthCheckVariantSafe.links.map((link, index) => (
+                          <div key={index} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                              <strong>Link {index + 1}</strong>
+                              <button onClick={() => removeHealthCheckLink(index)} style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '6px', padding: '0.45rem', cursor: 'pointer' }}>
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+
+                            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                              <div>
+                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Card title</label>
+                                <input
+                                  type="text"
+                                  value={link.title || ''}
+                                  onChange={(e) => updateHealthCheckLink(index, 'title', e.target.value)}
+                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'end' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={link.showTitleOnCard !== false}
+                                    onChange={(e) => updateHealthCheckLink(index, 'showTitleOnCard', e.target.checked)}
+                                  />
+                                  Show title on card
+                                </label>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: '0.75rem' }}>
+                              <div>
+                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Phone size={14} /> Phone</span></label>
+                                <input
+                                  type="text"
+                                  value={link.phone || ''}
+                                  onChange={(e) => updateHealthCheckLink(index, 'phone', e.target.value)}
+                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Phone label</label>
+                                <input
+                                  type="text"
+                                  value={link.phoneLabel || ''}
+                                  onChange={(e) => updateHealthCheckLink(index, 'phoneLabel', e.target.value)}
+                                  placeholder="Call"
+                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Mail size={14} /> Email</span></label>
+                                <input
+                                  type="text"
+                                  value={link.email || ''}
+                                  onChange={(e) => updateHealthCheckLink(index, 'email', e.target.value)}
+                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Email label</label>
+                                <input
+                                  type="text"
+                                  value={link.emailLabel || ''}
+                                  onChange={(e) => updateHealthCheckLink(index, 'emailLabel', e.target.value)}
+                                  placeholder="Email"
+                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Globe size={14} /> Website</span></label>
+                                <input
+                                  type="text"
+                                  value={link.website || ''}
+                                  onChange={(e) => updateHealthCheckLink(index, 'website', e.target.value)}
+                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Website label</label>
+                                <input
+                                  type="text"
+                                  value={link.websiteLabel || ''}
+                                  onChange={(e) => updateHealthCheckLink(index, 'websiteLabel', e.target.value)}
+                                  placeholder="Website"
+                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ position: 'sticky', top: 0, alignSelf: 'start' }}>
+                    <HealthCheckCard
+                      metric={{
+                        label: selectedHealthCheckMetric.label,
+                        value: selectedHealthCheckMetric.value,
+                        unit: selectedHealthCheckMetric.unit,
+                        badge: selectedHealthCheckMetric.badge,
+                        badgeClass: selectedHealthCheckMetric.badgeClass,
+                        whatTitle: selectedHealthCheckVariantSafe.whatIsTitle,
+                        what: selectedHealthCheckVariantSafe.whatIsText,
+                        pathway: selectedHealthCheckMetric.pathway,
+                        breakdown: selectedHealthCheckMetric.breakdown,
+                        oneLiner: selectedHealthCheckMetric.oneLiner,
+                      }}
+                      resultsMessage={selectedHealthCheckVariantSafe.resultsMessage}
+                      importantText={selectedHealthCheckVariantSafe.importantText}
+                      nextStepsTitle={selectedHealthCheckVariantSafe.nextStepsTitle}
+                      nextStepsText={selectedHealthCheckVariantSafe.nextStepsText}
+                      links={[
+                        ...selectedHealthCheckVariantSafe.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim())),
+                        ...(healthCheckLocalSupportLink ? [healthCheckLocalSupportLink] : []),
+                      ]}
+                      expanded
+                    />
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </>
       )}
 
