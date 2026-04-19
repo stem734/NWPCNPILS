@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -196,7 +197,7 @@ const PracticeDashboard: React.FC = () => {
       }
 
       const nextCards = Object.fromEntries(
-        (data || []).map((row) => [row.code, row as PracticeMedicationCardRow]),
+        (data || []).map((row: { code: string } & PracticeMedicationCardRow) => [row.code, row as PracticeMedicationCardRow]),
       );
 
       setPracticeCards(nextCards);
@@ -220,7 +221,7 @@ const PracticeDashboard: React.FC = () => {
 
     void hydrate();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
         await loadMemberships();
       } else {

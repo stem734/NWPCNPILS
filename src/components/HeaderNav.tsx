@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { LogOut, Home, FlaskConical, Settings } from 'lucide-react';
 import { getSubdomain, resolvePath } from '../subdomainUtils';
@@ -13,7 +14,7 @@ const HeaderNav: React.FC = () => {
   const subdomain = getSubdomain();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
         // Determine role based on subdomain first, then path
         if (subdomain === 'admin' || location.pathname.startsWith('/admin')) {

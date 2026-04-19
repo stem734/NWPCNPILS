@@ -12,6 +12,21 @@ type MedicationOverride = Partial<MedContent> & {
   is_deleted?: boolean;
 };
 
+type MedicationDbRow = {
+  code: string;
+  title: string;
+  description: string;
+  badge: MedContent['badge'];
+  category: string;
+  key_info?: string[];
+  nhs_link?: string;
+  trend_links?: { title: string; url: string }[];
+  sick_days_needed?: boolean;
+  review_months?: number;
+  content_review_date?: string;
+  is_deleted?: boolean;
+};
+
 const BUILT_IN_MAP = new Map(MEDICATIONS.map((med) => [med.code, med]));
 
 const sortByCode = (left: { code: string }, right: { code: string }) =>
@@ -80,7 +95,7 @@ export const loadMedicationCatalog = async (): Promise<MedicationRecord[]> => {
   }
 
   // Map snake_case DB columns back to camelCase for the MedicationOverride type
-  const overrides: MedicationOverride[] = (data || []).map((row) => ({
+  const overrides: MedicationOverride[] = ((data || []) as MedicationDbRow[]).map((row) => ({
     code: row.code,
     title: row.title,
     description: row.description,

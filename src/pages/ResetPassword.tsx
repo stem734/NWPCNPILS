@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
@@ -46,8 +47,9 @@ const ResetPassword: React.FC = () => {
       }
 
       let cancelled = false;
-      void supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+      void supabase.auth.exchangeCodeForSession(code).then((result) => {
         if (cancelled) return;
+        const exchangeError = result.error;
         if (exchangeError) {
           console.error('Code exchange failed:', exchangeError.message);
           setLinkExpired(true);
@@ -60,13 +62,14 @@ const ResetPassword: React.FC = () => {
 
     // Implicit flow: Supabase picks up recovery token from the URL hash
     let cancelled = false;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
       }
     });
 
-    void supabase.auth.getSession().then(({ data: { session } }) => {
+    void supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
+      const { session } = data;
       if (!cancelled && session) setSessionReady(true);
     });
 

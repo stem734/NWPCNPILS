@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from './protocolService';
 import AdminLogin from './pages/AdminLogin';
@@ -659,7 +660,7 @@ const AppContent: React.FC = () => {
 
   // Listen for PASSWORD_RECOVERY event and redirect
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === 'PASSWORD_RECOVERY' && location.pathname !== '/reset-password') {
         navigate('/reset-password', { replace: true });
       }

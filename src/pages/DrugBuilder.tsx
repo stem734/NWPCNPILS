@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe } from 'lucide-react';
@@ -8,7 +9,7 @@ import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
-import { HEALTH_CHECK_CARD_LABELS, HEALTH_CHECK_CODE_VALUES, type HealthCheckCodeFamily } from '../healthCheckCodes';
+import { HEALTH_CHECK_CARD_LABELS, type HealthCheckCodeFamily } from '../healthCheckCodes';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
 
 interface TrendLink {
@@ -130,7 +131,7 @@ const DrugBuilder: React.FC = () => {
   const [deletingCode, setDeletingCode] = useState('');
   const [builderOrgName, setBuilderOrgName] = useState('');
   const [healthCheckResultDate, setHealthCheckResultDate] = useState('');
-  const [healthCheckSelections, setHealthCheckSelections] = useState<Record<HealthCheckCodeFamily, string>>({
+  const [healthCheckSelections] = useState<Record<HealthCheckCodeFamily, string>>({
     bp: '',
     bmi: '',
     cvd: '',
@@ -154,7 +155,7 @@ const DrugBuilder: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
         setAuthenticated(true);
       } else {
@@ -295,10 +296,6 @@ const DrugBuilder: React.FC = () => {
     }
     return buildPatientUrl(params);
   }, [builderOrgName, immunisationSelections]);
-
-  const updateHealthCheckSelection = (family: HealthCheckCodeFamily, code: string) => {
-    setHealthCheckSelections((current) => ({ ...current, [family]: code }));
-  };
 
   const toggleImmunisation = (value: string) => {
     setImmunisationSelections((current) =>
