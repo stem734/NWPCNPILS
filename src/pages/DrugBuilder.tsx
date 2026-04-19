@@ -394,16 +394,21 @@ const DrugBuilder: React.FC = () => {
     return buildPatientUrl(params);
   };
 
-  const healthCheckCatalogueRows = CLINICAL_DOMAIN_IDS.flatMap((domainId) => {
+  const healthCheckCatalogueRows = CLINICAL_DOMAIN_IDS.map((domainId) => {
     const metricByCode = PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode;
-    return Object.keys(metricByCode).map((resultCode) => ({
-      id: `${domainId}:${resultCode}`,
+    const resultCodes = Object.keys(metricByCode);
+    const previewResultCode = resultCodes[0] || '';
+    const familyCode = (domainId === 'ldl' ? 'chol' : domainId).toUpperCase();
+
+    return {
+      id: domainId,
       domainId,
-      resultCode,
+      familyCode,
       label: HEALTH_CHECK_CARD_LABELS[(domainId === 'ldl' ? 'chol' : domainId) as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[domainId].heading,
-      summary: (healthCheckBuilderConfigs[domainId]?.[resultCode]?.resultsMessage || metricByCode[resultCode].pathway || '').trim(),
-      previewUrl: buildHealthCheckVariantPreviewUrl(domainId, resultCode),
-    }));
+      summary: `${resultCodes.length} result type${resultCodes.length === 1 ? '' : 's'}`,
+      resultCodes,
+      previewUrl: buildHealthCheckVariantPreviewUrl(domainId, previewResultCode),
+    };
   });
 
   const selectedHealthCheckDomainConfig = PREVIEW_DOMAIN_CONFIGS[selectedHealthCheckDomain];
@@ -1308,12 +1313,15 @@ const DrugBuilder: React.FC = () => {
                     minWidth: '72px',
                     textAlign: 'center',
                   }}>
-                    {row.resultCode}
+                    {row.familyCode}
                   </div>
                   <div className="dashboard-list-main">
                     <div className="dashboard-list-title">{row.label}</div>
                     <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
                       <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{row.summary}</span>
+                      <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>
+                        {row.resultCodes.join(', ')}
+                      </span>
                     </div>
                   </div>
                   <div className="dashboard-list-actions">
@@ -1323,7 +1331,7 @@ const DrugBuilder: React.FC = () => {
                     <button
                       onClick={() => {
                         setSelectedHealthCheckDomain(row.domainId);
-                        setSelectedHealthCheckVariantCode(row.resultCode);
+                        setSelectedHealthCheckVariantCode(row.resultCodes[0] || '');
                         setHealthCheckEditorOpen(true);
                       }}
                       className="action-button-sm"
