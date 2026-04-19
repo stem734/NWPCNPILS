@@ -63,6 +63,65 @@ const LongTermConditionView: React.FC = () => {
         </div>
       </div>
 
+      {selectedTemplate.zones && selectedTemplate.zones.length > 0 && (
+        <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #4c6272', marginBottom: '1rem' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Asthma action plan zones</h3>
+          <div style={{ display: 'grid', gap: '0.85rem' }}>
+            {selectedTemplate.zones.map((zone) => {
+              const tone = zone.color === 'green'
+                ? { border: '#007f3b', bg: '#f3f9f2', heading: '#005a2e' }
+                : zone.color === 'amber'
+                  ? { border: '#b27a00', bg: '#fff8e6', heading: '#8a5f00' }
+                  : { border: '#d5281b', bg: '#fdecec', heading: '#9d1c12' };
+
+              return (
+                <div
+                  key={zone.color}
+                  style={{
+                    border: `1px solid ${tone.border}`,
+                    background: tone.bg,
+                    borderRadius: '10px',
+                    padding: '0.85rem 0.9rem',
+                  }}
+                >
+                  <h4 style={{ margin: '0 0 0.5rem', color: tone.heading }}>{zone.title}</h4>
+                  <p style={{ margin: '0 0 0.35rem', fontWeight: 700, color: '#1d2a33' }}>Signs</p>
+                  <ul style={{ margin: '0 0 0.55rem 1rem', padding: 0, color: '#1d2a33' }}>
+                    {zone.when.map((item, index) => (
+                      <li key={index} style={{ marginBottom: '0.2rem' }}>{item}</li>
+                    ))}
+                  </ul>
+                  <p style={{ margin: '0 0 0.35rem', fontWeight: 700, color: '#1d2a33' }}>Actions</p>
+                  <ul style={{ margin: '0 0 0 1rem', padding: 0, color: '#1d2a33' }}>
+                    {zone.actions.map((item, index) => (
+                      <li key={index} style={{ marginBottom: '0.2rem' }}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {selectedTemplate.additionalSections && selectedTemplate.additionalSections.length > 0 && (
+        <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #4c6272', marginBottom: '1rem' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Additional plan details</h3>
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            {selectedTemplate.additionalSections.map((section) => (
+              <div key={section.title} style={{ border: '1px solid #d8dde0', background: '#f8fbfd', borderRadius: '10px', padding: '0.8rem 0.9rem' }}>
+                <h4 style={{ margin: '0 0 0.45rem' }}>{section.title}</h4>
+                <ul style={{ margin: '0 0 0 1rem', padding: 0, color: '#1d2a33' }}>
+                  {section.points.map((item, index) => (
+                    <li key={index} style={{ marginBottom: '0.2rem' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="patient-resources" style={{ marginTop: 0 }}>
         <h2 className="patient-resources-heading">Trusted resources</h2>
         <div className="patient-resource-list">

@@ -127,7 +127,6 @@ const DrugBuilder: React.FC = () => {
   const [savedAction, setSavedAction] = useState<'created' | 'updated'>('created');
 
   const [deletingCode, setDeletingCode] = useState('');
-  const [builderOrgName, setBuilderOrgName] = useState('');
   const [healthCheckLocalSupportName, setHealthCheckLocalSupportName] = useState('');
   const [healthCheckLocalSupportPhone, setHealthCheckLocalSupportPhone] = useState('');
   const [healthCheckLocalSupportEmail, setHealthCheckLocalSupportEmail] = useState('');
@@ -272,9 +271,6 @@ const DrugBuilder: React.FC = () => {
 
   const healthCheckPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'healthcheck' });
-    if (builderOrgName.trim()) {
-      params.set('org', builderOrgName.trim());
-    }
     if (healthCheckResultDate) {
       params.set('date', healthCheckResultDate);
     }
@@ -288,7 +284,6 @@ const DrugBuilder: React.FC = () => {
     if (healthCheckLocalSupportWebsite.trim()) params.set('localWebsite', healthCheckLocalSupportWebsite.trim());
     return buildPatientUrl(params);
   }, [
-    builderOrgName,
     healthCheckLocalSupportEmail,
     healthCheckLocalSupportName,
     healthCheckLocalSupportPhone,
@@ -299,17 +294,11 @@ const DrugBuilder: React.FC = () => {
 
   const screeningPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'screening', screen: screeningType });
-    if (builderOrgName.trim()) {
-      params.set('org', builderOrgName.trim());
-    }
     return buildPatientUrl(params);
-  }, [builderOrgName, screeningType]);
+  }, [screeningType]);
 
   const immunisationPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'imms' });
-    if (builderOrgName.trim()) {
-      params.set('org', builderOrgName.trim());
-    }
     if (immunisationSelections.length > 0) {
       params.set('vaccine', immunisationSelections.join(','));
     }
@@ -326,15 +315,12 @@ const DrugBuilder: React.FC = () => {
       params.set('localWebsite', localSupportWebsite.trim());
     }
     return buildPatientUrl(params);
-  }, [builderOrgName, immunisationSelections, localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite]);
+  }, [immunisationSelections, localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite]);
 
   const longTermConditionPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'ltc', ltc: selectedLongTermCondition });
-    if (builderOrgName.trim()) {
-      params.set('org', builderOrgName.trim());
-    }
     return buildPatientUrl(params);
-  }, [builderOrgName, selectedLongTermCondition]);
+  }, [selectedLongTermCondition]);
 
   const toggleImmunisation = (value: string) => {
     setImmunisationSelections((current) =>
@@ -373,7 +359,7 @@ const DrugBuilder: React.FC = () => {
   const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
     (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
       ? {
-          title: healthCheckLocalSupportName.trim() || `${builderOrgName.trim() || 'Local'} support`,
+          title: healthCheckLocalSupportName.trim() || 'Local support',
           showTitleOnCard: true,
           phone: healthCheckLocalSupportPhone.trim(),
           phoneLabel: 'Call',
@@ -1099,16 +1085,6 @@ const DrugBuilder: React.FC = () => {
               Build each health check card variation separately. Every result type can carry its own explanation, follow-up guidance, and a mix of national NHS links and local support links.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              <div style={{ flex: '1 1 240px' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
-                <input
-                  type="text"
-                  value={builderOrgName}
-                  onChange={(e) => setBuilderOrgName(e.target.value)}
-                  placeholder="e.g. Nottingham West GP Practices"
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-              </div>
               <div style={{ flex: '1 1 180px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Result date</label>
                 <input
@@ -1441,19 +1417,9 @@ const DrugBuilder: React.FC = () => {
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Screening Output Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
-            Build a reusable generic screening template, then apply your local support details so each practice can deploy it safely.
+            Build a reusable generic screening template and generate a patient preview link.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <div style={{ flex: '1 1 240px' }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
-              <input
-                type="text"
-                value={builderOrgName}
-                onChange={(e) => setBuilderOrgName(e.target.value)}
-                placeholder="e.g. Nottingham West GP Practices"
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-            </div>
             <div style={{ flex: '1 1 240px' }}>
               <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Screening type</label>
               <select
@@ -1496,16 +1462,6 @@ const DrugBuilder: React.FC = () => {
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
             Build reusable immunisation templates, then apply local support details for practice-specific deployment links.
           </p>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
-            <input
-              type="text"
-              value={builderOrgName}
-              onChange={(e) => setBuilderOrgName(e.target.value)}
-              placeholder="e.g. Nottingham West GP Practices"
-              style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-            />
-          </div>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>Vaccines</label>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -1605,16 +1561,6 @@ const DrugBuilder: React.FC = () => {
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <div style={{ flex: '1 1 240px' }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
-              <input
-                type="text"
-                value={builderOrgName}
-                onChange={(e) => setBuilderOrgName(e.target.value)}
-                placeholder="e.g. Nottingham West GP Practices"
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div style={{ flex: '1 1 240px' }}>
               <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Condition</label>
               <select
                 value={selectedLongTermCondition}
@@ -1642,6 +1588,29 @@ const DrugBuilder: React.FC = () => {
               Includes {selectedLongTermConditionTemplate.nhsLinks.length} default resource link{selectedLongTermConditionTemplate.nhsLinks.length === 1 ? '' : 's'}.
             </p>
           </div>
+
+          {selectedLongTermConditionTemplate.zones && selectedLongTermConditionTemplate.zones.length > 0 && (
+            <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Traffic-light sections</div>
+              <div style={{ display: 'grid', gap: '0.7rem' }}>
+                {selectedLongTermConditionTemplate.zones.map((zone) => {
+                  const tone = zone.color === 'green'
+                    ? { border: '#007f3b', bg: '#f3f9f2', heading: '#005a2e' }
+                    : zone.color === 'amber'
+                      ? { border: '#b27a00', bg: '#fff8e6', heading: '#8a5f00' }
+                      : { border: '#d5281b', bg: '#fdecec', heading: '#9d1c12' };
+                  return (
+                    <div key={zone.color} style={{ border: `1px solid ${tone.border}`, background: tone.bg, borderRadius: '8px', padding: '0.65rem 0.75rem' }}>
+                      <div style={{ fontWeight: 700, color: tone.heading, marginBottom: '0.3rem' }}>{zone.title}</div>
+                      <p style={{ margin: 0, color: '#4c6272', fontSize: '0.9rem' }}>
+                        {zone.when.length} signs · {zone.actions.length} action points
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
             <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>

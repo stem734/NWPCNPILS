@@ -29,6 +29,16 @@ export type LongTermConditionTemplate = {
   explanation: string;
   guidance: string[];
   importantMessage?: string;
+  zones?: Array<{
+    color: 'green' | 'amber' | 'red';
+    title: string;
+    when: string[];
+    actions: string[];
+  }>;
+  additionalSections?: Array<{
+    title: string;
+    points: string[];
+  }>;
   nhsLinks: PatientResourceLink[];
 };
 
@@ -307,6 +317,80 @@ export const LONG_TERM_CONDITION_TEMPLATES: Record<string, LongTermConditionTemp
     ],
     importantMessage:
       'Urgent: if you need your reliever more often than every 4 hours, take emergency action now. Call 999 if symptoms are severe or not improving.',
+    zones: [
+      {
+        color: 'green',
+        title: 'Green zone: daily routine (well controlled)',
+        when: [
+          'No symptoms in day or night and daily activities are not limited.',
+          'Using reliever only when needed.',
+          'Peak flow at or near personal best.',
+        ],
+        actions: [
+          'Take preventer inhaler every day, even when feeling well.',
+          'Keep action plan up to date and bring inhalers/spacer/peak-flow meter to reviews.',
+          'Book routine asthma review at least once a year.',
+          'If symptom-free and no reliever use for 12 weeks, discuss dose review with clinician.',
+        ],
+      },
+      {
+        color: 'amber',
+        title: 'Amber zone: asthma getting worse',
+        when: [
+          'Wheeze, chest tightness, breathlessness, or persistent cough.',
+          'Night waking with asthma symptoms.',
+          'Symptoms affecting work/exercise or daily activities.',
+          'Reliever needed 3 times a week or more.',
+          'Peak flow below personal best warning level.',
+        ],
+        actions: [
+          'Restart regular preventer use immediately if it has lapsed.',
+          'If already taking preventer, increase to agreed temporary higher dose.',
+          'Use reliever as needed, up to stated puffs every 4 hours.',
+          'Carry reliever (and spacer if used) whenever out.',
+          'See GP or asthma nurse within 24 hours if worsening or not settling.',
+          'Seek review if symptoms continue after 7 days.',
+        ],
+      },
+      {
+        color: 'red',
+        title: 'Red zone: asthma attack (emergency)',
+        when: [
+          'Reliever is not helping, or effect does not last 4 hours.',
+          'Difficulty breathing, speaking, or walking.',
+          'Severe wheeze/chest tightness/cough.',
+          'Peak flow in attack range.',
+        ],
+        actions: [
+          'Sit up and try to stay calm.',
+          'Take 1 puff of blue reliever every 30–60 seconds up to 10 puffs.',
+          'If worse at any point, or not better after 10 puffs, call 999 for ambulance.',
+          'If no blue reliever available, call 999 immediately.',
+          'If ambulance not arrived after 10 minutes and no improvement, repeat 10 puffs.',
+          'If still not better, call 999 again immediately.',
+          'After any attack: contact GP/111 the same day; if hospital-treated, arrange review within 48 hours of discharge.',
+        ],
+      },
+    ],
+    additionalSections: [
+      {
+        title: 'Triggers and prevention',
+        points: [
+          'Try to avoid known asthma triggers and keep allergy triggers under control.',
+          'Share your action plan with family/friends/workplace so others know how to help.',
+          'Keep a copy available at home and a photo on your phone.',
+          'Set reminders for medicines and action-plan checks.',
+        ],
+      },
+      {
+        title: 'Review and support',
+        points: [
+          'Book an urgent review after steroid tablets or A&E attendance.',
+          'Call 111 when surgery is closed if worried about asthma.',
+          'Asthma + Lung UK nurse support line: 0300 222 5800 (Mon–Fri).',
+        ],
+      },
+    ],
     nhsLinks: [
       {
         title: 'NHS asthma',
