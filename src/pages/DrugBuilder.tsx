@@ -7,15 +7,48 @@ import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
+import { HEALTH_CHECK_CARD_LABELS, HEALTH_CHECK_CODE_VALUES, type HealthCheckCodeFamily } from '../healthCheckCodes';
 
 interface TrendLink {
   title: string;
   url: string;
 }
 
+type OutputBuilderType = 'medication' | 'healthcheck' | 'screening' | 'immunisation';
+
+const HEALTH_CHECK_PARAM_KEYS: Record<HealthCheckCodeFamily, string> = {
+  bp: 'bps',
+  bmi: 'bmis',
+  cvd: 'cvds',
+  chol: 'ldls',
+  hba1c: 'hba1cs',
+  act: 'acts',
+  alc: 'alcs',
+  smk: 'smks',
+};
+
+const SCREENING_OPTIONS = [
+  { value: 'cervical', label: 'Cervical screening' },
+  { value: 'bowel', label: 'Bowel screening' },
+  { value: 'breast', label: 'Breast screening' },
+  { value: 'aaa', label: 'AAA screening' },
+  { value: 'diabetic_eye', label: 'Diabetic eye screening' },
+];
+
+const IMMUNISATION_OPTIONS = [
+  { value: 'flu', label: 'Flu' },
+  { value: 'covid', label: 'COVID-19' },
+  { value: 'shingles', label: 'Shingles' },
+  { value: 'pneumo', label: 'Pneumococcal' },
+  { value: 'pertussis', label: 'Pertussis' },
+  { value: 'mmr', label: 'MMR' },
+  { value: 'hpv', label: 'HPV' },
+];
+
 const DrugBuilder: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
+  const [selectedOutputType, setSelectedOutputType] = useState<OutputBuilderType>('medication');
   const {
     medications: existingMeds,
     loading: loadingMeds,
@@ -51,6 +84,20 @@ const DrugBuilder: React.FC = () => {
   const [savedAction, setSavedAction] = useState<'created' | 'updated'>('created');
 
   const [deletingCode, setDeletingCode] = useState('');
+  const [builderOrgName, setBuilderOrgName] = useState('');
+  const [healthCheckResultDate, setHealthCheckResultDate] = useState('');
+  const [healthCheckSelections, setHealthCheckSelections] = useState<Record<HealthCheckCodeFamily, string>>({
+    bp: '',
+    bmi: '',
+    cvd: '',
+    chol: '',
+    hba1c: '',
+    act: '',
+    alc: '',
+    smk: '',
+  });
+  const [screeningType, setScreeningType] = useState('cervical');
+  const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -152,6 +199,57 @@ const DrugBuilder: React.FC = () => {
     if (medication.source === 'built-in') return 'Built in';
     if (medication.source === 'override') return 'Built-in override';
     return 'Custom';
+  };
+
+  const buildPatientUrl = (params: URLSearchParams) =>
+    `${window.location.origin}${resolvePath('/patient')}?${params.toString()}`;
+
+  const copyText = async (value: string) => {
+    await navigator.clipboard.writeText(value);
+  };
+
+  const healthCheckPreviewUrl = useMemo(() => {
+    const params = new URLSearchParams({ type: 'healthcheck' });
+    if (builderOrgName.trim()) {
+      params.set('org', builderOrgName.trim());
+    }
+    if (healthCheckResultDate) {
+      params.set('date', healthCheckResultDate);
+    }
+    (Object.entries(healthCheckSelections) as Array<[HealthCheckCodeFamily, string]>).forEach(([family, code]) => {
+      if (!code) return;
+      params.set(HEALTH_CHECK_PARAM_KEYS[family], code);
+    });
+    return buildPatientUrl(params);
+  }, [builderOrgName, healthCheckResultDate, healthCheckSelections]);
+
+  const screeningPreviewUrl = useMemo(() => {
+    const params = new URLSearchParams({ type: 'screening', screen: screeningType });
+    if (builderOrgName.trim()) {
+      params.set('org', builderOrgName.trim());
+    }
+    return buildPatientUrl(params);
+  }, [builderOrgName, screeningType]);
+
+  const immunisationPreviewUrl = useMemo(() => {
+    const params = new URLSearchParams({ type: 'imms' });
+    if (builderOrgName.trim()) {
+      params.set('org', builderOrgName.trim());
+    }
+    if (immunisationSelections.length > 0) {
+      params.set('vaccine', immunisationSelections.join(','));
+    }
+    return buildPatientUrl(params);
+  }, [builderOrgName, immunisationSelections]);
+
+  const updateHealthCheckSelection = (family: HealthCheckCodeFamily, code: string) => {
+    setHealthCheckSelections((current) => ({ ...current, [family]: code }));
+  };
+
+  const toggleImmunisation = (value: string) => {
+    setImmunisationSelections((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
   };
 
   const handleGenerate = async () => {
@@ -333,7 +431,7 @@ const DrugBuilder: React.FC = () => {
         <div className="card" style={{ textAlign: 'center' }}>
           <CheckCircle size={64} color="#007f3b" style={{ marginBottom: '1rem' }} />
           <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>
-            Medication {savedAction === 'created' ? 'Created' : 'Updated'}
+            Output {savedAction === 'created' ? 'Created' : 'Updated'}
           </h1>
           <p style={{ color: '#4c6272', marginBottom: '1.5rem' }}>
             <strong>{title}</strong> has been {savedAction === 'created' ? 'created' : 'updated'} successfully.
@@ -343,7 +441,7 @@ const DrugBuilder: React.FC = () => {
             padding: '1.5rem', background: '#eef7ff', borderRadius: '12px',
             border: '2px solid #005eb8', marginBottom: '1.5rem',
           }}>
-            <div style={{ fontSize: '0.85rem', color: '#4c6272', marginBottom: '0.5rem' }}>SystmOne Code</div>
+            <div style={{ fontSize: '0.85rem', color: '#4c6272', marginBottom: '0.5rem' }}>Medication Output Code</div>
             <div style={{
               fontSize: '3rem', fontWeight: 800, color: '#005eb8',
               fontFamily: 'monospace', letterSpacing: '0.1em',
@@ -365,7 +463,7 @@ const DrugBuilder: React.FC = () => {
           }}>
             <strong>Add to SystmOne Protocol:</strong>
             <br />
-            Add code <strong>{savedCode}</strong> to your clinical protocol output.
+            Add code <strong>{savedCode}</strong> to your medication protocol output.
             When included in the URL as <code>codes=...{savedCode}</code>, patients will see this medication information.
           </div>
 
@@ -407,25 +505,80 @@ const DrugBuilder: React.FC = () => {
           <ArrowLeft size={24} />
         </button>
         <div>
-          <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Drug Builder</h1>
+          <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Output Builder</h1>
           <p style={{ margin: '0.25rem 0 0' }}>
-            Create, preview, edit, and retire medication information blocks with AI assistance
+            Manage the patient-facing outputs delivered through MyMedInfo, including medication information and health-check journeys.
           </p>
         </div>
       </div>
       </div>
 
+      <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #4c6272' }}>
+        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Output Types</h2>
+        <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Medication Info</div>
+            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Created and maintained in this builder using reusable SystmOne codes.</div>
+          </div>
+          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Health Checks</div>
+            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Delivered through structured health-check parameters and rendered in the patient pathway.</div>
+          </div>
+          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Screening</div>
+            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Supports screening information views routed from the same patient entry point.</div>
+          </div>
+          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Immunisation</div>
+            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Supports vaccine and immunisation information alongside the wider output framework.</div>
+          </div>
+        </div>
+        <p style={{ margin: '1rem 0 0', color: '#4c6272', fontSize: '0.95rem' }}>
+          This editor currently manages the medication content library. Other output types are already supported by the patient router and can be expanded here as the admin tooling grows.
+        </p>
+      </div>
+
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Builder Mode</h2>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {([
+            ['medication', 'Medication'],
+            ['healthcheck', 'Health Checks'],
+            ['screening', 'Screening'],
+            ['immunisation', 'Immunisation'],
+          ] as Array<[OutputBuilderType, string]>).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setSelectedOutputType(value)}
+              className="action-button"
+              style={{
+                backgroundColor: selectedOutputType === value ? '#005eb8' : '#eef7ff',
+                color: selectedOutputType === value ? '#ffffff' : '#005eb8',
+                border: selectedOutputType === value ? 'none' : '1px solid #005eb8',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Step 1: Search and Generate */}
+      {selectedOutputType === 'medication' && (
+      <>
       <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-          1. {editingCode ? `Editing ${editingCode}` : 'Medication Search'}
+          1. {editingCode ? `Editing Medication Output ${editingCode}` : 'Medication Output'}
         </h2>
+        <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
+          Create or update medication outputs here. Health checks and other patient pathways use the same platform, but their content is currently configured through dedicated route parameters and views.
+        </p>
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
           <input
             type="text"
             value={medName}
             onChange={e => setMedName(e.target.value)}
-            placeholder="Enter medication name (e.g. Metformin, Atorvastatin)"
+                placeholder="Enter medication name (e.g. Metformin, Atorvastatin)"
             style={{
               flex: '1 1 200px', padding: '0.75rem', border: '2px solid #d8dde0',
               borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box',
@@ -463,7 +616,7 @@ const DrugBuilder: React.FC = () => {
       {hasContent && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-            2. {editingCode ? `Edit Medication ${editingCode}` : 'Edit Content'}
+            2. {editingCode ? `Edit Medication Output ${editingCode}` : 'Edit Medication Content'}
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -770,6 +923,158 @@ const DrugBuilder: React.FC = () => {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {selectedOutputType === 'healthcheck' && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Health Check Output Builder</h2>
+          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
+            Build a live patient preview link for NHS Health Check outputs using the same route format supported by the patient router.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <div style={{ flex: '1 1 240px' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
+              <input
+                type="text"
+                value={builderOrgName}
+                onChange={(e) => setBuilderOrgName(e.target.value)}
+                placeholder="e.g. Nottingham West GP Practices"
+                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Result date</label>
+              <input
+                type="date"
+                value={healthCheckResultDate}
+                onChange={(e) => setHealthCheckResultDate(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: '1rem' }}>
+            {(Object.keys(HEALTH_CHECK_CARD_LABELS) as HealthCheckCodeFamily[]).map((family) => (
+              <div key={family}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>{HEALTH_CHECK_CARD_LABELS[family]}</label>
+                <select
+                  value={healthCheckSelections[family]}
+                  onChange={(e) => updateHealthCheckSelection(family, e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff' }}
+                >
+                  <option value="">Not included</option>
+                  {HEALTH_CHECK_CODE_VALUES[family].map((code) => (
+                    <option key={code} value={code}>{code}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
+            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{healthCheckPreviewUrl}</code>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button onClick={() => copyText(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Copy size={16} /> Copy Preview Link
+            </button>
+            <a href={healthCheckPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
+              <ExternalLink size={16} /> Open Preview
+            </a>
+          </div>
+        </div>
+      )}
+
+      {selectedOutputType === 'screening' && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Screening Output Builder</h2>
+          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
+            Create a screening route link for practice comms and test the patient view before you use it in a live protocol.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <div style={{ flex: '1 1 240px' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
+              <input
+                type="text"
+                value={builderOrgName}
+                onChange={(e) => setBuilderOrgName(e.target.value)}
+                placeholder="e.g. Nottingham West GP Practices"
+                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 240px' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Screening type</label>
+              <select
+                value={screeningType}
+                onChange={(e) => setScreeningType(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff' }}
+              >
+                {SCREENING_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
+            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{screeningPreviewUrl}</code>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button onClick={() => copyText(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Copy size={16} /> Copy Preview Link
+            </button>
+            <a href={screeningPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
+              <ExternalLink size={16} /> Open Preview
+            </a>
+          </div>
+        </div>
+      )}
+
+      {selectedOutputType === 'immunisation' && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Immunisation Output Builder</h2>
+          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
+            Build immunisation links for single or multiple vaccines and open the patient view directly from the builder.
+          </p>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
+            <input
+              type="text"
+              value={builderOrgName}
+              onChange={(e) => setBuilderOrgName(e.target.value)}
+              placeholder="e.g. Nottingham West GP Practices"
+              style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>Vaccines</label>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {IMMUNISATION_OPTIONS.map((option) => (
+                <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.65rem 0.8rem', border: '1px solid #d8dde0', borderRadius: '8px', background: '#f8fbfd' }}>
+                  <input
+                    type="checkbox"
+                    checked={immunisationSelections.includes(option.value)}
+                    onChange={() => toggleImmunisation(option.value)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
+            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{immunisationPreviewUrl}</code>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button onClick={() => copyText(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Copy size={16} /> Copy Preview Link
+            </button>
+            <a href={immunisationPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
+              <ExternalLink size={16} /> Open Preview
+            </a>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );

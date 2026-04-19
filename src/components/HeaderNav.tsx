@@ -58,9 +58,9 @@ const HeaderNav: React.FC = () => {
           <button
             onClick={() => navigate(resolvePath('/admin/drug-builder'))}
             className={`header-nav-link ${['/admin/drug-builder', '/drug-builder'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
-            title="Go to Drug Builder"
+            title="Go to Output Builder"
           >
-            <FlaskConical size={16} /> Drug Builder
+            <FlaskConical size={16} /> Output Builder
           </button>
         </>
       )}

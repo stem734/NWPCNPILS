@@ -590,11 +590,11 @@ const AdminDashboard: React.FC = () => {
           <h1>
             <ShieldAlert size={22} color="#005eb8" /> Admin Dashboard
           </h1>
-          <p>Manage practices, users, administrators, and the global medication library from one place.</p>
+          <p>Manage practices, users, administrators, and patient-facing outputs from one place.</p>
         </div>
         <div className="dashboard-actions">
           <button onClick={() => navigate(resolvePath('/admin/drug-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-            <FlaskConical size={16} /> Drug Builder
+            <FlaskConical size={16} /> Output Builder
           </button>
           <button onClick={loadDashboardData} className="action-button" style={{ backgroundColor: '#4c6272' }}>
             <RefreshCw size={16} /> Refresh
