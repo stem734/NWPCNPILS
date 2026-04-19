@@ -405,12 +405,6 @@ const DrugBuilder: React.FC = () => {
     }));
   });
 
-  const toggleImmunisation = (value: string) => {
-    setImmunisationSelections((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
-    );
-  };
-
   const selectedHealthCheckDomainConfig = PREVIEW_DOMAIN_CONFIGS[selectedHealthCheckDomain];
   const selectedHealthCheckDomainCodes = Object.keys(selectedHealthCheckDomainConfig.metricByCode);
   const resolvedSelectedHealthCheckVariantCode = selectedHealthCheckDomainCodes.includes(selectedHealthCheckVariantCode)
@@ -433,12 +427,6 @@ const DrugBuilder: React.FC = () => {
       nextStepsText: selectedHealthCheckDomainConfig.defaultNextStepsText,
       links: [],
     };
-  const selectedScreeningTemplate = SCREENING_TEMPLATES[screeningType] || SCREENING_TEMPLATES.cervical;
-  const selectedImmunisationTemplates = (immunisationSelections.length > 0 ? immunisationSelections : ['flu'])
-    .map((value) => IMMUNISATION_TEMPLATES[value])
-    .filter((template): template is (typeof IMMUNISATION_TEMPLATES)[keyof typeof IMMUNISATION_TEMPLATES] => Boolean(template));
-  const selectedLongTermConditionTemplate =
-    LONG_TERM_CONDITION_TEMPLATES[selectedLongTermCondition] || LONG_TERM_CONDITION_TEMPLATES.asthma;
   const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
     (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
       ? {
@@ -1636,41 +1624,13 @@ const DrugBuilder: React.FC = () => {
       {selectedOutputType === 'screening' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Screening Card Builder</h2>
-          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
-            Build a reusable generic screening template and generate a patient preview link.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <div style={{ flex: '1 1 240px' }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Screening type</label>
-              <select
-                value={screeningType}
-                onChange={(e) => setScreeningType(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff' }}
-              >
-                {SCREENING_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#005eb8' }}>Template preview</div>
-            <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{selectedScreeningTemplate.label}</div>
-            <p style={{ margin: '0 0 0.6rem', color: '#4c6272' }}>{selectedScreeningTemplate.headline}</p>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#4c6272' }}>
-              Includes {selectedScreeningTemplate.nhsLinks.length} NHS.UK resource link{selectedScreeningTemplate.nhsLinks.length === 1 ? '' : 's'}.
-            </p>
-          </div>
-          <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
-            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{screeningPreviewUrl}</code>
-          </div>
+          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>Use rows below to preview, edit, and copy each screening card template.</p>
           {builderNotice?.type === 'screening' && (
             <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
               {builderNotice.message}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <button onClick={() => openPreview(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Eye size={16} /> Preview
             </button>
@@ -1685,9 +1645,8 @@ const DrugBuilder: React.FC = () => {
             </button>
           </div>
 
-          <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid #4c6272' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
-            <div className="dashboard-list">
+          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
+          <div className="dashboard-list">
               {SCREENING_OPTIONS.map((option) => {
                 const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: option.value }));
                 return (
@@ -1712,7 +1671,6 @@ const DrugBuilder: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
           </div>
         </div>
       )}
@@ -1720,95 +1678,13 @@ const DrugBuilder: React.FC = () => {
       {selectedOutputType === 'immunisation' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Immunisation Card Builder</h2>
-          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
-            Build reusable immunisation templates, then apply local support details for practice-specific deployment links.
-          </p>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>Vaccines</label>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              {IMMUNISATION_OPTIONS.map((option) => (
-                <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.65rem 0.8rem', border: '1px solid #d8dde0', borderRadius: '8px', background: '#f8fbfd' }}>
-                  <input
-                    type="checkbox"
-                    checked={immunisationSelections.includes(option.value)}
-                    onChange={() => toggleImmunisation(option.value)}
-                  />
-                  {option.label}
-                </label>
-              ))}
-            </div>
-          </div>
-          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#005eb8' }}>Selected template cards</div>
-            {selectedImmunisationTemplates.length === 0 ? (
-              <p style={{ margin: 0, color: '#4c6272' }}>No template selected.</p>
-            ) : (
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {selectedImmunisationTemplates.map((template) => (
-                  <span
-                    key={template.id}
-                    style={{
-                      background: '#eef7ff',
-                      color: '#005eb8',
-                      border: '1px solid #b8d6ee',
-                      borderRadius: '999px',
-                      padding: '0.35rem 0.7rem',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {template.label}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p style={{ margin: '0.7rem 0 0', color: '#4c6272', fontSize: '0.9rem' }}>
-              Each selected template includes NHS.UK links and aftercare guidance.
-            </p>
-          </div>
-          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
-            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-              <input
-                type="text"
-                value={localSupportName}
-                onChange={(e) => setLocalSupportName(e.target.value)}
-                placeholder="Service name (e.g. Practice care team)"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-              <input
-                type="text"
-                value={localSupportPhone}
-                onChange={(e) => setLocalSupportPhone(e.target.value)}
-                placeholder="Phone number"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-              <input
-                type="email"
-                value={localSupportEmail}
-                onChange={(e) => setLocalSupportEmail(e.target.value)}
-                placeholder="Email address"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-              <input
-                type="url"
-                value={localSupportWebsite}
-                onChange={(e) => setLocalSupportWebsite(e.target.value)}
-                placeholder="Website URL"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-            </div>
-          </div>
-          <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
-            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{immunisationPreviewUrl}</code>
-          </div>
+          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>Use rows below to preview, edit, and copy each immunisation card template.</p>
           {builderNotice?.type === 'immunisation' && (
             <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
               {builderNotice.message}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <button onClick={() => openPreview(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Eye size={16} /> Preview
             </button>
@@ -1823,9 +1699,8 @@ const DrugBuilder: React.FC = () => {
             </button>
           </div>
 
-          <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid #4c6272' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Immunisation Card Catalogue</h3>
-            <div className="dashboard-list">
+          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Immunisation Card Catalogue</h3>
+          <div className="dashboard-list">
               {IMMUNISATION_OPTIONS.map((option) => {
                 const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'imms', vaccine: option.value }));
                 return (
@@ -1854,7 +1729,6 @@ const DrugBuilder: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
           </div>
         </div>
       )}
@@ -1862,73 +1736,14 @@ const DrugBuilder: React.FC = () => {
       {selectedOutputType === 'ltc' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Long Term Conditions Card Builder</h2>
-          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
-            Create reusable long-term condition cards. Starter templates are preloaded for Asthma and Diabetes.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <div style={{ flex: '1 1 240px' }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Condition</label>
-              <select
-                value={selectedLongTermCondition}
-                onChange={(e) => setSelectedLongTermCondition(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff' }}
-              >
-                {LONG_TERM_CONDITION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#005eb8' }}>Default template fields</div>
-            <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{selectedLongTermConditionTemplate.label}</div>
-            <p style={{ margin: '0 0 0.55rem', color: '#4c6272' }}>{selectedLongTermConditionTemplate.headline}</p>
-            <p style={{ margin: '0 0 0.55rem', color: '#4c6272', fontSize: '0.92rem' }}>{selectedLongTermConditionTemplate.explanation}</p>
-            <ul style={{ margin: '0 0 0.55rem 1rem', color: '#4c6272', padding: 0 }}>
-              {selectedLongTermConditionTemplate.guidance.slice(0, 3).map((item, idx) => (
-                <li key={idx} style={{ marginBottom: '0.2rem' }}>{item}</li>
-              ))}
-            </ul>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#4c6272' }}>
-              Includes {selectedLongTermConditionTemplate.nhsLinks.length} default resource link{selectedLongTermConditionTemplate.nhsLinks.length === 1 ? '' : 's'}.
-            </p>
-          </div>
-
-          {selectedLongTermConditionTemplate.zones && selectedLongTermConditionTemplate.zones.length > 0 && (
-            <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-              <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Traffic-light sections</div>
-              <div style={{ display: 'grid', gap: '0.7rem' }}>
-                {selectedLongTermConditionTemplate.zones.map((zone) => {
-                  const tone = zone.color === 'green'
-                    ? { border: '#007f3b', bg: '#f3f9f2', heading: '#005a2e' }
-                    : zone.color === 'amber'
-                      ? { border: '#b27a00', bg: '#fff8e6', heading: '#8a5f00' }
-                      : { border: '#d5281b', bg: '#fdecec', heading: '#9d1c12' };
-                  return (
-                    <div key={zone.color} style={{ border: `1px solid ${tone.border}`, background: tone.bg, borderRadius: '8px', padding: '0.65rem 0.75rem' }}>
-                      <div style={{ fontWeight: 700, color: tone.heading, marginBottom: '0.3rem' }}>{zone.title}</div>
-                      <p style={{ margin: 0, color: '#4c6272', fontSize: '0.9rem' }}>
-                        {zone.when.length} signs · {zone.actions.length} action points
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
-            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{longTermConditionPreviewUrl}</code>
-          </div>
+          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>Use rows below to preview, edit, and copy each long term condition card template.</p>
 
           {builderNotice?.type === 'ltc' && (
             <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
               {builderNotice.message}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <button onClick={() => openPreview(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Eye size={16} /> Preview
             </button>
@@ -1943,9 +1758,8 @@ const DrugBuilder: React.FC = () => {
             </button>
           </div>
 
-          <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid #4c6272' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Long Term Condition Card Catalogue</h3>
-            <div className="dashboard-list">
+          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Long Term Condition Card Catalogue</h3>
+          <div className="dashboard-list">
               {LONG_TERM_CONDITION_OPTIONS.map((option) => {
                 const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'ltc', ltc: option.value }));
                 return (
@@ -1970,7 +1784,6 @@ const DrugBuilder: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
           </div>
         </div>
       )}
