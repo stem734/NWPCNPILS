@@ -381,6 +381,30 @@ const DrugBuilder: React.FC = () => {
     return buildPatientUrl(params);
   }, [selectedLongTermCondition]);
 
+  const buildHealthCheckVariantPreviewUrl = (domainId: ClinicalDomainId, resultCode: string) => {
+    const params = new URLSearchParams({ type: 'healthcheck' });
+    const family = domainId === 'ldl' ? 'chol' : domainId;
+    const key = HEALTH_CHECK_PARAM_KEYS[family as HealthCheckCodeFamily];
+    params.set(key, resultCode);
+    if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
+    if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
+    if (healthCheckLocalSupportEmail.trim()) params.set('localEmail', healthCheckLocalSupportEmail.trim());
+    if (healthCheckLocalSupportWebsite.trim()) params.set('localWebsite', healthCheckLocalSupportWebsite.trim());
+    return buildPatientUrl(params);
+  };
+
+  const healthCheckCatalogueRows = CLINICAL_DOMAIN_IDS.flatMap((domainId) => {
+    const metricByCode = PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode;
+    return Object.keys(metricByCode).map((resultCode) => ({
+      id: `${domainId}:${resultCode}`,
+      domainId,
+      resultCode,
+      label: HEALTH_CHECK_CARD_LABELS[(domainId === 'ldl' ? 'chol' : domainId) as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[domainId].heading,
+      summary: (healthCheckBuilderConfigs[domainId]?.[resultCode]?.resultsMessage || metricByCode[resultCode].pathway || '').trim(),
+      previewUrl: buildHealthCheckVariantPreviewUrl(domainId, resultCode),
+    }));
+  });
+
   const toggleImmunisation = (value: string) => {
     setImmunisationSelections((current) =>
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
@@ -1556,6 +1580,53 @@ const DrugBuilder: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>3. Health Check Card Catalogue</h3>
+                  <div className="dashboard-list">
+                    {healthCheckCatalogueRows.map((row) => (
+                      <div key={row.id} className="dashboard-list-card">
+                        <div style={{
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          fontFamily: 'monospace',
+                          background: '#005eb8',
+                          color: 'white',
+                          minWidth: '72px',
+                          textAlign: 'center',
+                        }}>
+                          {row.resultCode}
+                        </div>
+                        <div className="dashboard-list-main">
+                          <div className="dashboard-list-title">{row.label}</div>
+                          <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
+                            <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{row.summary}</span>
+                          </div>
+                        </div>
+                        <div className="dashboard-list-actions">
+                          <button onClick={() => openPreview(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                            <Eye size={14} /> Preview
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedHealthCheckDomain(row.domainId);
+                              setSelectedHealthCheckVariantCode(row.resultCode);
+                            }}
+                            className="action-button-sm"
+                            style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                          >
+                            <Edit2 size={14} /> Edit
+                          </button>
+                          <button onClick={() => copyText(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                            <Copy size={14} /> Copy
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1612,6 +1683,36 @@ const DrugBuilder: React.FC = () => {
             <button onClick={() => copyText(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Copy size={16} /> Copy Link
             </button>
+          </div>
+
+          <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid #4c6272' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
+            <div className="dashboard-list">
+              {SCREENING_OPTIONS.map((option) => {
+                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: option.value }));
+                return (
+                  <div key={option.value} className="dashboard-list-card">
+                    <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
+                      {option.value.toUpperCase()}
+                    </div>
+                    <div className="dashboard-list-main">
+                      <div className="dashboard-list-title">{option.label}</div>
+                    </div>
+                    <div className="dashboard-list-actions">
+                      <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Eye size={14} /> Preview
+                      </button>
+                      <button onClick={() => setScreeningType(option.value)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Edit2 size={14} /> Edit
+                      </button>
+                      <button onClick={() => copyText(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Copy size={14} /> Copy
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1721,6 +1822,40 @@ const DrugBuilder: React.FC = () => {
               <Copy size={16} /> Copy Link
             </button>
           </div>
+
+          <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid #4c6272' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Immunisation Card Catalogue</h3>
+            <div className="dashboard-list">
+              {IMMUNISATION_OPTIONS.map((option) => {
+                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'imms', vaccine: option.value }));
+                return (
+                  <div key={option.value} className="dashboard-list-card">
+                    <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
+                      {option.value.toUpperCase()}
+                    </div>
+                    <div className="dashboard-list-main">
+                      <div className="dashboard-list-title">{option.label}</div>
+                    </div>
+                    <div className="dashboard-list-actions">
+                      <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Eye size={14} /> Preview
+                      </button>
+                      <button
+                        onClick={() => setImmunisationSelections([option.value])}
+                        className="action-button-sm"
+                        style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
+                      >
+                        <Edit2 size={14} /> Edit
+                      </button>
+                      <button onClick={() => copyText(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Copy size={14} /> Copy
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1806,6 +1941,36 @@ const DrugBuilder: React.FC = () => {
             <button onClick={() => copyText(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
               <Copy size={16} /> Copy Link
             </button>
+          </div>
+
+          <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid #4c6272' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Long Term Condition Card Catalogue</h3>
+            <div className="dashboard-list">
+              {LONG_TERM_CONDITION_OPTIONS.map((option) => {
+                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'ltc', ltc: option.value }));
+                return (
+                  <div key={option.value} className="dashboard-list-card">
+                    <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
+                      {option.value.toUpperCase()}
+                    </div>
+                    <div className="dashboard-list-main">
+                      <div className="dashboard-list-title">{option.label}</div>
+                    </div>
+                    <div className="dashboard-list-actions">
+                      <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Eye size={14} /> Preview
+                      </button>
+                      <button onClick={() => setSelectedLongTermCondition(option.value)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Edit2 size={14} /> Edit
+                      </button>
+                      <button onClick={() => copyText(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <Copy size={14} /> Copy
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
