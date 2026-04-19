@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ShieldPlus, ShieldCheck } from 'lucide-react';
+import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe } from 'lucide-react';
+import { IMMUNISATION_TEMPLATES } from '../patientTemplateCatalog';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -17,7 +18,14 @@ const ImmunisationView: React.FC = () => {
   const org = searchParams.get('org') || '';
   const vaccines = (searchParams.get('vaccine') || searchParams.get('jab') || searchParams.get('imms') || '')
     .split(',')
-    .map(v => v.trim())
+    .map(v => v.trim().toLowerCase())
+    .filter(Boolean);
+  const localSupportName = searchParams.get('localName') || `${org || 'Your practice'} support team`;
+  const localPhone = searchParams.get('localPhone') || '';
+  const localEmail = searchParams.get('localEmail') || '';
+  const localWebsite = searchParams.get('localWebsite') || '';
+  const selectedVaccines = (vaccines.length > 0 ? vaccines : ['flu'])
+    .map((vaccineCode) => IMMUNISATION_TEMPLATES[vaccineCode])
     .filter(Boolean);
 
   return (
@@ -26,7 +34,7 @@ const ImmunisationView: React.FC = () => {
         <div className="patient-greeting-icon"><ShieldPlus size={20} /></div>
         <p className="patient-greeting-text">
           Hi, {org ? `${org} has` : 'your practice has'} sent
-          you information about your {vaccines.length > 0 ? vaccines.join(' and ') : ''} immunisation{vaccines.length !== 1 ? 's' : ''}.
+          you information about your immunisation{selectedVaccines.length !== 1 ? 's' : ''}.
         </p>
       </div>
 
@@ -40,17 +48,65 @@ const ImmunisationView: React.FC = () => {
         <span>This information has been sent directly from your GP practice.</span>
       </div>
 
-      {/* TODO: Build vaccine-specific info cards */}
-      <div className="card" style={{ padding: '2rem', borderLeft: '4px solid #005eb8' }}>
-        <h2 style={{ marginBottom: '0.5rem' }}>Immunisation Information</h2>
-        <p style={{ color: '#4c6272' }}>
-          {vaccines.length > 0
-            ? `Information about: ${vaccines.join(', ')}.`
-            : 'Vaccine information will be displayed here.'}
-          {' '}Each vaccine type will have its own card with side effect guidance,
-          NHS links, and what to expect after vaccination.
-        </p>
-      </div>
+      {selectedVaccines.map((template) => (
+        <div key={template.id} className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #005eb8', marginBottom: '1rem' }}>
+          <h2 style={{ marginBottom: '0.4rem' }}>{template.label}</h2>
+          <p style={{ color: '#1d2a33', marginBottom: '0.65rem' }}>{template.headline}</p>
+          <p style={{ color: '#4c6272', marginBottom: '1rem' }}>{template.explanation}</p>
+
+          <div className="patient-info-section">
+            <h3 style={{ marginBottom: '0.5rem' }}>Aftercare and guidance</h3>
+            <ul className="patient-info-list">
+              {template.guidance.map((item, index) => (
+                <li key={index} className="patient-info-item">
+                  <div className="patient-info-icon"><ShieldCheck size={18} color="#007f3b" /></div>
+                  <span className="patient-info-text">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="patient-resources">
+            <h3 className="patient-resources-heading">NHS and local support links</h3>
+            <div className="patient-resource-list">
+              {template.nhsLinks.map((link) => (
+                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                  <div className="patient-resource-meta">
+                    <div className="patient-resource-chip">NHS</div>
+                    <span className="patient-resource-meta-text">National guidance</span>
+                  </div>
+                  <h3>{link.title}</h3>
+                  <p className="patient-resource-copy">{link.description}</p>
+                  <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+                </a>
+              ))}
+              {(localPhone || localEmail || localWebsite) && (
+                <div className="patient-resource-link" style={{ cursor: 'default' }}>
+                  <div className="patient-resource-meta">
+                    <div className="patient-resource-chip" style={{ background: '#007f3b' }}>LOCAL</div>
+                    <span className="patient-resource-meta-text">{localSupportName}</span>
+                  </div>
+                  {localPhone && (
+                    <p className="patient-resource-copy" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Phone size={15} /> {localPhone}
+                    </p>
+                  )}
+                  {localEmail && (
+                    <p className="patient-resource-copy" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Mail size={15} /> {localEmail}
+                    </p>
+                  )}
+                  {localWebsite && (
+                    <p className="patient-resource-copy" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Globe size={15} /> {localWebsite}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

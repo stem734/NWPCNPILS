@@ -11,6 +11,7 @@ import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalo
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { HEALTH_CHECK_CARD_LABELS, type HealthCheckCodeFamily } from '../healthCheckCodes';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
+import { SCREENING_TEMPLATES, IMMUNISATION_TEMPLATES } from '../patientTemplateCatalog';
 
 interface TrendLink {
   title: string;
@@ -52,23 +53,15 @@ const HEALTH_CHECK_PARAM_KEYS: Record<HealthCheckCodeFamily, string> = {
   smk: 'smks',
 };
 
-const SCREENING_OPTIONS = [
-  { value: 'cervical', label: 'Cervical screening' },
-  { value: 'bowel', label: 'Bowel screening' },
-  { value: 'breast', label: 'Breast screening' },
-  { value: 'aaa', label: 'AAA screening' },
-  { value: 'diabetic_eye', label: 'Diabetic eye screening' },
-];
+const SCREENING_OPTIONS = Object.values(SCREENING_TEMPLATES).map((template) => ({
+  value: template.id,
+  label: template.label,
+}));
 
-const IMMUNISATION_OPTIONS = [
-  { value: 'flu', label: 'Flu' },
-  { value: 'covid', label: 'COVID-19' },
-  { value: 'shingles', label: 'Shingles' },
-  { value: 'pneumo', label: 'Pneumococcal' },
-  { value: 'pertussis', label: 'Pertussis' },
-  { value: 'mmr', label: 'MMR' },
-  { value: 'hpv', label: 'HPV' },
-];
+const IMMUNISATION_OPTIONS = Object.values(IMMUNISATION_TEMPLATES).map((template) => ({
+  value: template.id,
+  label: template.label,
+}));
 
 const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>> =>
   CLINICAL_DOMAIN_IDS.reduce((domainAcc, domainId) => {
@@ -146,6 +139,10 @@ const DrugBuilder: React.FC = () => {
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
   const [screeningType, setScreeningType] = useState('cervical');
   const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
+  const [localSupportName, setLocalSupportName] = useState('');
+  const [localSupportPhone, setLocalSupportPhone] = useState('');
+  const [localSupportEmail, setLocalSupportEmail] = useState('');
+  const [localSupportWebsite, setLocalSupportWebsite] = useState('');
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -283,8 +280,20 @@ const DrugBuilder: React.FC = () => {
     if (builderOrgName.trim()) {
       params.set('org', builderOrgName.trim());
     }
+    if (localSupportName.trim()) {
+      params.set('localName', localSupportName.trim());
+    }
+    if (localSupportPhone.trim()) {
+      params.set('localPhone', localSupportPhone.trim());
+    }
+    if (localSupportEmail.trim()) {
+      params.set('localEmail', localSupportEmail.trim());
+    }
+    if (localSupportWebsite.trim()) {
+      params.set('localWebsite', localSupportWebsite.trim());
+    }
     return buildPatientUrl(params);
-  }, [builderOrgName, screeningType]);
+  }, [builderOrgName, localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite, screeningType]);
 
   const immunisationPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'imms' });
@@ -294,8 +303,20 @@ const DrugBuilder: React.FC = () => {
     if (immunisationSelections.length > 0) {
       params.set('vaccine', immunisationSelections.join(','));
     }
+    if (localSupportName.trim()) {
+      params.set('localName', localSupportName.trim());
+    }
+    if (localSupportPhone.trim()) {
+      params.set('localPhone', localSupportPhone.trim());
+    }
+    if (localSupportEmail.trim()) {
+      params.set('localEmail', localSupportEmail.trim());
+    }
+    if (localSupportWebsite.trim()) {
+      params.set('localWebsite', localSupportWebsite.trim());
+    }
     return buildPatientUrl(params);
-  }, [builderOrgName, immunisationSelections]);
+  }, [builderOrgName, immunisationSelections, localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite]);
 
   const toggleImmunisation = (value: string) => {
     setImmunisationSelections((current) =>
@@ -314,6 +335,21 @@ const DrugBuilder: React.FC = () => {
     defaultHealthCheckConfigs[selectedHealthCheckDomain][resolvedSelectedHealthCheckVariantCode];
   const selectedHealthCheckMetric =
     selectedHealthCheckDomainConfig.metricByCode[resolvedSelectedHealthCheckVariantCode] || selectedHealthCheckDomainConfig.defaultMetric;
+  const selectedHealthCheckVariantSafe: HealthCheckBuilderVariant =
+    selectedHealthCheckVariant || {
+      resultCode: resolvedSelectedHealthCheckVariantCode,
+      resultsMessage: selectedHealthCheckMetric.pathway || '',
+      importantText: '',
+      whatIsTitle: selectedHealthCheckDomainConfig.whatIsTitle,
+      whatIsText: selectedHealthCheckDomainConfig.whatIsText,
+      nextStepsTitle: selectedHealthCheckDomainConfig.defaultNextStepsTitle,
+      nextStepsText: selectedHealthCheckDomainConfig.defaultNextStepsText,
+      links: [],
+    };
+  const selectedScreeningTemplate = SCREENING_TEMPLATES[screeningType] || SCREENING_TEMPLATES.cervical;
+  const selectedImmunisationTemplates = (immunisationSelections.length > 0 ? immunisationSelections : ['flu'])
+    .map((value) => IMMUNISATION_TEMPLATES[value])
+    .filter((template): template is (typeof IMMUNISATION_TEMPLATES)[keyof typeof IMMUNISATION_TEMPLATES] => Boolean(template));
 
   const updateHealthCheckVariant = (domainId: ClinicalDomainId, resultCode: string, patch: Partial<HealthCheckBuilderVariant>) => {
     const fallbackVariant = defaultHealthCheckConfigs[domainId][resultCode];
@@ -330,7 +366,7 @@ const DrugBuilder: React.FC = () => {
   };
 
   const updateHealthCheckLink = (index: number, field: keyof HealthCheckBuilderLink, value: string | boolean) => {
-    const links = [...selectedHealthCheckVariant.links];
+    const links = [...selectedHealthCheckVariantSafe.links];
     const existing = links[index] || {
       title: '',
       showTitleOnCard: true,
@@ -351,7 +387,7 @@ const DrugBuilder: React.FC = () => {
   const addHealthCheckLink = () => {
     updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
       links: [
-        ...selectedHealthCheckVariant.links,
+        ...selectedHealthCheckVariantSafe.links,
         {
           title: '',
           showTitleOnCard: true,
@@ -368,7 +404,7 @@ const DrugBuilder: React.FC = () => {
 
   const removeHealthCheckLink = (index: number) => {
     updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
-      links: selectedHealthCheckVariant.links.filter((_, linkIndex) => linkIndex !== index),
+      links: selectedHealthCheckVariantSafe.links.filter((_, linkIndex) => linkIndex !== index),
     });
   };
 
@@ -1155,7 +1191,7 @@ const DrugBuilder: React.FC = () => {
                     <div>
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>What does this result mean?</label>
                       <textarea
-                        value={selectedHealthCheckVariant.resultsMessage}
+                        value={selectedHealthCheckVariantSafe.resultsMessage}
                         onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { resultsMessage: e.target.value })}
                         rows={4}
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
@@ -1165,7 +1201,7 @@ const DrugBuilder: React.FC = () => {
                     <div>
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Important message</label>
                       <textarea
-                        value={selectedHealthCheckVariant.importantText}
+                        value={selectedHealthCheckVariantSafe.importantText}
                         onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { importantText: e.target.value })}
                         rows={3}
                         placeholder="Optional urgent or safeguarding guidance shown in the Important box."
@@ -1178,7 +1214,7 @@ const DrugBuilder: React.FC = () => {
                         <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>What is this? title</label>
                         <input
                           type="text"
-                          value={selectedHealthCheckVariant.whatIsTitle}
+                          value={selectedHealthCheckVariantSafe.whatIsTitle}
                           onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { whatIsTitle: e.target.value })}
                           style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                         />
@@ -1187,7 +1223,7 @@ const DrugBuilder: React.FC = () => {
                         <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Next steps title</label>
                         <input
                           type="text"
-                          value={selectedHealthCheckVariant.nextStepsTitle}
+                          value={selectedHealthCheckVariantSafe.nextStepsTitle}
                           onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { nextStepsTitle: e.target.value })}
                           style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                         />
@@ -1197,7 +1233,7 @@ const DrugBuilder: React.FC = () => {
                     <div>
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>What is this? body</label>
                       <textarea
-                        value={selectedHealthCheckVariant.whatIsText}
+                        value={selectedHealthCheckVariantSafe.whatIsText}
                         onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { whatIsText: e.target.value })}
                         rows={4}
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
@@ -1207,7 +1243,7 @@ const DrugBuilder: React.FC = () => {
                     <div>
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Next steps guidance</label>
                       <textarea
-                        value={selectedHealthCheckVariant.nextStepsText}
+                        value={selectedHealthCheckVariantSafe.nextStepsText}
                         onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { nextStepsText: e.target.value })}
                         rows={4}
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
@@ -1227,11 +1263,11 @@ const DrugBuilder: React.FC = () => {
                     </button>
                   </div>
 
-                  {selectedHealthCheckVariant.links.length === 0 ? (
+                  {selectedHealthCheckVariantSafe.links.length === 0 ? (
                     <p style={{ color: '#4c6272', margin: 0 }}>No links added yet for this result type.</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {selectedHealthCheckVariant.links.map((link, index) => (
+                      {selectedHealthCheckVariantSafe.links.map((link, index) => (
                         <div key={index} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                             <strong>Link {index + 1}</strong>
@@ -1336,17 +1372,17 @@ const DrugBuilder: React.FC = () => {
                       unit: selectedHealthCheckMetric.unit,
                       badge: selectedHealthCheckMetric.badge,
                       badgeClass: selectedHealthCheckMetric.badgeClass,
-                      whatTitle: selectedHealthCheckVariant.whatIsTitle,
-                      what: selectedHealthCheckVariant.whatIsText,
+                      whatTitle: selectedHealthCheckVariantSafe.whatIsTitle,
+                      what: selectedHealthCheckVariantSafe.whatIsText,
                       pathway: selectedHealthCheckMetric.pathway,
                       breakdown: selectedHealthCheckMetric.breakdown,
                       oneLiner: selectedHealthCheckMetric.oneLiner,
                     }}
-                    resultsMessage={selectedHealthCheckVariant.resultsMessage}
-                    importantText={selectedHealthCheckVariant.importantText}
-                    nextStepsTitle={selectedHealthCheckVariant.nextStepsTitle}
-                    nextStepsText={selectedHealthCheckVariant.nextStepsText}
-                    links={selectedHealthCheckVariant.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim()))}
+                    resultsMessage={selectedHealthCheckVariantSafe.resultsMessage}
+                    importantText={selectedHealthCheckVariantSafe.importantText}
+                    nextStepsTitle={selectedHealthCheckVariantSafe.nextStepsTitle}
+                    nextStepsText={selectedHealthCheckVariantSafe.nextStepsText}
+                    links={selectedHealthCheckVariantSafe.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim()))}
                     expanded
                   />
                 </div>
@@ -1360,7 +1396,7 @@ const DrugBuilder: React.FC = () => {
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Screening Output Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
-            Create a screening route link for practice comms and test the patient view before you use it in a live protocol.
+            Build a reusable generic screening template, then apply your local support details so each practice can deploy it safely.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <div style={{ flex: '1 1 240px' }}>
@@ -1386,6 +1422,47 @@ const DrugBuilder: React.FC = () => {
               </select>
             </div>
           </div>
+          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#005eb8' }}>Template preview</div>
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{selectedScreeningTemplate.label}</div>
+            <p style={{ margin: '0 0 0.6rem', color: '#4c6272' }}>{selectedScreeningTemplate.headline}</p>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#4c6272' }}>
+              Includes {selectedScreeningTemplate.nhsLinks.length} NHS.UK resource link{selectedScreeningTemplate.nhsLinks.length === 1 ? '' : 's'}.
+            </p>
+          </div>
+          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
+            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <input
+                type="text"
+                value={localSupportName}
+                onChange={(e) => setLocalSupportName(e.target.value)}
+                placeholder="Service name (e.g. Practice care team)"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+              <input
+                type="text"
+                value={localSupportPhone}
+                onChange={(e) => setLocalSupportPhone(e.target.value)}
+                placeholder="Phone number"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+              <input
+                type="email"
+                value={localSupportEmail}
+                onChange={(e) => setLocalSupportEmail(e.target.value)}
+                placeholder="Email address"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+              <input
+                type="url"
+                value={localSupportWebsite}
+                onChange={(e) => setLocalSupportWebsite(e.target.value)}
+                placeholder="Website URL"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
           <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
             <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
             <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{screeningPreviewUrl}</code>
@@ -1405,7 +1482,7 @@ const DrugBuilder: React.FC = () => {
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Immunisation Output Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
-            Build immunisation links for single or multiple vaccines and open the patient view directly from the builder.
+            Build reusable immunisation templates, then apply local support details for practice-specific deployment links.
           </p>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
@@ -1430,6 +1507,67 @@ const DrugBuilder: React.FC = () => {
                   {option.label}
                 </label>
               ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#005eb8' }}>Selected template cards</div>
+            {selectedImmunisationTemplates.length === 0 ? (
+              <p style={{ margin: 0, color: '#4c6272' }}>No template selected.</p>
+            ) : (
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {selectedImmunisationTemplates.map((template) => (
+                  <span
+                    key={template.id}
+                    style={{
+                      background: '#eef7ff',
+                      color: '#005eb8',
+                      border: '1px solid #b8d6ee',
+                      borderRadius: '999px',
+                      padding: '0.35rem 0.7rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {template.label}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p style={{ margin: '0.7rem 0 0', color: '#4c6272', fontSize: '0.9rem' }}>
+              Each selected template includes NHS.UK links and aftercare guidance.
+            </p>
+          </div>
+          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
+            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <input
+                type="text"
+                value={localSupportName}
+                onChange={(e) => setLocalSupportName(e.target.value)}
+                placeholder="Service name (e.g. Practice care team)"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+              <input
+                type="text"
+                value={localSupportPhone}
+                onChange={(e) => setLocalSupportPhone(e.target.value)}
+                placeholder="Phone number"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+              <input
+                type="email"
+                value={localSupportEmail}
+                onChange={(e) => setLocalSupportEmail(e.target.value)}
+                placeholder="Email address"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+              <input
+                type="url"
+                value={localSupportWebsite}
+                onChange={(e) => setLocalSupportWebsite(e.target.value)}
+                placeholder="Website URL"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
             </div>
           </div>
           <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
