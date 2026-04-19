@@ -36,11 +36,9 @@ function normaliseCodeStatus(raw: string): MetricStatus {
     return 'red';
   }
   if (HEALTH_CHECK_CODE_VALUES.alc.includes(code)) {
-    // Canonical alcohol risk order from high → low:
-    // ALCRISKTEETOTAL, ALCRISKOK, ALCRISKTOOMUCH, ALCRISKTOOMUCH1, ALCRISKATRISK
-    if (code === 'ALCRISKTEETOTAL' || code === 'ALCRISKOK') return 'red';
+    if (code === 'ALCRISKATRISK') return 'red';
     if (code === 'ALCRISKTOOMUCH' || code === 'ALCRISKTOOMUCH1') return 'amber';
-    if (code === 'ALCRISKATRISK') return 'ok';
+    if (code === 'ALCRISKOK' || code === 'ALCRISKTEETOTAL') return 'ok';
     return 'ok';
   }
   if (HEALTH_CHECK_CODE_VALUES.smk.includes(code)) {
