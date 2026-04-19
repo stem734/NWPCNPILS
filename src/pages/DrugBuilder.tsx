@@ -131,7 +131,6 @@ const DrugBuilder: React.FC = () => {
   const [healthCheckLocalSupportPhone, setHealthCheckLocalSupportPhone] = useState('');
   const [healthCheckLocalSupportEmail, setHealthCheckLocalSupportEmail] = useState('');
   const [healthCheckLocalSupportWebsite, setHealthCheckLocalSupportWebsite] = useState('');
-  const [healthCheckResultDate, setHealthCheckResultDate] = useState('');
   const [healthCheckSelections] = useState<Record<HealthCheckCodeFamily, string>>({
     bp: '',
     bmi: '',
@@ -271,9 +270,6 @@ const DrugBuilder: React.FC = () => {
 
   const healthCheckPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'healthcheck' });
-    if (healthCheckResultDate) {
-      params.set('date', healthCheckResultDate);
-    }
     (Object.entries(healthCheckSelections) as Array<[HealthCheckCodeFamily, string]>).forEach(([family, code]) => {
       if (!code) return;
       params.set(HEALTH_CHECK_PARAM_KEYS[family], code);
@@ -288,7 +284,6 @@ const DrugBuilder: React.FC = () => {
     healthCheckLocalSupportName,
     healthCheckLocalSupportPhone,
     healthCheckLocalSupportWebsite,
-    healthCheckResultDate,
     healthCheckSelections,
   ]);
 
@@ -1085,15 +1080,6 @@ const DrugBuilder: React.FC = () => {
               Build each health check card variation separately. Every result type can carry its own explanation, follow-up guidance, and a mix of national NHS links and local support links.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              <div style={{ flex: '1 1 180px' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Result date</label>
-                <input
-                  type="date"
-                  value={healthCheckResultDate}
-                  onChange={(e) => setHealthCheckResultDate(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-              </div>
             </div>
             <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
               <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
