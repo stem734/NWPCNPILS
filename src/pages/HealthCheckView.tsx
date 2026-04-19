@@ -65,6 +65,10 @@ const getDisplayMetrics = (metrics: ParsedMetric[]): ParsedMetric[] =>
 const HealthCheckView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
+  const localSupportName = searchParams.get('localName') || `${org || 'Your practice'} support team`;
+  const localSupportPhone = searchParams.get('localPhone') || '';
+  const localSupportEmail = searchParams.get('localEmail') || '';
+  const localSupportWebsite = searchParams.get('localWebsite') || '';
 
   const metrics = useMemo(() => parseHealthCheckParams(searchParams), [searchParams]);
   const hasData = metrics.length > 0;
@@ -130,6 +134,20 @@ const HealthCheckView: React.FC = () => {
     const red = displayMetrics.filter((m) => m.badgeClass === 'red');
     return red.sort((a, b) => priority.indexOf(a.id) - priority.indexOf(b.id))[0] || null;
   }, [displayMetrics]);
+
+  const localSupportLink = useMemo(() => {
+    if (!(localSupportPhone || localSupportEmail || localSupportWebsite)) return null;
+    return {
+      title: localSupportName,
+      showTitleOnCard: true,
+      phone: localSupportPhone,
+      phoneLabel: 'Call',
+      email: localSupportEmail,
+      emailLabel: 'Email',
+      website: localSupportWebsite,
+      websiteLabel: 'Website',
+    };
+  }, [localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite]);
 
   const jumpToUrgent = () => {
     if (!mostUrgentMetric) return;
@@ -258,6 +276,15 @@ const HealthCheckView: React.FC = () => {
                           : undefined,
                       }}
                       resultsMessage={metric.pathway}
+                      links={[
+                        ...(metric.helpLinks || []).map((link) => ({
+                          title: link.title,
+                          showTitleOnCard: true,
+                          website: link.url,
+                          websiteLabel: 'Read',
+                        })),
+                        ...(localSupportLink ? [localSupportLink] : []),
+                      ]}
                       expanded={expandedCards[metric.id] ?? false}
                       onExpandedChange={(next) => setExpandedCards((cur) => ({ ...cur, [metric.id]: next }))}
                       collapsedPrompt={

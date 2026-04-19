@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ShieldCheck, ExternalLink, Phone, Mail, Globe } from 'lucide-react';
+import { Search, ShieldCheck, ExternalLink } from 'lucide-react';
 import { SCREENING_TEMPLATES } from '../patientTemplateCatalog';
 
 /**
@@ -17,10 +17,6 @@ const ScreeningView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
   const screenType = (searchParams.get('screen') || searchParams.get('screening') || '').trim().toLowerCase();
-  const localSupportName = searchParams.get('localName') || `${org || 'Your practice'} support team`;
-  const localPhone = searchParams.get('localPhone') || '';
-  const localEmail = searchParams.get('localEmail') || '';
-  const localWebsite = searchParams.get('localWebsite') || '';
   const selectedTemplate = SCREENING_TEMPLATES[screenType] || SCREENING_TEMPLATES.cervical;
 
   return (
@@ -75,29 +71,6 @@ const ScreeningView: React.FC = () => {
               <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
             </a>
           ))}
-          {(localPhone || localEmail || localWebsite) && (
-            <div className="patient-resource-link" style={{ cursor: 'default' }}>
-              <div className="patient-resource-meta">
-                <div className="patient-resource-chip" style={{ background: '#007f3b' }}>LOCAL</div>
-                <span className="patient-resource-meta-text">{localSupportName}</span>
-              </div>
-              {localPhone && (
-                <p className="patient-resource-copy" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Phone size={15} /> {localPhone}
-                </p>
-              )}
-              {localEmail && (
-                <p className="patient-resource-copy" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Mail size={15} /> {localEmail}
-                </p>
-              )}
-              {localWebsite && (
-                <p className="patient-resource-copy" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Globe size={15} /> {localWebsite}
-                </p>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

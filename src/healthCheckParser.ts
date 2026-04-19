@@ -36,10 +36,12 @@ function normaliseCodeStatus(raw: string): MetricStatus {
     return 'red';
   }
   if (HEALTH_CHECK_CODE_VALUES.alc.includes(code)) {
-    if (code === 'ALCRISKOK') return 'ok';
-    if (code === 'ALCRISKTOOMUCH' || code === 'ALCRISKTOOMUCH1' || code === 'ALCRISKTEETOTAL') return 'amber';
-    if (code === 'ALCRISKATRISK') return 'red';
-    return 'red';
+    // Canonical alcohol risk order from high → low:
+    // ALCRISKTEETOTAL, ALCRISKOK, ALCRISKTOOMUCH, ALCRISKTOOMUCH1, ALCRISKATRISK
+    if (code === 'ALCRISKTEETOTAL' || code === 'ALCRISKOK') return 'red';
+    if (code === 'ALCRISKTOOMUCH' || code === 'ALCRISKTOOMUCH1') return 'amber';
+    if (code === 'ALCRISKATRISK') return 'ok';
+    return 'ok';
   }
   if (HEALTH_CHECK_CODE_VALUES.smk.includes(code)) {
     if (code === 'SMOKNONSMOK' || code === 'SMOKSTOPPED') return 'ok';

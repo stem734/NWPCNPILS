@@ -123,6 +123,10 @@ const DrugBuilder: React.FC = () => {
 
   const [deletingCode, setDeletingCode] = useState('');
   const [builderOrgName, setBuilderOrgName] = useState('');
+  const [healthCheckLocalSupportName, setHealthCheckLocalSupportName] = useState('');
+  const [healthCheckLocalSupportPhone, setHealthCheckLocalSupportPhone] = useState('');
+  const [healthCheckLocalSupportEmail, setHealthCheckLocalSupportEmail] = useState('');
+  const [healthCheckLocalSupportWebsite, setHealthCheckLocalSupportWebsite] = useState('');
   const [healthCheckResultDate, setHealthCheckResultDate] = useState('');
   const [healthCheckSelections] = useState<Record<HealthCheckCodeFamily, string>>({
     bp: '',
@@ -272,28 +276,28 @@ const DrugBuilder: React.FC = () => {
       if (!code) return;
       params.set(HEALTH_CHECK_PARAM_KEYS[family], code);
     });
+    if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
+    if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
+    if (healthCheckLocalSupportEmail.trim()) params.set('localEmail', healthCheckLocalSupportEmail.trim());
+    if (healthCheckLocalSupportWebsite.trim()) params.set('localWebsite', healthCheckLocalSupportWebsite.trim());
     return buildPatientUrl(params);
-  }, [builderOrgName, healthCheckResultDate, healthCheckSelections]);
+  }, [
+    builderOrgName,
+    healthCheckLocalSupportEmail,
+    healthCheckLocalSupportName,
+    healthCheckLocalSupportPhone,
+    healthCheckLocalSupportWebsite,
+    healthCheckResultDate,
+    healthCheckSelections,
+  ]);
 
   const screeningPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'screening', screen: screeningType });
     if (builderOrgName.trim()) {
       params.set('org', builderOrgName.trim());
     }
-    if (localSupportName.trim()) {
-      params.set('localName', localSupportName.trim());
-    }
-    if (localSupportPhone.trim()) {
-      params.set('localPhone', localSupportPhone.trim());
-    }
-    if (localSupportEmail.trim()) {
-      params.set('localEmail', localSupportEmail.trim());
-    }
-    if (localSupportWebsite.trim()) {
-      params.set('localWebsite', localSupportWebsite.trim());
-    }
     return buildPatientUrl(params);
-  }, [builderOrgName, localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite, screeningType]);
+  }, [builderOrgName, screeningType]);
 
   const immunisationPreviewUrl = useMemo(() => {
     const params = new URLSearchParams({ type: 'imms' });
@@ -350,6 +354,19 @@ const DrugBuilder: React.FC = () => {
   const selectedImmunisationTemplates = (immunisationSelections.length > 0 ? immunisationSelections : ['flu'])
     .map((value) => IMMUNISATION_TEMPLATES[value])
     .filter((template): template is (typeof IMMUNISATION_TEMPLATES)[keyof typeof IMMUNISATION_TEMPLATES] => Boolean(template));
+  const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
+    (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
+      ? {
+          title: healthCheckLocalSupportName.trim() || `${builderOrgName.trim() || 'Local'} support`,
+          showTitleOnCard: true,
+          phone: healthCheckLocalSupportPhone.trim(),
+          phoneLabel: 'Call',
+          email: healthCheckLocalSupportEmail.trim(),
+          emailLabel: 'Email',
+          website: healthCheckLocalSupportWebsite.trim(),
+          websiteLabel: 'Website',
+        }
+      : null;
 
   const updateHealthCheckVariant = (domainId: ClinicalDomainId, resultCode: string, patch: Partial<HealthCheckBuilderVariant>) => {
     const fallbackVariant = defaultHealthCheckConfigs[domainId][resultCode];
@@ -667,31 +684,6 @@ const DrugBuilder: React.FC = () => {
           </p>
         </div>
       </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #4c6272' }}>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Output Types</h2>
-        <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Medication Info</div>
-            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Created and maintained in this builder using reusable SystmOne codes.</div>
-          </div>
-          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Health Checks</div>
-            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Delivered through structured health-check parameters and rendered in the patient pathway.</div>
-          </div>
-          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Screening</div>
-            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Supports screening information views routed from the same patient entry point.</div>
-          </div>
-          <div style={{ padding: '0.9rem', border: '1px solid #d8dde0', borderRadius: '10px', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#005eb8' }}>Immunisation</div>
-            <div style={{ fontSize: '0.9rem', color: '#4c6272' }}>Supports vaccine and immunisation information alongside the wider output framework.</div>
-          </div>
-        </div>
-        <p style={{ margin: '1rem 0 0', color: '#4c6272', fontSize: '0.95rem' }}>
-          This editor currently manages the medication content library. Other output types are already supported by the patient router and can be expanded here as the admin tooling grows.
-        </p>
       </div>
 
       <div className="card" style={{ marginBottom: '1.5rem' }}>
@@ -1110,6 +1102,39 @@ const DrugBuilder: React.FC = () => {
                 />
               </div>
             </div>
+            <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
+              <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                <input
+                  type="text"
+                  value={healthCheckLocalSupportName}
+                  onChange={(e) => setHealthCheckLocalSupportName(e.target.value)}
+                  placeholder="Service name (e.g. Practice health coach)"
+                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+                <input
+                  type="text"
+                  value={healthCheckLocalSupportPhone}
+                  onChange={(e) => setHealthCheckLocalSupportPhone(e.target.value)}
+                  placeholder="Phone number"
+                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+                <input
+                  type="email"
+                  value={healthCheckLocalSupportEmail}
+                  onChange={(e) => setHealthCheckLocalSupportEmail(e.target.value)}
+                  placeholder="Email address"
+                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+                <input
+                  type="url"
+                  value={healthCheckLocalSupportWebsite}
+                  onChange={(e) => setHealthCheckLocalSupportWebsite(e.target.value)}
+                  placeholder="Website URL"
+                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
             <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(260px, 320px) minmax(0, 1fr)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
@@ -1382,7 +1407,10 @@ const DrugBuilder: React.FC = () => {
                     importantText={selectedHealthCheckVariantSafe.importantText}
                     nextStepsTitle={selectedHealthCheckVariantSafe.nextStepsTitle}
                     nextStepsText={selectedHealthCheckVariantSafe.nextStepsText}
-                    links={selectedHealthCheckVariantSafe.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim()))}
+                    links={[
+                      ...selectedHealthCheckVariantSafe.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim())),
+                      ...(healthCheckLocalSupportLink ? [healthCheckLocalSupportLink] : []),
+                    ]}
                     expanded
                   />
                 </div>
@@ -1429,39 +1457,6 @@ const DrugBuilder: React.FC = () => {
             <p style={{ margin: 0, fontSize: '0.9rem', color: '#4c6272' }}>
               Includes {selectedScreeningTemplate.nhsLinks.length} NHS.UK resource link{selectedScreeningTemplate.nhsLinks.length === 1 ? '' : 's'}.
             </p>
-          </div>
-          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-            <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
-            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-              <input
-                type="text"
-                value={localSupportName}
-                onChange={(e) => setLocalSupportName(e.target.value)}
-                placeholder="Service name (e.g. Practice care team)"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-              <input
-                type="text"
-                value={localSupportPhone}
-                onChange={(e) => setLocalSupportPhone(e.target.value)}
-                placeholder="Phone number"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-              <input
-                type="email"
-                value={localSupportEmail}
-                onChange={(e) => setLocalSupportEmail(e.target.value)}
-                placeholder="Email address"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-              <input
-                type="url"
-                value={localSupportWebsite}
-                onChange={(e) => setLocalSupportWebsite(e.target.value)}
-                placeholder="Website URL"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-              />
-            </div>
           </div>
           <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
             <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
