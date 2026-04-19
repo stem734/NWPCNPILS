@@ -304,19 +304,25 @@ const DrugBuilder: React.FC = () => {
   };
 
   const selectedHealthCheckDomainConfig = PREVIEW_DOMAIN_CONFIGS[selectedHealthCheckDomain];
+  const selectedHealthCheckDomainCodes = Object.keys(selectedHealthCheckDomainConfig.metricByCode);
+  const resolvedSelectedHealthCheckVariantCode = selectedHealthCheckDomainCodes.includes(selectedHealthCheckVariantCode)
+    ? selectedHealthCheckVariantCode
+    : (selectedHealthCheckDomainCodes[0] || '');
+  const defaultHealthCheckConfigs = createDefaultHealthCheckBuilderState();
   const selectedHealthCheckVariant =
-    healthCheckBuilderConfigs[selectedHealthCheckDomain]?.[selectedHealthCheckVariantCode] ||
-    createDefaultHealthCheckBuilderState()[selectedHealthCheckDomain][selectedHealthCheckVariantCode];
+    healthCheckBuilderConfigs[selectedHealthCheckDomain]?.[resolvedSelectedHealthCheckVariantCode] ||
+    defaultHealthCheckConfigs[selectedHealthCheckDomain][resolvedSelectedHealthCheckVariantCode];
   const selectedHealthCheckMetric =
-    selectedHealthCheckDomainConfig.metricByCode[selectedHealthCheckVariantCode] || selectedHealthCheckDomainConfig.defaultMetric;
+    selectedHealthCheckDomainConfig.metricByCode[resolvedSelectedHealthCheckVariantCode] || selectedHealthCheckDomainConfig.defaultMetric;
 
   const updateHealthCheckVariant = (domainId: ClinicalDomainId, resultCode: string, patch: Partial<HealthCheckBuilderVariant>) => {
+    const fallbackVariant = defaultHealthCheckConfigs[domainId][resultCode];
     setHealthCheckBuilderConfigs((current) => ({
       ...current,
       [domainId]: {
         ...current[domainId],
         [resultCode]: {
-          ...current[domainId][resultCode],
+          ...(current[domainId]?.[resultCode] || fallbackVariant),
           ...patch,
         },
       },
@@ -339,11 +345,11 @@ const DrugBuilder: React.FC = () => {
       ...existing,
       [field]: value,
     };
-    updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, { links });
+    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { links });
   };
 
   const addHealthCheckLink = () => {
-    updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, {
+    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
       links: [
         ...selectedHealthCheckVariant.links,
         {
@@ -361,7 +367,7 @@ const DrugBuilder: React.FC = () => {
   };
 
   const removeHealthCheckLink = (index: number) => {
-    updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, {
+    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
       links: selectedHealthCheckVariant.links.filter((_, linkIndex) => linkIndex !== index),
     });
   };
@@ -1077,7 +1083,11 @@ const DrugBuilder: React.FC = () => {
                       <button
                         key={domainId}
                         type="button"
-                        onClick={() => setSelectedHealthCheckDomain(domainId)}
+                        onClick={() => {
+                          const nextCodes = Object.keys(PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode);
+                          setSelectedHealthCheckDomain(domainId);
+                          setSelectedHealthCheckVariantCode(nextCodes[0] || '');
+                        }}
                         style={{
                           textAlign: 'left',
                           padding: '0.75rem 0.85rem',
@@ -1088,7 +1098,7 @@ const DrugBuilder: React.FC = () => {
                           color: '#1d2a33',
                         }}
                       >
-                        <div style={{ fontWeight: 700 }}>{HEALTH_CHECK_CARD_LABELS[domainId as HealthCheckCodeFamily] || selectedHealthCheckDomainConfig.heading}</div>
+                        <div style={{ fontWeight: 700 }}>{HEALTH_CHECK_CARD_LABELS[domainId as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[domainId].heading}</div>
                         <div style={{ fontSize: '0.82rem', color: '#4c6272', marginTop: '0.2rem' }}>
                           {Object.keys(PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode).length} result type{Object.keys(PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode).length === 1 ? '' : 's'}
                         </div>
@@ -1108,8 +1118,8 @@ const DrugBuilder: React.FC = () => {
                           textAlign: 'left',
                           padding: '0.75rem 0.85rem',
                           borderRadius: '8px',
-                          border: selectedHealthCheckVariantCode === resultCode ? '2px solid #005eb8' : '1px solid #d8dde0',
-                          background: selectedHealthCheckVariantCode === resultCode ? '#eef7ff' : '#ffffff',
+                          border: resolvedSelectedHealthCheckVariantCode === resultCode ? '2px solid #005eb8' : '1px solid #d8dde0',
+                          background: resolvedSelectedHealthCheckVariantCode === resultCode ? '#eef7ff' : '#ffffff',
                           cursor: 'pointer',
                           color: '#1d2a33',
                         }}
@@ -1146,7 +1156,7 @@ const DrugBuilder: React.FC = () => {
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>What does this result mean?</label>
                       <textarea
                         value={selectedHealthCheckVariant.resultsMessage}
-                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, { resultsMessage: e.target.value })}
+                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { resultsMessage: e.target.value })}
                         rows={4}
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
                       />
@@ -1156,7 +1166,7 @@ const DrugBuilder: React.FC = () => {
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Important message</label>
                       <textarea
                         value={selectedHealthCheckVariant.importantText}
-                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, { importantText: e.target.value })}
+                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { importantText: e.target.value })}
                         rows={3}
                         placeholder="Optional urgent or safeguarding guidance shown in the Important box."
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
@@ -1169,7 +1179,7 @@ const DrugBuilder: React.FC = () => {
                         <input
                           type="text"
                           value={selectedHealthCheckVariant.whatIsTitle}
-                          onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, { whatIsTitle: e.target.value })}
+                          onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { whatIsTitle: e.target.value })}
                           style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                         />
                       </div>
@@ -1178,7 +1188,7 @@ const DrugBuilder: React.FC = () => {
                         <input
                           type="text"
                           value={selectedHealthCheckVariant.nextStepsTitle}
-                          onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, { nextStepsTitle: e.target.value })}
+                          onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { nextStepsTitle: e.target.value })}
                           style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                         />
                       </div>
@@ -1188,7 +1198,7 @@ const DrugBuilder: React.FC = () => {
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>What is this? body</label>
                       <textarea
                         value={selectedHealthCheckVariant.whatIsText}
-                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, { whatIsText: e.target.value })}
+                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { whatIsText: e.target.value })}
                         rows={4}
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
                       />
@@ -1198,7 +1208,7 @@ const DrugBuilder: React.FC = () => {
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Next steps guidance</label>
                       <textarea
                         value={selectedHealthCheckVariant.nextStepsText}
-                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, selectedHealthCheckVariantCode, { nextStepsText: e.target.value })}
+                        onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { nextStepsText: e.target.value })}
                         rows={4}
                         style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
                       />
