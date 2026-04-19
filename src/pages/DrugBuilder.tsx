@@ -601,7 +601,7 @@ const DrugBuilder: React.FC = () => {
         <div className="card" style={{ textAlign: 'center' }}>
           <CheckCircle size={64} color="#007f3b" style={{ marginBottom: '1rem' }} />
           <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>
-            Output {savedAction === 'created' ? 'Created' : 'Updated'}
+            Card {savedAction === 'created' ? 'Created' : 'Updated'}
           </h1>
           <p style={{ color: '#4c6272', marginBottom: '1.5rem' }}>
             <strong>{title}</strong> has been {savedAction === 'created' ? 'created' : 'updated'} successfully.
@@ -611,7 +611,7 @@ const DrugBuilder: React.FC = () => {
             padding: '1.5rem', background: '#eef7ff', borderRadius: '12px',
             border: '2px solid #005eb8', marginBottom: '1.5rem',
           }}>
-            <div style={{ fontSize: '0.85rem', color: '#4c6272', marginBottom: '0.5rem' }}>Medication Output Code</div>
+            <div style={{ fontSize: '0.85rem', color: '#4c6272', marginBottom: '0.5rem' }}>Medication Card Code</div>
             <div style={{
               fontSize: '3rem', fontWeight: 800, color: '#005eb8',
               fontFamily: 'monospace', letterSpacing: '0.1em',
@@ -675,7 +675,7 @@ const DrugBuilder: React.FC = () => {
           <ArrowLeft size={24} />
         </button>
         <div>
-          <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Output Builder</h1>
+          <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Card Builder</h1>
           <p style={{ margin: '0.25rem 0 0' }}>
             Manage the patient-facing outputs delivered through MyMedInfo, including medication information and health-check journeys.
           </p>
@@ -714,7 +714,7 @@ const DrugBuilder: React.FC = () => {
       <>
       <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-          1. {editingCode ? `Editing Medication Output ${editingCode}` : 'Medication Output'}
+          1. {editingCode ? `Editing Medication Card ${editingCode}` : 'Medication Card'}
         </h2>
         <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
           Create or update medication outputs here. Health checks and other patient pathways use the same platform, but their content is currently configured through dedicated route parameters and views.
@@ -762,7 +762,7 @@ const DrugBuilder: React.FC = () => {
       {hasContent && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-            2. {editingCode ? `Edit Medication Output ${editingCode}` : 'Edit Medication Content'}
+            2. {editingCode ? `Edit Medication Card ${editingCode}` : 'Edit Medication Card Content'}
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1075,7 +1075,7 @@ const DrugBuilder: React.FC = () => {
       {selectedOutputType === 'healthcheck' && (
         <>
           <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-            <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>NHS Health Check Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>NHS Health Check Card Builder</h2>
             <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
               Build each health check card variation separately. Every result type can carry its own explanation, follow-up guidance, and a mix of national NHS links and local support links.
             </p>
@@ -1401,7 +1401,7 @@ const DrugBuilder: React.FC = () => {
 
       {selectedOutputType === 'screening' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Screening Output Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Screening Card Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
             Build a reusable generic screening template and generate a patient preview link.
           </p>
@@ -1444,7 +1444,7 @@ const DrugBuilder: React.FC = () => {
 
       {selectedOutputType === 'immunisation' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Immunisation Output Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Immunisation Card Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
             Build reusable immunisation templates, then apply local support details for practice-specific deployment links.
           </p>
@@ -1541,7 +1541,7 @@ const DrugBuilder: React.FC = () => {
 
       {selectedOutputType === 'ltc' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Long Term Conditions Builder</h2>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Long Term Conditions Card Builder</h2>
           <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
             Create reusable long-term condition cards. Starter templates are preloaded for Asthma and Diabetes.
           </p>

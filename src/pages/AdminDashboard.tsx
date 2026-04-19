@@ -594,8 +594,8 @@ const AdminDashboard: React.FC = () => {
           <p>Manage practices, users, administrators, and patient-facing outputs from one place.</p>
         </div>
         <div className="dashboard-actions">
-          <button onClick={() => navigate(resolvePath('/admin/drug-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-            <FlaskConical size={16} /> Output Builder
+          <button onClick={() => navigate(resolvePath('/admin/card-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+            <FlaskConical size={16} /> Card Builder
           </button>
           <button onClick={loadDashboardData} className="action-button" style={{ backgroundColor: '#4c6272' }}>
             <RefreshCw size={16} /> Refresh

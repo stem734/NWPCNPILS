@@ -602,6 +602,7 @@ const SubdomainRoutes: React.FC = () => {
         <Route path="/" element={<AdminLogin />} />
         <Route path="/dashboard" element={<AdminDashboard />} />
         <Route path="/drug-builder" element={<DrugBuilder />} />
+        <Route path="/card-builder" element={<DrugBuilder />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     );
@@ -629,6 +630,7 @@ const SubdomainRoutes: React.FC = () => {
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/signup" element={<PracticeSignup />} />
       <Route path="/admin/drug-builder" element={<DrugBuilder />} />
+      <Route path="/admin/card-builder" element={<DrugBuilder />} />
       <Route path="/practice" element={<PracticeLogin />} />
       <Route path="/practice/dashboard" element={<PracticeDashboard />} />
       <Route path="/reset-password" element={<ResetPassword />} />

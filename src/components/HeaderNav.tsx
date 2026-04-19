@@ -57,11 +57,11 @@ const HeaderNav: React.FC = () => {
             <Settings size={16} /> Dashboard
           </button>
           <button
-            onClick={() => navigate(resolvePath('/admin/drug-builder'))}
-            className={`header-nav-link ${['/admin/drug-builder', '/drug-builder'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
-            title="Go to Output Builder"
+            onClick={() => navigate(resolvePath('/admin/card-builder'))}
+            className={`header-nav-link ${['/admin/drug-builder', '/drug-builder', '/admin/card-builder', '/card-builder'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
+            title="Go to Card Builder"
           >
-            <FlaskConical size={16} /> Output Builder
+            <FlaskConical size={16} /> Card Builder
           </button>
         </>
       )}
