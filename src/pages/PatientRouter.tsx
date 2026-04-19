@@ -10,6 +10,7 @@ const ResourceView = React.lazy(() =>
 const HealthCheckView = React.lazy(() => import('./HealthCheckView'));
 const ScreeningView = React.lazy(() => import('./ScreeningView'));
 const ImmunisationView = React.lazy(() => import('./ImmunisationView'));
+const LongTermConditionView = React.lazy(() => import('./LongTermConditionView'));
 
 /**
  * PatientRouter — detects the content type from URL params
@@ -38,6 +39,8 @@ const PatientRouter: React.FC = () => {
         return <ScreeningView />;
       case CONTENT_TYPES.IMMUNISATION:
         return <ImmunisationView />;
+      case CONTENT_TYPES.LONG_TERM_CONDITION:
+        return <LongTermConditionView />;
       case CONTENT_TYPES.MEDICATION:
       case CONTENT_TYPES.UNKNOWN:
       default:

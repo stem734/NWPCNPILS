@@ -11,14 +11,14 @@ import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalo
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { HEALTH_CHECK_CARD_LABELS, type HealthCheckCodeFamily } from '../healthCheckCodes';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
-import { SCREENING_TEMPLATES, IMMUNISATION_TEMPLATES } from '../patientTemplateCatalog';
+import { SCREENING_TEMPLATES, IMMUNISATION_TEMPLATES, LONG_TERM_CONDITION_TEMPLATES } from '../patientTemplateCatalog';
 
 interface TrendLink {
   title: string;
   url: string;
 }
 
-type OutputBuilderType = 'medication' | 'healthcheck' | 'screening' | 'immunisation';
+type OutputBuilderType = 'medication' | 'healthcheck' | 'screening' | 'immunisation' | 'ltc';
 
 type HealthCheckBuilderLink = {
   title: string;
@@ -59,6 +59,11 @@ const SCREENING_OPTIONS = Object.values(SCREENING_TEMPLATES).map((template) => (
 }));
 
 const IMMUNISATION_OPTIONS = Object.values(IMMUNISATION_TEMPLATES).map((template) => ({
+  value: template.id,
+  label: template.label,
+}));
+
+const LONG_TERM_CONDITION_OPTIONS = Object.values(LONG_TERM_CONDITION_TEMPLATES).map((template) => ({
   value: template.id,
   label: template.label,
 }));
@@ -143,6 +148,7 @@ const DrugBuilder: React.FC = () => {
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
   const [screeningType, setScreeningType] = useState('cervical');
   const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
+  const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
   const [localSupportName, setLocalSupportName] = useState('');
   const [localSupportPhone, setLocalSupportPhone] = useState('');
   const [localSupportEmail, setLocalSupportEmail] = useState('');
@@ -322,6 +328,14 @@ const DrugBuilder: React.FC = () => {
     return buildPatientUrl(params);
   }, [builderOrgName, immunisationSelections, localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite]);
 
+  const longTermConditionPreviewUrl = useMemo(() => {
+    const params = new URLSearchParams({ type: 'ltc', ltc: selectedLongTermCondition });
+    if (builderOrgName.trim()) {
+      params.set('org', builderOrgName.trim());
+    }
+    return buildPatientUrl(params);
+  }, [builderOrgName, selectedLongTermCondition]);
+
   const toggleImmunisation = (value: string) => {
     setImmunisationSelections((current) =>
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
@@ -354,6 +368,8 @@ const DrugBuilder: React.FC = () => {
   const selectedImmunisationTemplates = (immunisationSelections.length > 0 ? immunisationSelections : ['flu'])
     .map((value) => IMMUNISATION_TEMPLATES[value])
     .filter((template): template is (typeof IMMUNISATION_TEMPLATES)[keyof typeof IMMUNISATION_TEMPLATES] => Boolean(template));
+  const selectedLongTermConditionTemplate =
+    LONG_TERM_CONDITION_TEMPLATES[selectedLongTermCondition] || LONG_TERM_CONDITION_TEMPLATES.asthma;
   const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
     (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
       ? {
@@ -694,6 +710,7 @@ const DrugBuilder: React.FC = () => {
             ['healthcheck', 'Health Checks'],
             ['screening', 'Screening'],
             ['immunisation', 'Immunisation'],
+            ['ltc', 'Long Term Conditions'],
           ] as Array<[OutputBuilderType, string]>).map(([value, label]) => (
             <button
               key={value}
@@ -1574,6 +1591,68 @@ const DrugBuilder: React.FC = () => {
               <Copy size={16} /> Copy Preview Link
             </button>
             <a href={immunisationPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
+              <ExternalLink size={16} /> Open Preview
+            </a>
+          </div>
+        </div>
+      )}
+
+      {selectedOutputType === 'ltc' && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Long Term Conditions Builder</h2>
+          <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
+            Create reusable long-term condition cards. Starter templates are preloaded for Asthma and Diabetes.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <div style={{ flex: '1 1 240px' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Practice name</label>
+              <input
+                type="text"
+                value={builderOrgName}
+                onChange={(e) => setBuilderOrgName(e.target.value)}
+                placeholder="e.g. Nottingham West GP Practices"
+                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 240px' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Condition</label>
+              <select
+                value={selectedLongTermCondition}
+                onChange={(e) => setSelectedLongTermCondition(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff' }}
+              >
+                {LONG_TERM_CONDITION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#005eb8' }}>Default template fields</div>
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{selectedLongTermConditionTemplate.label}</div>
+            <p style={{ margin: '0 0 0.55rem', color: '#4c6272' }}>{selectedLongTermConditionTemplate.headline}</p>
+            <p style={{ margin: '0 0 0.55rem', color: '#4c6272', fontSize: '0.92rem' }}>{selectedLongTermConditionTemplate.explanation}</p>
+            <ul style={{ margin: '0 0 0.55rem 1rem', color: '#4c6272', padding: 0 }}>
+              {selectedLongTermConditionTemplate.guidance.slice(0, 3).map((item, idx) => (
+                <li key={idx} style={{ marginBottom: '0.2rem' }}>{item}</li>
+              ))}
+            </ul>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#4c6272' }}>
+              Includes {selectedLongTermConditionTemplate.nhsLinks.length} default resource link{selectedLongTermConditionTemplate.nhsLinks.length === 1 ? '' : 's'}.
+            </p>
+          </div>
+
+          <div style={{ padding: '1rem', background: '#f8fbfd', borderRadius: '10px', border: '1px solid #d8dde0', marginBottom: '1rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#005eb8' }}>Preview Link</div>
+            <code style={{ display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#1d2a33' }}>{longTermConditionPreviewUrl}</code>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button onClick={() => copyText(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+              <Copy size={16} /> Copy Preview Link
+            </button>
+            <a href={longTermConditionPreviewUrl} target="_blank" rel="noreferrer" className="action-button" style={{ backgroundColor: '#007f3b', textDecoration: 'none' }}>
               <ExternalLink size={16} /> Open Preview
             </a>
           </div>

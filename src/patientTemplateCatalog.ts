@@ -22,6 +22,16 @@ export type ImmunisationTemplate = {
   nhsLinks: PatientResourceLink[];
 };
 
+export type LongTermConditionTemplate = {
+  id: string;
+  label: string;
+  headline: string;
+  explanation: string;
+  guidance: string[];
+  importantMessage?: string;
+  nhsLinks: PatientResourceLink[];
+};
+
 export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
   cervical: {
     id: 'cervical',
@@ -281,3 +291,70 @@ export const IMMUNISATION_TEMPLATES: Record<string, ImmunisationTemplate> = {
   },
 };
 
+export const LONG_TERM_CONDITION_TEMPLATES: Record<string, LongTermConditionTemplate> = {
+  asthma: {
+    id: 'asthma',
+    label: 'Asthma',
+    headline: 'Use your written asthma action plan every day and know what to do if symptoms worsen.',
+    explanation:
+      'Based on the Adult Asthma Action Plan leaflet, asthma control depends on taking preventer treatment daily, watching for worsening signs early, and acting fast in an attack.',
+    guidance: [
+      'Book an asthma review at least once a year, and sooner after A&E attendance or oral steroids.',
+      'Bring your action plan, inhalers, spacers, peak flow meter, and questions to each review.',
+      'If symptoms worsen: restart regular preventer use, use reliever as advised, and seek same-day review if not improving.',
+      'In an asthma attack: sit up, stay calm, use 1 puff of blue reliever every 30–60 seconds up to 10 puffs, and call 999 if not improving.',
+      'After an attack: contact GP/111 the same day, or arrange review within 48 hours after hospital discharge.',
+    ],
+    importantMessage:
+      'Urgent: if you need your reliever more often than every 4 hours, take emergency action now. Call 999 if symptoms are severe or not improving.',
+    nhsLinks: [
+      {
+        title: 'NHS asthma',
+        url: 'https://www.nhs.uk/conditions/asthma/',
+        description: 'Symptoms, treatment, inhalers, and what to do when asthma gets worse.',
+      },
+      {
+        title: 'NHS asthma attack advice',
+        url: 'https://www.nhs.uk/conditions/asthma/asthma-attack/',
+        description: 'Emergency signs, immediate steps, and when to call 999.',
+      },
+      {
+        title: 'Adult Asthma Action Plan leaflet',
+        url: 'https://cdn.shopify.com/s/files/1/0221/4446/files/Adult_Asthma_Plan_A4_trifold_DIGITAL.pdf?v=1707323842',
+        description: 'Patient action plan template with daily routine, worsening symptoms, and attack steps.',
+      },
+    ],
+  },
+  diabetes: {
+    id: 'diabetes',
+    label: 'Diabetes',
+    headline: 'Diabetes reviews help reduce long-term complications and keep you well.',
+    explanation:
+      'Regular monitoring of HbA1c, blood pressure, cholesterol, kidneys, feet, and eyes helps detect problems early and supports safer self-management.',
+    guidance: [
+      'Attend annual diabetes review and make sure all routine checks are completed.',
+      'Take medication as prescribed and discuss side effects promptly.',
+      'Check glucose as advised and look out for signs of high or low blood sugar.',
+      'Seek urgent advice if you are unwell, vomiting, dehydrated, or unable to keep fluids down.',
+    ],
+    importantMessage:
+      'If you feel very unwell, drowsy, confused, or have persistent vomiting, seek urgent medical advice immediately.',
+    nhsLinks: [
+      {
+        title: 'NHS type 2 diabetes',
+        url: 'https://www.nhs.uk/conditions/type-2-diabetes/',
+        description: 'Managing blood sugar, treatment options, and lifestyle support.',
+      },
+      {
+        title: 'NHS type 1 diabetes',
+        url: 'https://www.nhs.uk/conditions/type-1-diabetes/',
+        description: 'Insulin treatment, glucose checks, and day-to-day management.',
+      },
+      {
+        title: 'NHS diabetic eye screening',
+        url: 'https://www.nhs.uk/conditions/diabetic-eye-screening/',
+        description: 'Why annual eye screening matters and what to expect.',
+      },
+    ],
+  },
+};

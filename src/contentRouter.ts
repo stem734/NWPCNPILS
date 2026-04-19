@@ -18,6 +18,7 @@ export const CONTENT_TYPES = {
   HEALTH_CHECK:   'healthcheck',
   SCREENING:      'screening',
   IMMUNISATION:   'imms',
+  LONG_TERM_CONDITION: 'ltc',
   PATIENT_LETTER: 'letter',
   UNKNOWN:        'unknown',
 } as const;
@@ -30,6 +31,7 @@ const PARAM_HINTS: Record<ContentType, string[]> = {
   [CONTENT_TYPES.HEALTH_CHECK]:   ['s1', 's1csv', 'payload', 'hc', 'bp', 'bmi', 'cvd', 'hba1c'],
   [CONTENT_TYPES.SCREENING]:      ['screen', 'screening'],
   [CONTENT_TYPES.IMMUNISATION]:    ['imms', 'vaccine', 'jab'],
+  [CONTENT_TYPES.LONG_TERM_CONDITION]: ['ltc', 'condition'],
   [CONTENT_TYPES.PATIENT_LETTER]: ['letter', 'comms'],
   [CONTENT_TYPES.UNKNOWN]:        [],
 };
@@ -86,6 +88,7 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   [CONTENT_TYPES.HEALTH_CHECK]:   'NHS Health Check Results',
   [CONTENT_TYPES.SCREENING]:      'Screening Information',
   [CONTENT_TYPES.IMMUNISATION]:    'Immunisation Information',
+  [CONTENT_TYPES.LONG_TERM_CONDITION]: 'Long Term Condition Information',
   [CONTENT_TYPES.PATIENT_LETTER]: 'Patient Letter',
   [CONTENT_TYPES.UNKNOWN]:        'Patient Information',
 };
