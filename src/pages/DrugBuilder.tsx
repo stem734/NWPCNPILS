@@ -1464,25 +1464,8 @@ const DrugBuilder: React.FC = () => {
                 {builderNotice.message}
               </div>
             )}
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              <button onClick={() => setHealthCheckEditorOpen(true)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                <Edit2 size={16} /> Edit
-              </button>
-              <button onClick={() => openPreview(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-                <Eye size={16} /> Preview
-              </button>
-              <button onClick={() => saveHealthCheckTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                <Save size={16} /> Save Template
-              </button>
-              <button onClick={resetHealthCheckTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                Reset
-              </button>
-              <button onClick={() => copyText(healthCheckPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-                <Copy size={16} /> Copy Link
-              </button>
-            </div>
 
-            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>3. Health Check Card Catalogue</h3>
+            <h3 style={{ marginBottom: '1rem' }}>3. Health Check Card Catalogue</h3>
             <div className="dashboard-list">
               {healthCheckCatalogueRows.map((row) => (
                 <div key={row.id} className="dashboard-list-card">
@@ -1839,6 +1822,25 @@ const DrugBuilder: React.FC = () => {
                   >
                     Close
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      saveHealthCheckTemplate(selectedHealthCheckDomain);
+                      setHealthCheckEditorOpen(false);
+                    }}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#007f3b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.95rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Save Changes
+                  </button>
                 </div>
               </div>
             </>
@@ -1855,22 +1857,8 @@ const DrugBuilder: React.FC = () => {
               {builderNotice.message}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <button onClick={() => openPreview(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Eye size={16} /> Preview
-            </button>
-            <button onClick={() => saveScreeningTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-              <Save size={16} /> Save Template
-            </button>
-            <button onClick={resetScreeningTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-              Reset
-            </button>
-            <button onClick={() => copyText(screeningPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Copy size={16} /> Copy Link
-            </button>
-          </div>
 
-          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
+          <h3 style={{ marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
           <div className="dashboard-list">
               {Object.values(screeningTemplates).map((template) => {
                 const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: template.id }));
@@ -1927,22 +1915,8 @@ const DrugBuilder: React.FC = () => {
               {builderNotice.message}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <button onClick={() => openPreview(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Eye size={16} /> Preview
-            </button>
-            <button onClick={() => saveImmunisationTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-              <Save size={16} /> Save Template
-            </button>
-            <button onClick={resetImmunisationTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-              Reset
-            </button>
-            <button onClick={() => copyText(immunisationPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Copy size={16} /> Copy Link
-            </button>
-          </div>
 
-          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Immunisation Card Catalogue</h3>
+          <h3 style={{ marginBottom: '1rem' }}>2. Immunisation Card Catalogue</h3>
           <div className="dashboard-list">
               {Object.values(immunisationTemplates).map((template) => {
                 const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'imms', vaccine: template.id }));
@@ -2004,22 +1978,7 @@ const DrugBuilder: React.FC = () => {
               {builderNotice.message}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <button onClick={() => openPreview(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Eye size={16} /> Preview
-            </button>
-            <button onClick={() => saveLtcTemplate()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-              <Save size={16} /> Save Template
-            </button>
-            <button onClick={resetLtcTemplate} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-              Reset
-            </button>
-            <button onClick={() => copyText(longTermConditionPreviewUrl)} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Copy size={16} /> Copy Link
-            </button>
-          </div>
-
-          <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>2. Long Term Condition Card Catalogue</h3>
+          <h3 style={{ marginBottom: '1rem' }}>2. Long Term Condition Card Catalogue</h3>
           <div className="dashboard-list">
               {Object.values(longTermConditionTemplates).map((template) => {
                 const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'ltc', ltc: template.id }));
