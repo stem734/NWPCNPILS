@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Edit2, Mail, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '../supabase';
 import ConfirmDialog from './ConfirmDialog';
@@ -69,6 +69,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     isDangerous: boolean;
     onConfirm: () => void;
   } | null>(null);
+  const editModalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     void loadUsers();
@@ -79,6 +80,67 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       void loadUsers();
     }
   }, [practices.length]);
+
+  useEffect(() => {
+    if (!editingUser) return;
+
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const modalNode = editModalRef.current;
+    const focusableSelector = [
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+
+    const focusFirstElement = () => {
+      const focusable = modalNode?.querySelectorAll<HTMLElement>(focusableSelector);
+      focusable?.[0]?.focus();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        resetForm();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !modalNode) {
+        return;
+      }
+
+      const focusable = Array.from(modalNode.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+        (element) => !element.hasAttribute('disabled') && element.tabIndex !== -1,
+      );
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const frame = window.requestAnimationFrame(focusFirstElement);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', handleKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [editingUser]);
 
   const activePractices = useMemo(
     () => [...practices].sort((left, right) => left.name.localeCompare(right.name)),
@@ -315,6 +377,80 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
     });
   };
 
+  const userForm = (
+    <form onSubmit={editingUser ? handleUpdate : handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="dashboard-form-grid">
+        <div className="dashboard-field">
+          <label>Name</label>
+          <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+        </div>
+        <div className="dashboard-field">
+          <label>Email *</label>
+          <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required />
+        </div>
+      </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+        <input
+          type="checkbox"
+          checked={form.isActive}
+          onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
+          style={{ width: '18px', height: '18px' }}
+        />
+        User account active
+      </label>
+
+      {editingUser?.global_role && (
+        <div className="dashboard-banner dashboard-banner--info">
+          This user also has global administrator access as <strong>{editingUser.global_role}</strong>. Any practice changes here will keep that global role in place.
+        </div>
+      )}
+
+      <div className="dashboard-panel" style={{ background: '#f8fafb' }}>
+        <h3 className="dashboard-panel-title" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Assigned Practices</h3>
+        <div style={{ display: 'grid', gap: '0.5rem' }}>
+          {activePractices.map((practice) => (
+            <label key={practice.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, fontSize: '0.9rem' }}>
+              <input
+                type="checkbox"
+                checked={form.practiceIds.includes(practice.id)}
+                onChange={() => togglePracticeId(practice.id)}
+                style={{ width: '18px', height: '18px' }}
+              />
+              <span>{practice.name}{practice.is_active ? '' : ' (Inactive)'}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="dashboard-field" style={{ maxWidth: '420px' }}>
+        <label>Default Practice</label>
+        <select
+          value={form.defaultPracticeId}
+          onChange={(event) => setForm((current) => ({ ...current, defaultPracticeId: event.target.value }))}
+          disabled={form.practiceIds.length === 0}
+        >
+          {form.practiceIds.map((practiceId) => {
+            const practice = activePractices.find((item) => item.id === practiceId);
+            if (!practice) return null;
+
+            return (
+              <option key={practice.id} value={practice.id}>
+                {practice.name}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+
+      <div className="dashboard-inline-actions" style={{ alignSelf: 'flex-start' }}>
+        <button type="submit" className="action-button" style={{ backgroundColor: '#007f3b' }}>
+          {editingUser ? 'Save Changes' : 'Create User'}
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <>
       {confirmDialog && (
@@ -345,10 +481,10 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
         </div>
       )}
 
-      {(showAddForm || editingUser) && (
+      {showAddForm && (
         <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
           <div className="dashboard-panel-header">
-            <h2 className="dashboard-panel-title">{editingUser ? 'Edit User Practice Access' : 'Add User To Practices'}</h2>
+            <h2 className="dashboard-panel-title">Add User To Practices</h2>
             <button onClick={resetForm} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
               Cancel
             </button>
@@ -359,78 +495,55 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
               {error}
             </div>
           )}
+          {userForm}
+        </div>
+      )}
 
-          <form onSubmit={editingUser ? handleUpdate : handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div className="dashboard-form-grid">
-              <div className="dashboard-field">
-                <label>Name</label>
-                <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-              </div>
-              <div className="dashboard-field">
-                <label>Email *</label>
-                <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required />
-              </div>
+      {editingUser && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-user-practice-access-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1200,
+            background: 'rgba(15, 32, 45, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+          }}
+          onClick={resetForm}
+        >
+          <div
+            ref={editModalRef}
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: 'min(860px, 100%)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: '#ffffff',
+              borderRadius: '16px',
+              boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
+              padding: '1.5rem',
+            }}
+          >
+            <div className="dashboard-panel-header">
+              <h2 id="edit-user-practice-access-title" className="dashboard-panel-title">Edit User Practice Access</h2>
+              <button onClick={resetForm} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
+                Cancel
+              </button>
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
-                style={{ width: '18px', height: '18px' }}
-              />
-              User account active
-            </label>
-
-            {editingUser?.global_role && (
-              <div className="dashboard-banner dashboard-banner--info">
-                This user also has global administrator access as <strong>{editingUser.global_role}</strong>. Any practice changes here will keep that global role in place.
+            {error && (
+              <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
+                {error}
               </div>
             )}
 
-            <div className="dashboard-panel" style={{ background: '#f8fafb' }}>
-              <h3 className="dashboard-panel-title" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Assigned Practices</h3>
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                {activePractices.map((practice) => (
-                  <label key={practice.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, fontSize: '0.9rem' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.practiceIds.includes(practice.id)}
-                      onChange={() => togglePracticeId(practice.id)}
-                      style={{ width: '18px', height: '18px' }}
-                    />
-                    <span>{practice.name}{practice.is_active ? '' : ' (Inactive)'}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="dashboard-field" style={{ maxWidth: '420px' }}>
-              <label>Default Practice</label>
-              <select
-                value={form.defaultPracticeId}
-                onChange={(event) => setForm((current) => ({ ...current, defaultPracticeId: event.target.value }))}
-                disabled={form.practiceIds.length === 0}
-              >
-                {form.practiceIds.map((practiceId) => {
-                  const practice = activePractices.find((item) => item.id === practiceId);
-                  if (!practice) return null;
-
-                  return (
-                    <option key={practice.id} value={practice.id}>
-                      {practice.name}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div className="dashboard-inline-actions" style={{ alignSelf: 'flex-start' }}>
-              <button type="submit" className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                {editingUser ? 'Save Changes' : 'Create User'}
-              </button>
-            </div>
-          </form>
+            {userForm}
+          </div>
         </div>
       )}
 
