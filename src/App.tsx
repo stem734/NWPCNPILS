@@ -17,8 +17,12 @@ import LegalPage from './pages/LegalPage';
 import { useMedicationCatalog } from './medicationCatalog';
 import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
-import { getSubdomain, adminUrl, practiceUrl } from './subdomainUtils';
+import { getSubdomain } from './subdomainUtils';
 import { getDemoNoticeText } from './demoHelpers';
+
+declare const __APP_COMMIT_COUNT__: string;
+declare const __APP_COMMIT_HASH__: string;
+
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   NEW: 0,
@@ -642,6 +646,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
+  const versionLabel = `0.0.1+${__APP_COMMIT_COUNT__}`;
 
   // Detect implicit-flow Supabase auth recovery tokens in the URL hash
   // and redirect to /reset-password. The PKCE ?code= flow is NOT handled
@@ -674,20 +679,19 @@ const AppContent: React.FC = () => {
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
       <main id="main-content">
+        <div className="main-guidance-banner" role="note" aria-label="Guidance">
+          <p>This information is for guidance only. Always follow the specific advice from your GP or clinical team.</p>
+        </div>
         <SubdomainRoutes />
       </main>
 
       <footer className="footer">
-        <p>© {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo</p>
-        <p>
-          This information is for guidance only. Always follow the specific advice from your GP or clinical team.
+        <p className="footer-copyright">
+          © {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo
         </p>
-        <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.5 }}>
-          <a href="/legal" style={{ color: 'inherit', textDecoration: 'none' }}>Legal & Privacy</a>
-          {' · '}
-          <a href={adminUrl()} style={{ color: 'inherit', textDecoration: 'none' }}>Admin</a>
-          {' · '}
-          <a href={practiceUrl()} style={{ color: 'inherit', textDecoration: 'none' }}>Practice</a>
+        <p className="footer-version" title={`Commit ${__APP_COMMIT_HASH__}`}>
+          <span className="footer-beta">Beta</span>
+          <span>Version {versionLabel}</span>
         </p>
       </footer>
 

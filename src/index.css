@@ -577,10 +577,48 @@ p {
   border-top: 1px solid var(--nhs-border);
 }
 
-.footer p:last-child {
+.main-guidance-banner {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #005eb8;
+  border-radius: 10px;
+  background: #eef7ff;
+}
+
+.main-guidance-banner p {
+  margin: 0;
+  font-size: 0.95rem;
   font-weight: 500;
-  color: var(--nhs-text);
-  margin-top: 0.5rem;
+  color: var(--nhs-blue);
+}
+
+.footer-copyright {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--nhs-secondary-text);
+  margin-bottom: 0.4rem;
+}
+
+.footer-version {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--nhs-secondary-text);
+}
+
+.footer-beta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: #005eb8;
+  color: #ffffff;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .action-button {
