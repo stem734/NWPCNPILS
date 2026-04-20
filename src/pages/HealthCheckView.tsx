@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Activity, ShieldCheck, AlertTriangle, CircleCheck, CircleAlert, CalendarClock, ChevronRight, Printer } from 'lucide-react';
 import { parseHealthCheckParams } from '../healthCheckParser';
 import { METRIC_ORDER, METRIC_DEFINITIONS, type ParsedMetric } from '../healthCheckData';
+import { PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
 import HealthCheckCard from '../components/HealthCheckCard';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
@@ -62,7 +63,26 @@ const getDisplayMetrics = (metrics: ParsedMetric[]): ParsedMetric[] =>
     };
   });
 
-const metricIdToTemplateId = (metricId: string) => (metricId === 'ldl' ? 'ldl' : metricId);
+const metricIdToTemplateId = (metricId: string) => metricId.split(':')[0] || metricId;
+
+const buildPreviewMetrics = (domainId: ClinicalDomainId): ParsedMetric[] => {
+  const domainConfig = PREVIEW_DOMAIN_CONFIGS[domainId];
+  return Object.entries(domainConfig.metricByCode).map(([resultCode, metric]) => ({
+    id: `${domainId}:${resultCode}`,
+    label: metric.label,
+    value: metric.value,
+    unit: metric.unit,
+    whatTitle: domainConfig.whatIsTitle,
+    what: domainConfig.whatIsText,
+    resultCode,
+    status: metric.badgeClass === 'ok' ? 'ok' : metric.badgeClass === 'amber' ? 'amber' : 'red',
+    badge: metric.badge,
+    badgeClass: metric.badgeClass,
+    pathway: metric.pathway,
+    meaning: metric.pathway,
+    helpLinks: [],
+  }));
+};
 
 // ─── Main HealthCheckView ─────────────────────────────────────────────────────
 
@@ -70,12 +90,18 @@ const HealthCheckView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
   const previewOnly = searchParams.get('previewOnly') === '1';
+  const previewDomain = (searchParams.get('previewDomain') || '').trim() as ClinicalDomainId | '';
   const localSupportName = searchParams.get('localName') || `${org || 'Your practice'} support team`;
   const localSupportPhone = searchParams.get('localPhone') || '';
   const localSupportEmail = searchParams.get('localEmail') || '';
   const localSupportWebsite = searchParams.get('localWebsite') || '';
 
-  const metrics = useMemo(() => parseHealthCheckParams(searchParams), [searchParams]);
+  const metrics = useMemo(() => {
+    if (previewOnly && previewDomain && PREVIEW_DOMAIN_CONFIGS[previewDomain]) {
+      return buildPreviewMetrics(previewDomain);
+    }
+    return parseHealthCheckParams(searchParams);
+  }, [previewDomain, previewOnly, searchParams]);
   const hasData = metrics.length > 0;
   const [templateOverrides, setTemplateOverrides] = useState<Record<string, HealthCheckTemplatePayload>>({});
 
@@ -98,7 +124,7 @@ const HealthCheckView: React.FC = () => {
   }, [metrics]);
 
   const displayMetrics = useMemo(() => {
-    const baseMetrics = previewOnly ? metrics : getDisplayMetrics(metrics);
+    const baseMetrics = previewOnly && previewDomain ? metrics : getDisplayMetrics(metrics);
     return baseMetrics.map((metric) => {
       const templatePayload = templateOverrides[metricIdToTemplateId(metric.id)];
       const resultCode = (metric.resultCode || '').trim();
@@ -114,7 +140,7 @@ const HealthCheckView: React.FC = () => {
           .map((link) => ({ title: link.title, url: link.website || '' })),
       };
     });
-  }, [metrics, previewOnly, templateOverrides]);
+  }, [metrics, previewDomain, previewOnly, templateOverrides]);
 
   const groupedMetrics = useMemo(() => {
     const withIndex = displayMetrics.map((metric, index) => ({ metric, index }));

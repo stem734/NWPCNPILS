@@ -39,17 +39,6 @@ interface TrendLink {
 
 type OutputBuilderType = 'medication' | 'healthcheck' | 'screening' | 'immunisation' | 'ltc';
 
-const HEALTH_CHECK_PARAM_KEYS: Record<HealthCheckCodeFamily, string> = {
-  bp: 'bps',
-  bmi: 'bmis',
-  cvd: 'cvds',
-  chol: 'ldls',
-  hba1c: 'hba1cs',
-  act: 'acts',
-  alc: 'alcs',
-  smk: 'smks',
-};
-
 const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>> =>
   CLINICAL_DOMAIN_IDS.reduce((domainAcc, domainId) => {
     const domainConfig = PREVIEW_DOMAIN_CONFIGS[domainId];
@@ -377,16 +366,24 @@ const DrugBuilder: React.FC = () => {
     return buildPatientUrl(params);
   }, [selectedLongTermCondition]);
 
+  const buildHealthCheckFamilyPreviewUrl = (domainId: ClinicalDomainId) => {
+    const params = new URLSearchParams({ type: 'healthcheck', previewOnly: '1', previewDomain: domainId });
+    if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
+    if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
+    if (healthCheckLocalSupportEmail.trim()) params.set('localEmail', healthCheckLocalSupportEmail.trim());
+    if (healthCheckLocalSupportWebsite.trim()) params.set('localWebsite', healthCheckLocalSupportWebsite.trim());
+    return buildPatientUrl(params);
+  };
+
   const selectedScreeningTemplate = screeningTemplates[screeningType] || SCREENING_TEMPLATES.cervical;
   const selectedImmunisationTemplate = immunisationTemplates[immunisationSelections[0]] || IMMUNISATION_TEMPLATES.flu;
   const selectedLongTermConditionTemplate =
     longTermConditionTemplates[selectedLongTermCondition] || LONG_TERM_CONDITION_TEMPLATES.asthma;
 
   const buildHealthCheckVariantPreviewUrl = (domainId: ClinicalDomainId, resultCode: string, previewOnly = false) => {
+    const metric = PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode[resultCode] || PREVIEW_DOMAIN_CONFIGS[domainId].defaultMetric;
     const params = new URLSearchParams({ type: 'healthcheck' });
-    const family = domainId === 'ldl' ? 'chol' : domainId;
-    const key = HEALTH_CHECK_PARAM_KEYS[family as HealthCheckCodeFamily];
-    params.set(key, resultCode);
+    params.set('hc', `${domainId}:${metric.value}:${resultCode}`);
     if (previewOnly) params.set('previewOnly', '1');
     if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
     if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
@@ -398,7 +395,6 @@ const DrugBuilder: React.FC = () => {
   const healthCheckCatalogueRows = CLINICAL_DOMAIN_IDS.map((domainId) => {
     const metricByCode = PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode;
     const resultCodes = Object.keys(metricByCode);
-    const previewResultCode = resultCodes[0] || '';
     const familyCode = (domainId === 'ldl' ? 'chol' : domainId).toUpperCase();
 
     return {
@@ -408,7 +404,7 @@ const DrugBuilder: React.FC = () => {
       label: HEALTH_CHECK_CARD_LABELS[(domainId === 'ldl' ? 'chol' : domainId) as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[domainId].heading,
       summary: `${resultCodes.length} result type${resultCodes.length === 1 ? '' : 's'}`,
       resultCodes,
-      previewUrl: buildHealthCheckVariantPreviewUrl(domainId, previewResultCode, true),
+      previewUrl: buildHealthCheckFamilyPreviewUrl(domainId),
     };
   });
 
