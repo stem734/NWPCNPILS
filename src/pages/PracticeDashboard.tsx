@@ -26,6 +26,7 @@ import {
   CUSTOM_CARD_DISCLAIMER_TEXT,
   GLOBAL_TEMPLATE_DISCLAIMER_TEXT,
   PRACTICE_SELECTION_STORAGE_KEY,
+  coercePracticeSummary,
   type PracticeMembership,
   type PracticeMedicationCardRow,
   type PracticeSummary,
@@ -66,16 +67,7 @@ const EMPTY_TREND_LINK = { title: '', url: '' };
 
 const normalisePracticeSummary = (value: PracticeSummary | PracticeSummary[] | null | undefined): PracticeSummary | null => {
   const practice = Array.isArray(value) ? value[0] : value;
-  if (!practice) {
-    return null;
-  }
-
-  return {
-    ...practice,
-    selected_medications: Array.isArray(practice.selected_medications)
-      ? practice.selected_medications
-      : [],
-  };
+  return coercePracticeSummary(practice);
 };
 
 const PracticeDashboard: React.FC = () => {
@@ -131,7 +123,11 @@ const PracticeDashboard: React.FC = () => {
             patient_rating_count,
             patient_rating_total,
             last_accessed,
-            selected_medications
+            selected_medications,
+            healthcheck_enabled,
+            screening_enabled,
+            immunisation_enabled,
+            ltc_enabled
           )
         `)
         .eq('user_uid', user.id)
@@ -616,7 +612,7 @@ const PracticeDashboard: React.FC = () => {
           <h1>
             <FlaskConical size={28} color="#005eb8" /> {selectedPractice.name}
           </h1>
-          <p>Review the shared medication library, accept global templates, and maintain practice-owned card versions.</p>
+          <p>Review the medication library, accept global templates, and maintain practice-owned card versions for this practice.</p>
         </div>
         <div className="dashboard-actions">
           <button onClick={() => void loadPracticeCards(selectedPracticeId)} className="action-button" style={{ backgroundColor: '#4c6272' }}>

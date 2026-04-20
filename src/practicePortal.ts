@@ -1,4 +1,9 @@
 import type { MedContent } from './medicationData';
+import {
+  DEFAULT_PRACTICE_FEATURE_SETTINGS,
+  coercePracticeFeatureSettings,
+  type PracticeFeatureSettings,
+} from './practiceFeatures';
 import { supabase } from './supabase';
 
 export const PRACTICE_SELECTION_STORAGE_KEY = 'practice-dashboard:selected-practice';
@@ -11,7 +16,7 @@ export const GLOBAL_TEMPLATE_DISCLAIMER_TEXT =
 export const CUSTOM_CARD_DISCLAIMER_TEXT =
   'I understand that I am creating or updating a practice-specific medication card and that my practice is responsible for reviewing, maintaining, and governing this custom content.';
 
-export type PracticeSummary = {
+export type PracticeSummary = Partial<PracticeFeatureSettings> & {
   id: string;
   name: string;
   ods_code?: string | null;
@@ -107,6 +112,30 @@ export const coerceResolvedMedicationCard = (value: unknown): ResolvedMedication
     sickDaysNeeded: Boolean(row.sickDaysNeeded),
     reviewMonths: typeof row.reviewMonths === 'number' ? row.reviewMonths : undefined,
     contentReviewDate: typeof row.contentReviewDate === 'string' ? row.contentReviewDate : undefined,
+  };
+};
+
+export const coercePracticeSummary = (value: unknown): PracticeSummary | null => {
+  const row = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+  if (!row || typeof row.id !== 'string' || typeof row.name !== 'string') {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    name: row.name,
+    ods_code: typeof row.ods_code === 'string' ? row.ods_code : null,
+    contact_email: typeof row.contact_email === 'string' ? row.contact_email : null,
+    is_active: row.is_active === true,
+    link_visit_count: typeof row.link_visit_count === 'number' ? row.link_visit_count : null,
+    patient_rating_count: typeof row.patient_rating_count === 'number' ? row.patient_rating_count : null,
+    patient_rating_total: typeof row.patient_rating_total === 'number' ? row.patient_rating_total : null,
+    last_accessed: typeof row.last_accessed === 'string' ? row.last_accessed : null,
+    selected_medications: Array.isArray(row.selected_medications)
+      ? row.selected_medications.filter((item): item is string => typeof item === 'string')
+      : [],
+    ...DEFAULT_PRACTICE_FEATURE_SETTINGS,
+    ...coercePracticeFeatureSettings(row),
   };
 };
 

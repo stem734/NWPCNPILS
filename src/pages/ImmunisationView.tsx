@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe } from 'lucide-react';
 import { IMMUNISATION_TEMPLATES, type ImmunisationTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
+import { usePracticeContentAccess } from '../usePracticeContentAccess';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -25,31 +26,50 @@ const ImmunisationView: React.FC = () => {
   const localPhone = searchParams.get('localPhone') || '';
   const localEmail = searchParams.get('localEmail') || '';
   const localWebsite = searchParams.get('localWebsite') || '';
-  const requestedVaccines = (vaccines.length > 0 ? vaccines : ['flu']);
+  const requestedVaccines = useMemo(() => (vaccines.length > 0 ? vaccines : ['flu']), [vaccines]);
   const requestedVaccinesKey = requestedVaccines.join(',');
-  const defaultSelectedVaccines = requestedVaccines
-    .map((vaccineCode) => IMMUNISATION_TEMPLATES[vaccineCode])
+  const [loadedTemplateMap, setLoadedTemplateMap] = useState<Record<string, ImmunisationTemplate>>({});
+  const access = usePracticeContentAccess(org, 'immunisation_enabled');
+  const selectedVaccines = requestedVaccines
+    .map((vaccineCode) => loadedTemplateMap[vaccineCode] || IMMUNISATION_TEMPLATES[vaccineCode])
     .filter(Boolean);
-  const [selectedVaccines, setSelectedVaccines] = useState<ImmunisationTemplate[]>(defaultSelectedVaccines);
 
   useEffect(() => {
-    setSelectedVaccines(defaultSelectedVaccines);
     const loadTemplates = async () => {
       try {
         const rows = await fetchCardTemplates<ImmunisationTemplate>('immunisation', requestedVaccines);
-        if (rows.length === 0) return;
-        const rowMap = Object.fromEntries(rows.map((row) => [row.template_id, row.payload]));
-        setSelectedVaccines(
-          requestedVaccines
-            .map((vaccineCode) => rowMap[vaccineCode] || IMMUNISATION_TEMPLATES[vaccineCode])
-            .filter(Boolean),
-        );
+        setLoadedTemplateMap(Object.fromEntries(rows.map((row) => [row.template_id, row.payload])));
       } catch (error) {
         console.error('Failed to load immunisation template overrides', error);
+        setLoadedTemplateMap({});
       }
     };
-    loadTemplates();
-  }, [requestedVaccinesKey]);
+    void loadTemplates();
+  }, [requestedVaccines, requestedVaccinesKey]);
+
+  if (access.loading) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ShieldPlus size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>Immunisation Information</h1>
+        <p style={{ color: '#4c6272', maxWidth: '36rem', margin: '0 auto', lineHeight: 1.6 }}>
+          Checking whether this practice has immunisation information enabled.
+        </p>
+      </div>
+    );
+  }
+
+  if (!access.allowed) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ShieldCheck size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>Immunisation Information</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          {access.error || 'This practice has not enabled immunisation information yet.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="animation-container patient-view">

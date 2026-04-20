@@ -34,7 +34,13 @@ BEGIN
     RETURN jsonb_build_object('valid', false, 'error', 'Practice subscription is inactive');
   END IF;
 
-  RETURN jsonb_build_object('valid', true);
+  RETURN jsonb_build_object(
+    'valid', true,
+    'healthcheck_enabled', practice_record.healthcheck_enabled,
+    'screening_enabled', practice_record.screening_enabled,
+    'immunisation_enabled', practice_record.immunisation_enabled,
+    'ltc_enabled', practice_record.ltc_enabled
+  );
 END;
 $$;
 

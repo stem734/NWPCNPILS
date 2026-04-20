@@ -7,6 +7,7 @@ import { PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVar
 import HealthCheckCard from '../components/HealthCheckCard';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
+import { usePracticeContentAccess } from '../usePracticeContentAccess';
 
 // ─── Helpers (ported from NHSHealthCheck/App.tsx) ─────────────────────────────
 
@@ -104,11 +105,18 @@ const HealthCheckView: React.FC = () => {
   }, [previewDomain, previewOnly, searchParams]);
   const hasData = metrics.length > 0;
   const [templateOverrides, setTemplateOverrides] = useState<Record<string, HealthCheckTemplatePayload>>({});
+  const access = usePracticeContentAccess(org, 'healthcheck_enabled', { skip: previewOnly });
+  const templateIds = useMemo(
+    () => Array.from(new Set(metrics.map((metric) => metricIdToTemplateId(metric.id)))),
+    [metrics],
+  );
+  const effectiveTemplateOverrides = useMemo(
+    () => (templateIds.length === 0 ? {} : templateOverrides),
+    [templateIds, templateOverrides],
+  );
 
   useEffect(() => {
-    const templateIds = Array.from(new Set(metrics.map((metric) => metricIdToTemplateId(metric.id))));
     if (templateIds.length === 0) {
-      setTemplateOverrides({});
       return;
     }
     const loadOverrides = async () => {
@@ -121,12 +129,12 @@ const HealthCheckView: React.FC = () => {
       }
     };
     loadOverrides();
-  }, [metrics]);
+  }, [templateIds]);
 
   const displayMetrics = useMemo(() => {
     const baseMetrics = previewOnly && previewDomain ? metrics : getDisplayMetrics(metrics);
     return baseMetrics.map((metric) => {
-      const templatePayload = templateOverrides[metricIdToTemplateId(metric.id)];
+      const templatePayload = effectiveTemplateOverrides[metricIdToTemplateId(metric.id)];
       const resultCode = (metric.resultCode || '').trim();
       const variant = templatePayload?.variants?.[resultCode];
       if (!variant) return metric;
@@ -140,7 +148,7 @@ const HealthCheckView: React.FC = () => {
           .map((link) => ({ title: link.title, url: link.website || '' })),
       };
     });
-  }, [metrics, previewDomain, previewOnly, templateOverrides]);
+  }, [effectiveTemplateOverrides, metrics, previewDomain, previewOnly]);
 
   const groupedMetrics = useMemo(() => {
     const withIndex = displayMetrics.map((metric, index) => ({ metric, index }));
@@ -220,6 +228,30 @@ const HealthCheckView: React.FC = () => {
     if (!mostUrgentMetric) return;
     document.getElementById(`metric-${mostUrgentMetric.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  if (access.loading) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <Activity size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>NHS Health Check</h1>
+        <p style={{ color: '#4c6272', maxWidth: '36rem', margin: '0 auto', lineHeight: 1.6 }}>
+          Checking whether this practice has health check information enabled.
+        </p>
+      </div>
+    );
+  }
+
+  if (!access.allowed) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ShieldCheck size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>NHS Health Check</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          {access.error || 'This practice has not enabled health check information yet.'}
+        </p>
+      </div>
+    );
+  }
 
   // ─── Empty state ────────────────────────────────────────────────────────────
   if (!hasData) {

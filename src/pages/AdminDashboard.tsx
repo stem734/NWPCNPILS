@@ -14,6 +14,10 @@ interface Practice {
   is_active: boolean;
   ods_code?: string;
   contact_email?: string;
+  healthcheck_enabled?: boolean;
+  screening_enabled?: boolean;
+  immunisation_enabled?: boolean;
+  ltc_enabled?: boolean;
   signed_up_at?: string;
   last_accessed?: string;
   link_visit_count?: number;
@@ -135,6 +139,10 @@ const AdminDashboard: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editOds, setEditOds] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editHealthcheckEnabled, setEditHealthcheckEnabled] = useState(false);
+  const [editScreeningEnabled, setEditScreeningEnabled] = useState(false);
+  const [editImmunisationEnabled, setEditImmunisationEnabled] = useState(false);
+  const [editLtcEnabled, setEditLtcEnabled] = useState(false);
   const [editError, setEditError] = useState('');
   const [editAdminName, setEditAdminName] = useState('');
   const [editAdminEmail, setEditAdminEmail] = useState('');
@@ -416,6 +424,10 @@ const AdminDashboard: React.FC = () => {
     setEditName(practice.name);
     setEditOds(practice.ods_code || '');
     setEditEmail(practice.contact_email || '');
+    setEditHealthcheckEnabled(practice.healthcheck_enabled === true);
+    setEditScreeningEnabled(practice.screening_enabled === true);
+    setEditImmunisationEnabled(practice.immunisation_enabled === true);
+    setEditLtcEnabled(practice.ltc_enabled === true);
     setEditError('');
   };
 
@@ -440,6 +452,10 @@ const AdminDashboard: React.FC = () => {
         name: editName.trim(),
         ods_code: editOds.trim().toUpperCase(),
         contact_email: editEmail.trim(),
+        healthcheck_enabled: editHealthcheckEnabled,
+        screening_enabled: editScreeningEnabled,
+        immunisation_enabled: editImmunisationEnabled,
+        ltc_enabled: editLtcEnabled,
       }).eq('id', editingPractice.id);
 
       setEditingPractice(null);
@@ -800,6 +816,30 @@ const AdminDashboard: React.FC = () => {
                     />
                   </div>
                 </div>
+                <div style={{ padding: '1rem', borderRadius: '12px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
+                  <h3 style={{ margin: '0 0 0.35rem', fontSize: '1rem', color: '#1a1a1a' }}>Patient Information Functions</h3>
+                  <p style={{ margin: '0 0 0.9rem', color: '#4c6272', fontSize: '0.92rem' }}>
+                    These shared card sets are controlled by administrators and stay off until enabled here for the practice.
+                  </p>
+                  <div style={{ display: 'grid', gap: '0.7rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
+                      <input type="checkbox" checked={editHealthcheckEnabled} onChange={(e) => setEditHealthcheckEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                      Enable Health Checks
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
+                      <input type="checkbox" checked={editScreeningEnabled} onChange={(e) => setEditScreeningEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                      Enable Screening
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
+                      <input type="checkbox" checked={editImmunisationEnabled} onChange={(e) => setEditImmunisationEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                      Enable Immunisations
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
+                      <input type="checkbox" checked={editLtcEnabled} onChange={(e) => setEditLtcEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                      Enable Long Term Conditions
+                    </label>
+                  </div>
+                </div>
               </form>
             </div>
             <div style={{ padding: '1.5rem', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
@@ -1024,16 +1064,22 @@ const AdminDashboard: React.FC = () => {
               >
                 <div className="dashboard-list-main">
                   <div className="dashboard-list-title">{practice.name}</div>
-                  <div className="dashboard-meta">
-                    {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
-                    {practice.contact_email && <span>{practice.contact_email}</span>}
-                    <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
-                    <span>Satisfaction: {getPracticeSatisfaction(practice)}</span>
-                    {practice.last_accessed && (
-                      <span>Last active: {new Date(practice.last_accessed).toLocaleDateString() || 'N/A'}</span>
-                    )}
-                  </div>
+                <div className="dashboard-meta">
+                  {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
+                  {practice.contact_email && <span>{practice.contact_email}</span>}
+                  <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
+                  <span>Satisfaction: {getPracticeSatisfaction(practice)}</span>
+                  {practice.last_accessed && (
+                    <span>Last active: {new Date(practice.last_accessed).toLocaleDateString() || 'N/A'}</span>
+                  )}
                 </div>
+                <div className="dashboard-chip-row" style={{ marginTop: '0.6rem' }}>
+                  <span className={`dashboard-badge ${practice.healthcheck_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Health checks {practice.healthcheck_enabled ? 'on' : 'off'}</span>
+                  <span className={`dashboard-badge ${practice.screening_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Screening {practice.screening_enabled ? 'on' : 'off'}</span>
+                  <span className={`dashboard-badge ${practice.immunisation_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Immunisations {practice.immunisation_enabled ? 'on' : 'off'}</span>
+                  <span className={`dashboard-badge ${practice.ltc_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>LTC {practice.ltc_enabled ? 'on' : 'off'}</span>
+                </div>
+              </div>
                 <div className="dashboard-list-actions">
                   {practice.is_active ? (
                     <span className="dashboard-badge dashboard-badge--green">

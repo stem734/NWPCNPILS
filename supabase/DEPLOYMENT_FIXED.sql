@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS practices (
   auth_uid                uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   selected_medications    text[] DEFAULT '{}',
   medication_review_dates jsonb DEFAULT '{}',
+  healthcheck_enabled     boolean NOT NULL DEFAULT false,
+  screening_enabled       boolean NOT NULL DEFAULT false,
+  immunisation_enabled    boolean NOT NULL DEFAULT false,
+  ltc_enabled             boolean NOT NULL DEFAULT false,
   link_visit_count        integer NOT NULL DEFAULT 0,
   patient_rating_count    integer NOT NULL DEFAULT 0,
   patient_rating_total    integer NOT NULL DEFAULT 0,
@@ -170,7 +174,13 @@ BEGIN
     RETURN jsonb_build_object('valid', false, 'error', 'Practice subscription is inactive');
   END IF;
 
-  RETURN jsonb_build_object('valid', true);
+  RETURN jsonb_build_object(
+    'valid', true,
+    'healthcheck_enabled', practice_record.healthcheck_enabled,
+    'screening_enabled', practice_record.screening_enabled,
+    'immunisation_enabled', practice_record.immunisation_enabled,
+    'ltc_enabled', practice_record.ltc_enabled
+  );
 END;
 $$;
 

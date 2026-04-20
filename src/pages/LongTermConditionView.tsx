@@ -3,28 +3,53 @@ import { useSearchParams } from 'react-router-dom';
 import { ClipboardList, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
 import { LONG_TERM_CONDITION_TEMPLATES, type LongTermConditionTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
+import { usePracticeContentAccess } from '../usePracticeContentAccess';
 
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
   const conditionType = (searchParams.get('ltc') || searchParams.get('condition') || '').trim().toLowerCase();
   const fallbackTemplate = LONG_TERM_CONDITION_TEMPLATES[conditionType] || LONG_TERM_CONDITION_TEMPLATES.asthma;
-  const [selectedTemplate, setSelectedTemplate] = useState<LongTermConditionTemplate>(fallbackTemplate);
+  const [loadedTemplate, setLoadedTemplate] = useState<LongTermConditionTemplate | null>(null);
+  const access = usePracticeContentAccess(org, 'ltc_enabled');
+  const selectedTemplate = loadedTemplate?.id === fallbackTemplate.id ? loadedTemplate : fallbackTemplate;
 
   useEffect(() => {
-    setSelectedTemplate(fallbackTemplate);
     const loadTemplate = async () => {
       try {
         const [row] = await fetchCardTemplates<LongTermConditionTemplate>('ltc', [fallbackTemplate.id]);
-        if (row?.payload) {
-          setSelectedTemplate(row.payload);
-        }
+        setLoadedTemplate(row?.payload || null);
       } catch (error) {
         console.error('Failed to load long term condition template override', error);
+        setLoadedTemplate(null);
       }
     };
-    loadTemplate();
+    void loadTemplate();
   }, [fallbackTemplate]);
+
+  if (access.loading) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ClipboardList size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>Long Term Condition Information</h1>
+        <p style={{ color: '#4c6272', maxWidth: '36rem', margin: '0 auto', lineHeight: 1.6 }}>
+          Checking whether this practice has long term condition information enabled.
+        </p>
+      </div>
+    );
+  }
+
+  if (!access.allowed) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ShieldCheck size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>Long Term Condition Information</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          {access.error || 'This practice has not enabled long term condition information yet.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="animation-container patient-view">
