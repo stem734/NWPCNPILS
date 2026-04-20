@@ -842,8 +842,9 @@ p {
 }
 
 .dashboard-list-card--practice {
-  gap: 1.25rem;
-  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 1.3rem;
+  padding: 1.25rem 1.3rem;
 }
 
 .dashboard-list-card--practice-active {
@@ -858,6 +859,12 @@ p {
   font-weight: 700;
   font-size: 0.98rem;
   color: var(--nhs-text);
+}
+
+.dashboard-list-title--practice {
+  font-size: 1.6rem;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .dashboard-list-copy {
@@ -880,36 +887,57 @@ p {
 .dashboard-practice-card-header {
   display: flex;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
   align-items: flex-start;
+}
+
+.dashboard-practice-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.dashboard-practice-identity {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dashboard-practice-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .dashboard-practice-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
-  margin-top: 0.8rem;
+  gap: 1rem;
 }
 
 .dashboard-practice-stat {
-  padding: 0.65rem 0.75rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(152, 176, 194, 0.22);
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(152, 176, 194, 0.28);
+  box-shadow: 0 10px 20px rgba(16, 24, 40, 0.08);
+  text-align: center;
 }
 
 .dashboard-practice-stat strong {
   display: block;
-  margin-top: 0.2rem;
-  font-size: 0.92rem;
+  margin-top: 0.4rem;
+  font-size: 1.2rem;
+  font-weight: 500;
   color: var(--nhs-text);
 }
 
 .dashboard-practice-stat-label {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--nhs-secondary-text);
 }
@@ -961,43 +989,42 @@ p {
   flex-shrink: 0;
 }
 
-.dashboard-practice-side {
-  width: 250px;
-}
-
 .dashboard-practice-feature-panel {
-  padding: 0.85rem 0.95rem;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(152, 176, 194, 0.28);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
 }
 
 .dashboard-practice-feature-title {
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #4c6272;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.75rem;
 }
 
 .dashboard-practice-feature-list {
   display: grid;
-  gap: 0.45rem;
+  gap: 0;
 }
 
 .dashboard-practice-feature-item {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 0.9rem;
+  gap: 0.75rem;
+  font-size: 0.92rem;
   color: var(--nhs-text);
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #d8dde0;
 }
 
 .dashboard-practice-feature-empty {
   margin: 0;
   font-size: 0.88rem;
   color: var(--nhs-secondary-text);
+  padding: 0.25rem 0 0.1rem;
 }
 
 .dashboard-practice-feature-icon {
@@ -1020,14 +1047,23 @@ p {
   background: #eef2f4;
 }
 
-.dashboard-list-actions--practice {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 0.45rem;
+.dashboard-list-actions--practice-primary {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.dashboard-list-actions--practice > * {
+.dashboard-list-actions--practice-secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  align-items: stretch;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.dashboard-list-actions--practice-primary > *,
+.dashboard-list-actions--practice-secondary > * {
   justify-content: center;
 }
 
@@ -1341,6 +1377,7 @@ p {
     width: 100%;
   }
 
+  .dashboard-practice-top,
   .dashboard-practice-card-header {
     flex-direction: column;
   }
@@ -1349,7 +1386,27 @@ p {
     grid-template-columns: 1fr;
   }
 
-  .dashboard-list-actions--practice {
+  .dashboard-list-actions--practice-primary,
+  .dashboard-list-actions--practice-secondary {
+    width: 100%;
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .dashboard-list-actions--practice-primary {
+    display: grid;
+  }
+
+  .dashboard-list-actions--practice-primary > *,
+  .dashboard-list-actions--practice-secondary > * {
+    width: 100%;
+  }
+
+  .dashboard-list-title--practice {
+    font-size: 1.25rem;
+  }
+
+  .dashboard-practice-heading-row {
     grid-template-columns: 1fr;
   }
 
