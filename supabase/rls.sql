@@ -74,6 +74,7 @@ $$;
 -- PRACTICES policies
 -- =============================================================================
 DROP POLICY IF EXISTS "practices_insert_anyone" ON practices;
+DROP POLICY IF EXISTS "practices_insert_authenticated" ON practices;
 DROP POLICY IF EXISTS "practices_select_admin" ON practices;
 DROP POLICY IF EXISTS "practices_select_member" ON practices;
 DROP POLICY IF EXISTS "practices_select_own" ON practices;
@@ -81,10 +82,24 @@ DROP POLICY IF EXISTS "practices_update_admin" ON practices;
 DROP POLICY IF EXISTS "practices_update_own" ON practices;
 DROP POLICY IF EXISTS "practices_delete_admin" ON practices;
 
-CREATE POLICY "practices_insert_anyone"
+-- Only authenticated users can create a practice, and only as a blank, inactive record.
+-- Prevents anonymous spam and pre-population of sensitive fields.
+CREATE POLICY "practices_insert_authenticated"
   ON practices FOR INSERT
-  TO authenticated, anon
-  WITH CHECK (true);
+  TO authenticated
+  WITH CHECK (
+    name IS NOT NULL
+    AND trim(name) <> ''
+    AND name_lowercase = lower(trim(name))
+    AND is_active = false
+    AND auth_uid IS NULL
+    AND selected_medications = '{}'::text[]
+    AND medication_review_dates = '{}'::jsonb
+    AND link_visit_count = 0
+    AND patient_rating_count = 0
+    AND patient_rating_total = 0
+    AND last_accessed IS NULL
+  );
 
 CREATE POLICY "practices_select_admin"
   ON practices FOR SELECT
@@ -110,14 +125,23 @@ CREATE POLICY "practices_delete_admin"
 -- MEDICATIONS policies
 -- =============================================================================
 DROP POLICY IF EXISTS "medications_select_anyone" ON medications;
+DROP POLICY IF EXISTS "medications_select_admin" ON medications;
+DROP POLICY IF EXISTS "medications_select_active" ON medications;
 DROP POLICY IF EXISTS "medications_insert_admin" ON medications;
 DROP POLICY IF EXISTS "medications_update_admin" ON medications;
 DROP POLICY IF EXISTS "medications_delete_admin" ON medications;
 
-CREATE POLICY "medications_select_anyone"
+-- Admins can see all medications, including soft-deleted ones (needed for audit/restore).
+CREATE POLICY "medications_select_admin"
+  ON medications FOR SELECT
+  TO authenticated
+  USING (is_admin());
+
+-- Everyone else (practice users and anonymous patients) sees only active medications.
+CREATE POLICY "medications_select_active"
   ON medications FOR SELECT
   TO authenticated, anon
-  USING (true);
+  USING (is_deleted = false);
 
 CREATE POLICY "medications_insert_admin"
   ON medications FOR INSERT

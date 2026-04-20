@@ -207,6 +207,53 @@ CREATE TABLE audit_log (
 CREATE INDEX idx_audit_log_timestamp ON audit_log (timestamp DESC);
 
 -- ===================
+-- SYNC TRIGGER: practice_medication_cards → practices
+-- Keeps practices.selected_medications and practices.medication_review_dates
+-- derived from practice_medication_cards, eliminating dual-write drift.
+-- Application code may still write these columns directly; the trigger
+-- overwrites them after every card change to enforce DB-level consistency.
+-- TODO: once app code is updated to read from practice_medication_cards
+-- directly, drop this trigger and the two redundant columns on practices.
+-- ===================
+CREATE OR REPLACE FUNCTION sync_practice_medications_cache()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+DECLARE
+  target_practice_id uuid;
+BEGIN
+  target_practice_id := COALESCE(NEW.practice_id, OLD.practice_id);
+
+  UPDATE practices
+  SET
+    selected_medications = (
+      SELECT COALESCE(array_agg(code ORDER BY code), '{}'::text[])
+      FROM practice_medication_cards
+      WHERE practice_id = target_practice_id
+    ),
+    medication_review_dates = (
+      SELECT COALESCE(
+        jsonb_object_agg(code, content_review_date),
+        '{}'::jsonb
+      )
+      FROM practice_medication_cards
+      WHERE practice_id = target_practice_id
+        AND content_review_date IS NOT NULL
+        AND content_review_date <> ''
+    )
+  WHERE id = target_practice_id;
+
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_sync_practice_medications_cache
+  AFTER INSERT OR UPDATE OR DELETE ON practice_medication_cards
+  FOR EACH ROW EXECUTE FUNCTION sync_practice_medications_cache();
+
+-- ===================
 -- FIREBASE_UID_MAP TABLE (temporary, for migration only)
 -- Maps old Firebase Auth UIDs to new Supabase Auth UUIDs
 -- Drop this table after migration is verified.

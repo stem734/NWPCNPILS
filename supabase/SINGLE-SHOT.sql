@@ -301,12 +301,13 @@ $$;
 
 -- RLS POLICIES
 DROP POLICY IF EXISTS "practices_insert_anyone" ON practices;
+DROP POLICY IF EXISTS "practices_insert_authenticated" ON practices;
 DROP POLICY IF EXISTS "practices_select_admin" ON practices;
 DROP POLICY IF EXISTS "practices_select_member" ON practices;
 DROP POLICY IF EXISTS "practices_update_admin" ON practices;
 DROP POLICY IF EXISTS "practices_delete_admin" ON practices;
 
-CREATE POLICY "practices_insert_anyone" ON practices FOR INSERT TO authenticated, anon WITH CHECK (
+CREATE POLICY "practices_insert_authenticated" ON practices FOR INSERT TO authenticated WITH CHECK (
   name IS NOT NULL
   AND trim(name) <> ''
   AND name_lowercase = lower(trim(name))
@@ -325,11 +326,14 @@ CREATE POLICY "practices_update_admin" ON practices FOR UPDATE TO authenticated 
 CREATE POLICY "practices_delete_admin" ON practices FOR DELETE TO authenticated USING (is_admin());
 
 DROP POLICY IF EXISTS "medications_select_anyone" ON medications;
+DROP POLICY IF EXISTS "medications_select_admin" ON medications;
+DROP POLICY IF EXISTS "medications_select_active" ON medications;
 DROP POLICY IF EXISTS "medications_insert_admin" ON medications;
 DROP POLICY IF EXISTS "medications_update_admin" ON medications;
 DROP POLICY IF EXISTS "medications_delete_admin" ON medications;
 
-CREATE POLICY "medications_select_anyone" ON medications FOR SELECT TO authenticated, anon USING (true);
+CREATE POLICY "medications_select_admin" ON medications FOR SELECT TO authenticated USING (is_admin());
+CREATE POLICY "medications_select_active" ON medications FOR SELECT TO authenticated, anon USING (is_deleted = false);
 CREATE POLICY "medications_insert_admin" ON medications FOR INSERT TO authenticated WITH CHECK (is_admin());
 CREATE POLICY "medications_update_admin" ON medications FOR UPDATE TO authenticated USING (is_admin());
 CREATE POLICY "medications_delete_admin" ON medications FOR DELETE TO authenticated USING (is_admin());
@@ -405,5 +409,34 @@ DROP POLICY IF EXISTS "audit_log_insert_admin" ON audit_log;
 
 CREATE POLICY "audit_log_select_admin" ON audit_log FOR SELECT TO authenticated USING (is_admin());
 CREATE POLICY "audit_log_insert_admin" ON audit_log FOR INSERT TO authenticated WITH CHECK (is_admin());
+
+-- SYNC TRIGGER: keeps practices.selected_medications / medication_review_dates
+-- derived from practice_medication_cards to prevent dual-write drift.
+CREATE OR REPLACE FUNCTION sync_practice_medications_cache() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
+DECLARE
+  target_practice_id uuid;
+BEGIN
+  target_practice_id := COALESCE(NEW.practice_id, OLD.practice_id);
+  UPDATE practices
+  SET
+    selected_medications = (
+      SELECT COALESCE(array_agg(code ORDER BY code), '{}'::text[])
+      FROM practice_medication_cards WHERE practice_id = target_practice_id
+    ),
+    medication_review_dates = (
+      SELECT COALESCE(jsonb_object_agg(code, content_review_date), '{}'::jsonb)
+      FROM practice_medication_cards
+      WHERE practice_id = target_practice_id
+        AND content_review_date IS NOT NULL AND content_review_date <> ''
+    )
+  WHERE id = target_practice_id;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sync_practice_medications_cache ON practice_medication_cards;
+CREATE TRIGGER trg_sync_practice_medications_cache
+  AFTER INSERT OR UPDATE OR DELETE ON practice_medication_cards
+  FOR EACH ROW EXECUTE FUNCTION sync_practice_medications_cache();
 
 -- DEPLOYMENT COMPLETE
