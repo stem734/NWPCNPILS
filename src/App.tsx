@@ -646,6 +646,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
+  const showPatientGuidance = location.pathname === '/patient';
   const versionLabel = `0.0.1+${__APP_COMMIT_COUNT__}`;
 
   // Detect implicit-flow Supabase auth recovery tokens in the URL hash
@@ -679,9 +680,11 @@ const AppContent: React.FC = () => {
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
       <main id="main-content">
-        <div className="main-guidance-banner" role="note" aria-label="Guidance">
-          <p>This information is for guidance only. Always follow the specific advice from your GP or clinical team.</p>
-        </div>
+        {showPatientGuidance && (
+          <div className="main-guidance-banner" role="note" aria-label="Guidance">
+            <p>This information is for guidance only. Always follow the specific advice from your GP or clinical team.</p>
+          </div>
+        )}
         <SubdomainRoutes />
       </main>
 
