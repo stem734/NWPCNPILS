@@ -336,36 +336,6 @@ const DrugBuilder: React.FC = () => {
     await navigator.clipboard.writeText(value);
   };
 
-  const screeningPreviewUrl = useMemo(() => {
-    const params = new URLSearchParams({ type: 'screening', screen: screeningType });
-    return buildPatientUrl(params);
-  }, [screeningType]);
-
-  const immunisationPreviewUrl = useMemo(() => {
-    const params = new URLSearchParams({ type: 'imms' });
-    if (immunisationSelections.length > 0) {
-      params.set('vaccine', immunisationSelections.join(','));
-    }
-    if (localSupportName.trim()) {
-      params.set('localName', localSupportName.trim());
-    }
-    if (localSupportPhone.trim()) {
-      params.set('localPhone', localSupportPhone.trim());
-    }
-    if (localSupportEmail.trim()) {
-      params.set('localEmail', localSupportEmail.trim());
-    }
-    if (localSupportWebsite.trim()) {
-      params.set('localWebsite', localSupportWebsite.trim());
-    }
-    return buildPatientUrl(params);
-  }, [immunisationSelections, localSupportEmail, localSupportName, localSupportPhone, localSupportWebsite]);
-
-  const longTermConditionPreviewUrl = useMemo(() => {
-    const params = new URLSearchParams({ type: 'ltc', ltc: selectedLongTermCondition });
-    return buildPatientUrl(params);
-  }, [selectedLongTermCondition]);
-
   const buildHealthCheckFamilyPreviewUrl = (domainId: ClinicalDomainId) => {
     const params = new URLSearchParams({ type: 'healthcheck', previewOnly: '1', previewDomain: domainId });
     if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
@@ -413,16 +383,6 @@ const DrugBuilder: React.FC = () => {
   const resolvedSelectedHealthCheckVariantCode = selectedHealthCheckDomainCodes.includes(selectedHealthCheckVariantCode)
     ? selectedHealthCheckVariantCode
     : (selectedHealthCheckDomainCodes[0] || '');
-  const healthCheckPreviewUrl = useMemo(() => {
-    return buildHealthCheckVariantPreviewUrl(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, true);
-  }, [
-    healthCheckLocalSupportEmail,
-    healthCheckLocalSupportName,
-    healthCheckLocalSupportPhone,
-    healthCheckLocalSupportWebsite,
-    resolvedSelectedHealthCheckVariantCode,
-    selectedHealthCheckDomain,
-  ]);
   const defaultHealthCheckConfigs = createDefaultHealthCheckBuilderState();
   const selectedHealthCheckVariant =
     healthCheckBuilderConfigs[selectedHealthCheckDomain]?.[resolvedSelectedHealthCheckVariantCode] ||
@@ -880,26 +840,9 @@ const DrugBuilder: React.FC = () => {
     );
   };
 
-  const resetHealthCheckTemplate = () => {
-    setHealthCheckBuilderConfigs(createDefaultHealthCheckBuilderState());
-    setSelectedHealthCheckDomain('bp');
-    setSelectedHealthCheckVariantCode('BPNORMAL');
-    setHealthCheckLocalSupportName('');
-    setHealthCheckLocalSupportPhone('');
-    setHealthCheckLocalSupportEmail('');
-    setHealthCheckLocalSupportWebsite('');
-    showBuilderNotice('healthcheck', 'Health check template reset.');
-  };
-
   const saveScreeningTemplate = async (templateId = screeningType) => {
     const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
     await persistCardTemplate('screening', templateId, template.label, template, `${template.label} saved.`);
-  };
-
-  const resetScreeningTemplate = () => {
-    setScreeningType('cervical');
-    setScreeningTemplates(createDefaultScreeningState());
-    showBuilderNotice('screening', 'Screening template reset.');
   };
 
   const saveImmunisationTemplate = async (templateId = immunisationSelections[0] || 'flu') => {
@@ -907,25 +850,9 @@ const DrugBuilder: React.FC = () => {
     await persistCardTemplate('immunisation', templateId, template.label, template, `${template.label} saved.`);
   };
 
-  const resetImmunisationTemplate = () => {
-    setImmunisationSelections(['flu']);
-    setLocalSupportName('');
-    setLocalSupportPhone('');
-    setLocalSupportEmail('');
-    setLocalSupportWebsite('');
-    setImmunisationTemplates(createDefaultImmunisationState());
-    showBuilderNotice('immunisation', 'Immunisation template reset.');
-  };
-
   const saveLtcTemplate = async (templateId = selectedLongTermCondition) => {
     const template = longTermConditionTemplates[templateId] || LONG_TERM_CONDITION_TEMPLATES.asthma;
     await persistCardTemplate('ltc', templateId, template.label, template, `${template.label} saved.`);
-  };
-
-  const resetLtcTemplate = () => {
-    setSelectedLongTermCondition('asthma');
-    setLongTermConditionTemplates(createDefaultLongTermConditionState());
-    showBuilderNotice('ltc', 'Long term condition template reset.');
   };
 
   if (!authenticated) return null;
