@@ -41,15 +41,60 @@ serve(async (req) => {
       return errorResponse(`Failed to delete medication: ${updateError.message}`, 500);
     }
 
-    // Audit log
-    await supabase.from('audit_log').insert({
-      action: 'deleted',
-      actor_uid: userId,
-      code,
-      timestamp: now,
-      previous_state: existingDoc || null,
-      new_state: { code, ...updateData },
-    });
+    const templateKey = `medication:${code}`;
+    const { data: existingTemplate, error: existingTemplateError } = await supabase
+      .from('card_templates')
+      .select('*')
+      .eq('template_key', templateKey)
+      .maybeSingle();
+
+    if (existingTemplateError) {
+      return errorResponse(`Medication deleted but history lookup failed: ${existingTemplateError.message}`, 500);
+    }
+
+    const version = (existingTemplate?.version || 0) + 1;
+    const payload = existingDoc
+      ? { ...existingDoc, ...updateData }
+      : { code, ...updateData };
+    const templateRecord = {
+      template_key: templateKey,
+      builder_type: 'medication',
+      template_id: code,
+      label: existingDoc?.title || code,
+      payload,
+      version,
+      created_at: existingTemplate?.created_at || now,
+      created_by: existingTemplate?.created_by || userId,
+      updated_at: now,
+      updated_by: userId,
+    };
+
+    const { error: templateUpsertError } = await supabase
+      .from('card_templates')
+      .upsert(templateRecord, { onConflict: 'template_key' });
+
+    if (templateUpsertError) {
+      return errorResponse(`Medication deleted but history update failed: ${templateUpsertError.message}`, 500);
+    }
+
+    const { error: revisionError } = await supabase
+      .from('card_template_revisions')
+      .insert({
+        template_key: templateKey,
+        builder_type: 'medication',
+        template_id: code,
+        label: existingDoc?.title || code,
+        version,
+        action: 'deleted',
+        payload,
+        restored_from_revision_id: null,
+        created_at: now,
+        created_by: userId,
+      });
+
+    if (revisionError) {
+      return errorResponse(`Medication deleted but revision history failed: ${revisionError.message}`, 500);
+    }
 
     return jsonResponse({ success: true });
   } catch (err) {

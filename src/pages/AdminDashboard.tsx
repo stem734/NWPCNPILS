@@ -37,14 +37,15 @@ type AdminRow = {
   global_role: 'owner' | 'admin' | null;
 };
 
-interface AuditLog {
+interface MedicationHistoryEntry {
   id: string;
-  action: 'created' | 'updated' | 'deleted';
-  actorUid: string;
-  code: string;
-  timestampMs: number;
-  previous_state: unknown;
-  new_state: unknown;
+  template_key: string;
+  template_id: string;
+  label: string;
+  version: number;
+  action: 'created' | 'updated' | 'restored' | 'deleted';
+  created_by: string | null;
+  createdAtMs: number;
 }
 
 interface LoginAuditEntry {
@@ -78,14 +79,16 @@ interface LoginAuditGroup {
 type AdminDashboardPayload = {
   practices?: Practice[];
   admins?: AdminRow[];
-  auditLogs?: Array<{
+  medicationHistory?: Array<{
     id: string;
-    action: 'created' | 'updated' | 'deleted';
-    actor_uid: string;
-    code: string;
-    timestamp: string;
-    previous_state: unknown;
-    new_state: unknown;
+    template_key: string;
+    template_id: string;
+    label: string;
+    version: number;
+    action: 'created' | 'updated' | 'restored' | 'deleted';
+    created_by: string | null;
+    created_at?: string;
+    timestamp?: string;
   }>;
   loginAudit?: Array<{
     id: string;
@@ -102,22 +105,12 @@ type AdminDashboardPayload = {
   }>;
 };
 
-const getAuditStateTitle = (value: unknown): string | null => {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  return typeof (value as { title?: unknown }).title === 'string'
-    ? (value as { title: string }).title
-    : null;
-};
-
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'practices' | 'practiceUsers' | 'admins' | 'setup' | 'audit'>('practices');
   const [auditTab, setAuditTab] = useState<'login' | 'medication'>('login');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [medicationHistory, setMedicationHistory] = useState<MedicationHistoryEntry[]>([]);
   const [loginAudit, setLoginAudit] = useState<LoginAuditEntry[]>([]);
   const [practiceSearch, setPracticeSearch] = useState('');
   const [practiceStatusFilter, setPracticeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -207,15 +200,16 @@ const AdminDashboard: React.FC = () => {
             role: row.global_role as 'owner' | 'admin',
           })),
       );
-      setAuditLogs(
-        (payload.auditLogs || []).map((row) => ({
+      setMedicationHistory(
+        (payload.medicationHistory || []).map((row) => ({
           id: row.id,
+          template_key: row.template_key,
+          template_id: row.template_id,
+          label: row.label,
+          version: row.version,
           action: row.action,
-          actorUid: row.actor_uid,
-          code: row.code,
-          timestampMs: new Date(row.timestamp).getTime(),
-          previous_state: row.previous_state,
-          new_state: row.new_state,
+          created_by: row.created_by,
+          createdAtMs: new Date(row.created_at || row.timestamp || 0).getTime(),
         })),
       );
       setLoginAudit(
@@ -239,7 +233,7 @@ const AdminDashboard: React.FC = () => {
       setLoadError(message);
       setPractices([]);
       setAdminUsers([]);
-      setAuditLogs([]);
+      setMedicationHistory([]);
       setLoginAudit([]);
     } finally {
       setLoading(false);
@@ -1092,7 +1086,7 @@ const AdminDashboard: React.FC = () => {
 
       {activeTab === 'audit' && (
       <>
-        <div className="dashboard-tabs" style={{ marginBottom: '1rem' }}>
+      <div className="dashboard-tabs" style={{ marginBottom: '1rem' }}>
           <button
             className={`dashboard-tab${auditTab === 'login' ? ' dashboard-tab--active' : ''}`}
             onClick={() => setAuditTab('login')}
@@ -1103,7 +1097,7 @@ const AdminDashboard: React.FC = () => {
             className={`dashboard-tab${auditTab === 'medication' ? ' dashboard-tab--active' : ''}`}
             onClick={() => setAuditTab('medication')}
           >
-            Medication Audit
+            Medication History
           </button>
         </div>
 
@@ -1197,9 +1191,9 @@ const AdminDashboard: React.FC = () => {
           <div className="dashboard-panel-header">
             <div>
               <h2 className="dashboard-panel-title">
-              Medication Audit Log ({auditLogs.length})
+              Medication History ({medicationHistory.length})
               </h2>
-              <p className="dashboard-panel-subtitle">History of changes to medication cards.</p>
+              <p className="dashboard-panel-subtitle">Shared revision history for medication cards.</p>
             </div>
             <button onClick={loadAudits} className="action-button" style={{ backgroundColor: '#4c6272' }}>
               <RefreshCw size={16} /> Refresh
@@ -1207,21 +1201,20 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           {loadingAudits ? (
-            <p style={{ color: '#4c6272' }}>Loading audit logs...</p>
-          ) : auditLogs.length === 0 ? (
-            <p style={{ color: '#4c6272' }}>No audit history found.</p>
+            <p style={{ color: '#4c6272' }}>Loading medication history...</p>
+          ) : medicationHistory.length === 0 ? (
+            <p style={{ color: '#4c6272' }}>No medication history found.</p>
           ) : (
             <div className="dashboard-list">
-              {auditLogs.map((audit) => {
-                const actorEmail = adminUsers.find(a => a.uid === audit.actorUid)?.email || audit.actorUid;
-                const dateObj = new Date(audit.timestampMs);
-                const isDeleted = audit.action === 'deleted';
-                const isCreated = audit.action === 'created';
-                const title = getAuditStateTitle(audit.new_state) || getAuditStateTitle(audit.previous_state) || 'Unknown Card';
+              {medicationHistory.map((entry) => {
+                const actorEmail = adminUsers.find((admin) => admin.uid === entry.created_by)?.email || entry.created_by || 'Unknown';
+                const dateObj = new Date(entry.createdAtMs);
+                const isDeleted = entry.action === 'deleted';
+                const isCreated = entry.action === 'created';
 
                 return (
                 <div
-                  key={audit.id}
+                  key={entry.id}
                   className="dashboard-list-card"
                 >
                   <div style={{
@@ -1229,16 +1222,16 @@ const AdminDashboard: React.FC = () => {
                     fontWeight: 800, fontFamily: 'monospace', background: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8'), color: 'white',
                     minWidth: '40px', textAlign: 'center',
                   }}>
-                    {audit.code || '???'}
+                    {entry.template_id || '???'}
                   </div>
                   <div className="dashboard-list-main" style={{ marginLeft: '1rem' }}>
-                    <div className="dashboard-list-title">{title}</div>
+                    <div className="dashboard-list-title">{entry.label}</div>
                     <div className="dashboard-meta" style={{ marginTop: '0.25rem' }}>
                       <span style={{
                         fontWeight: 700,
                         color: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8')
                       }}>
-                        {audit.action.toUpperCase()}
+                        v{entry.version} · {entry.action.toUpperCase()}
                       </span>
                       <span>by {actorEmail}</span>
                       <span>{dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString()}</span>

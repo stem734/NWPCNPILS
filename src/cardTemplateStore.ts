@@ -30,9 +30,17 @@ export async function fetchCardTemplateRevisions<T = unknown>(
   const { data, error } = await supabase
     .from('card_template_revisions')
     .select('*')
-    .eq('template_key', templateKey)
-    .order('created_at', { ascending: false });
+    .eq('template_key', templateKey);
 
   if (error) throw error;
-  return (data || []) as CardTemplateRevisionRecord<T>[];
+  return ((data || []) as CardTemplateRevisionRecord<T>[]).sort((left, right) => {
+    const leftTime = new Date((left as { created_at?: string }).created_at || 0).getTime();
+    const rightTime = new Date((right as { created_at?: string }).created_at || 0).getTime();
+
+    if (Number.isFinite(rightTime) && Number.isFinite(leftTime) && rightTime !== leftTime) {
+      return rightTime - leftTime;
+    }
+
+    return right.version - left.version;
+  });
 }

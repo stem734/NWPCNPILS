@@ -1,4 +1,4 @@
-export type CardTemplateBuilderType = 'healthcheck' | 'screening' | 'immunisation' | 'ltc';
+export type CardTemplateBuilderType = 'healthcheck' | 'screening' | 'immunisation' | 'ltc' | 'medication';
 
 export type HealthCheckBuilderLink = {
   title: string;
@@ -46,7 +46,7 @@ export type CardTemplateRevisionRecord<T = unknown> = {
   template_id: string;
   label: string;
   version: number;
-  action: 'created' | 'updated' | 'restored';
+  action: 'created' | 'updated' | 'restored' | 'deleted';
   payload: T;
   restored_from_revision_id: string | null;
   created_at: string;

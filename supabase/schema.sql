@@ -60,7 +60,7 @@ CREATE TABLE medications (
 -- ===================
 CREATE TABLE card_templates (
   template_key        text PRIMARY KEY,
-  builder_type        text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
+  builder_type        text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc', 'medication')),
   template_id         text NOT NULL,
   label               text NOT NULL,
   payload             jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -83,11 +83,11 @@ CREATE INDEX idx_card_templates_builder_type
 CREATE TABLE card_template_revisions (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   template_key            text NOT NULL REFERENCES card_templates(template_key) ON DELETE CASCADE,
-  builder_type            text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
+  builder_type            text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc', 'medication')),
   template_id             text NOT NULL,
   label                   text NOT NULL,
   version                 integer NOT NULL,
-  action                  text NOT NULL CHECK (action IN ('created', 'updated', 'restored')),
+  action                  text NOT NULL CHECK (action IN ('created', 'updated', 'restored', 'deleted')),
   payload                 jsonb NOT NULL,
   restored_from_revision_id uuid REFERENCES card_template_revisions(id) ON DELETE SET NULL,
   created_at              timestamptz DEFAULT now(),

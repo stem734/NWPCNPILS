@@ -33,6 +33,7 @@ serve(async (req) => {
       nhsLink: string;
       trendLinks: { title: string; url: string }[];
       sickDaysNeeded: boolean;
+      reviewMonths?: number;
       contentReviewDate?: string;
     };
 
@@ -130,6 +131,7 @@ serve(async (req) => {
       nhs_link: data.nhsLink || '',
       trend_links: data.trendLinks || [],
       sick_days_needed: data.sickDaysNeeded || false,
+      review_months: typeof data.reviewMonths === 'number' ? data.reviewMonths : 12,
       content_review_date: data.contentReviewDate || '',
       is_deleted: false,
       updated_at: now,
@@ -146,15 +148,57 @@ serve(async (req) => {
       return errorResponse(`Failed to save medication: ${upsertError.message}`, 500);
     }
 
-    // Audit log
-    await supabase.from('audit_log').insert({
-      action,
-      actor_uid: userId,
-      code: medicationCode,
-      timestamp: now,
-      previous_state: existingDoc || null,
-      new_state: medDoc,
-    });
+    const templateKey = `medication:${medicationCode}`;
+    const { data: existingTemplate, error: existingTemplateError } = await supabase
+      .from('card_templates')
+      .select('*')
+      .eq('template_key', templateKey)
+      .maybeSingle();
+
+    if (existingTemplateError) {
+      return errorResponse(`Failed to load medication history: ${existingTemplateError.message}`, 500);
+    }
+
+    const version = (existingTemplate?.version || 0) + 1;
+    const templateRecord = {
+      template_key: templateKey,
+      builder_type: 'medication',
+      template_id: medicationCode,
+      label: data.title,
+      payload: medDoc,
+      version,
+      created_at: existingTemplate?.created_at || now,
+      created_by: existingTemplate?.created_by || userId,
+      updated_at: now,
+      updated_by: userId,
+    };
+
+    const { error: templateUpsertError } = await supabase
+      .from('card_templates')
+      .upsert(templateRecord, { onConflict: 'template_key' });
+
+    if (templateUpsertError) {
+      return errorResponse(`Medication saved but history update failed: ${templateUpsertError.message}`, 500);
+    }
+
+    const { error: revisionError } = await supabase
+      .from('card_template_revisions')
+      .insert({
+        template_key: templateKey,
+        builder_type: 'medication',
+        template_id: medicationCode,
+        label: data.title,
+        version,
+        action,
+        payload: medDoc,
+        restored_from_revision_id: null,
+        created_at: now,
+        created_by: userId,
+      });
+
+    if (revisionError) {
+      return errorResponse(`Medication saved but revision history failed: ${revisionError.message}`, 500);
+    }
 
     // If code changed, delete the old one
     if (existingCode && requestedCode && requestedCode !== existingCode) {

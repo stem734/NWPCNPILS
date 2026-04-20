@@ -14,7 +14,7 @@ serve(async (req) => {
     const [
       { data: practices, error: practicesError },
       { data: admins, error: adminsError },
-      { data: audits, error: auditsError },
+      { data: medicationHistory, error: medicationHistoryError },
       { data: loginAudit, error: loginAuditError },
     ] = await Promise.all([
       supabase.from('practices').select('*').order('name'),
@@ -23,7 +23,11 @@ serve(async (req) => {
         .select('uid, email, name, is_active, global_role')
         .in('global_role', ['owner', 'admin'])
         .order('email'),
-      supabase.from('audit_log').select('*').order('timestamp', { ascending: false }).limit(100),
+      supabase
+        .from('card_template_revisions')
+        .select('*')
+        .eq('builder_type', 'medication')
+        .limit(100),
       supabase.from('login_audit').select('*').order('created_at', { ascending: false }).limit(100),
     ]);
 
@@ -35,8 +39,8 @@ serve(async (req) => {
       return errorResponse(`Failed to load administrators: ${adminsError.message}`, 500);
     }
 
-    if (auditsError) {
-      return errorResponse(`Failed to load audit log: ${auditsError.message}`, 500);
+    if (medicationHistoryError) {
+      return errorResponse(`Failed to load medication history: ${medicationHistoryError.message}`, 500);
     }
 
     if (loginAuditError) {
@@ -46,7 +50,16 @@ serve(async (req) => {
     return jsonResponse({
       practices: practices || [],
       admins: admins || [],
-      auditLogs: audits || [],
+      medicationHistory: [...(medicationHistory || [])].sort((left, right) => {
+        const leftCreatedAt = new Date((left as { created_at?: string; timestamp?: string }).created_at || (left as { timestamp?: string }).timestamp || 0).getTime();
+        const rightCreatedAt = new Date((right as { created_at?: string; timestamp?: string }).created_at || (right as { timestamp?: string }).timestamp || 0).getTime();
+
+        if (Number.isFinite(rightCreatedAt) && Number.isFinite(leftCreatedAt) && rightCreatedAt !== leftCreatedAt) {
+          return rightCreatedAt - leftCreatedAt;
+        }
+
+        return (right as { version?: number }).version - (left as { version?: number }).version;
+      }),
       loginAudit: loginAudit || [],
     });
   } catch (err) {
