@@ -110,6 +110,14 @@ type AdminDashboardPayload = {
   }>;
 };
 
+const PRACTICE_FUNCTIONS: Array<{ key: keyof Pick<Practice, 'medication_enabled' | 'healthcheck_enabled' | 'screening_enabled' | 'immunisation_enabled' | 'ltc_enabled'>; label: string }> = [
+  { key: 'medication_enabled', label: 'Medication cards' },
+  { key: 'healthcheck_enabled', label: 'Health checks' },
+  { key: 'screening_enabled', label: 'Screening' },
+  { key: 'immunisation_enabled', label: 'Immunisations' },
+  { key: 'ltc_enabled', label: 'Long term conditions' },
+];
+
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'practices' | 'practiceUsers' | 'admins' | 'setup' | 'audit'>('practices');
   const [auditTab, setAuditTab] = useState<'login' | 'medication'>('login');
@@ -1067,43 +1075,64 @@ const AdminDashboard: React.FC = () => {
                 .map(practice => (
               <div
                 key={practice.id}
-                className="dashboard-list-card"
-                style={{ background: practice.is_active ? '#f0f9f0' : '#fef7f0' }}
+                className={`dashboard-list-card dashboard-list-card--practice ${practice.is_active ? 'dashboard-list-card--practice-active' : 'dashboard-list-card--practice-inactive'}`}
               >
                 <div className="dashboard-list-main">
-                  <div className="dashboard-list-title">{practice.name}</div>
-                <div className="dashboard-meta">
-                  {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
-                  {practice.contact_email && <span>{practice.contact_email}</span>}
-                  <span>Patient link uses: {practice.link_visit_count ?? 0}</span>
-                  <span>Satisfaction: {getPracticeSatisfaction(practice)}</span>
-                  {practice.last_accessed && (
-                    <span>Last active: {new Date(practice.last_accessed).toLocaleDateString() || 'N/A'}</span>
-                  )}
+                  <div className="dashboard-practice-card-header">
+                    <div className="dashboard-list-title">{practice.name}</div>
+                    <span className={`dashboard-badge ${practice.is_active ? 'dashboard-badge--green' : 'dashboard-badge--red'}`}>
+                      {practice.is_active ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                      {practice.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="dashboard-meta dashboard-meta--practice">
+                    {practice.ods_code && <span>ODS: {practice.ods_code}</span>}
+                    {practice.contact_email && <span>{practice.contact_email}</span>}
+                  </div>
+                  <div className="dashboard-practice-stats">
+                    <div className="dashboard-practice-stat">
+                      <span className="dashboard-practice-stat-label">Patient link uses</span>
+                      <strong>{practice.link_visit_count ?? 0}</strong>
+                    </div>
+                    <div className="dashboard-practice-stat">
+                      <span className="dashboard-practice-stat-label">Satisfaction</span>
+                      <strong>{getPracticeSatisfaction(practice)}</strong>
+                    </div>
+                    <div className="dashboard-practice-stat">
+                      <span className="dashboard-practice-stat-label">Last active</span>
+                      <strong>{practice.last_accessed ? new Date(practice.last_accessed).toLocaleDateString() || 'N/A' : 'No visits yet'}</strong>
+                    </div>
+                  </div>
                 </div>
-                <div className="dashboard-chip-row" style={{ marginTop: '0.6rem' }}>
-                  <span className={`dashboard-badge ${practice.medication_enabled !== false ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Medication {practice.medication_enabled !== false ? 'on' : 'off'}</span>
-                  <span className={`dashboard-badge ${practice.healthcheck_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Health checks {practice.healthcheck_enabled ? 'on' : 'off'}</span>
-                  <span className={`dashboard-badge ${practice.screening_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Screening {practice.screening_enabled ? 'on' : 'off'}</span>
-                  <span className={`dashboard-badge ${practice.immunisation_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Immunisations {practice.immunisation_enabled ? 'on' : 'off'}</span>
-                  <span className={`dashboard-badge ${practice.ltc_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>LTC {practice.ltc_enabled ? 'on' : 'off'}</span>
-                </div>
-              </div>
-                <div className="dashboard-list-actions">
+                <div className="dashboard-list-side dashboard-practice-side">
+                  <div className="dashboard-practice-feature-panel">
+                    <div className="dashboard-practice-feature-title">Functions</div>
+                    <div className="dashboard-practice-feature-list">
+                      {PRACTICE_FUNCTIONS.map((feature) => {
+                        const enabled = practice[feature.key] !== false;
+                        return (
+                          <div key={feature.key} className={`dashboard-practice-feature-item${enabled ? ' is-enabled' : ' is-disabled'}`}>
+                            <span className={`dashboard-practice-feature-icon${enabled ? ' is-enabled' : ' is-disabled'}`}>
+                              {enabled ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                            </span>
+                            <span>{feature.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="dashboard-list-actions dashboard-list-actions--practice">
                   {practice.is_active ? (
-                    <span className="dashboard-badge dashboard-badge--green">
-                      <CheckCircle size={16} /> Active
-                    </span>
+                    <button onClick={() => toggleActive(practice)} className="dashboard-pill-button dashboard-pill-button--danger">
+                      Deactivate
+                    </button>
                   ) : (
-                    <span className="dashboard-badge dashboard-badge--red">
-                      <XCircle size={16} /> Inactive
-                    </span>
+                    <button onClick={() => toggleActive(practice)} className="dashboard-pill-button dashboard-pill-button--success">
+                      Activate
+                    </button>
                   )}
                   <button onClick={() => openEditForm(practice)} className="dashboard-pill-button dashboard-pill-button--primary">
                     <Edit2 size={14} /> Edit
-                  </button>
-                  <button onClick={() => toggleActive(practice)} className={`dashboard-pill-button ${practice.is_active ? 'dashboard-pill-button--danger' : 'dashboard-pill-button--success'}`}>
-                    {practice.is_active ? 'Deactivate' : 'Activate'}
                   </button>
                   <button onClick={() => resetPracticeCounters(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
                     <RefreshCw size={14} /> Reset Counters
@@ -1112,6 +1141,7 @@ const AdminDashboard: React.FC = () => {
                     <Trash2 size={16} />
                   </button>
                 </div>
+              </div>
               </div>
             ))}
           </div>
