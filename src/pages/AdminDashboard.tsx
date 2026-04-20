@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
+import { useToast } from '../components/Toast';
 import { practiceUrl, resolvePath } from '../subdomainUtils';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 
@@ -137,8 +138,17 @@ const AdminDashboard: React.FC = () => {
   const [editAdminEmail, setEditAdminEmail] = useState('');
   const [editAdminActive, setEditAdminActive] = useState(true);
   const [editAdminError, setEditAdminError] = useState('');
-  const [adminActionLink, setAdminActionLink] = useState('');
-  const [adminActionMessage, setAdminActionMessage] = useState('');
+  // Admin actions (add-admin, reset-password, delete-admin) previously
+  // shared a single link/message state which meant starting any new
+  // action silently discarded the previously-shown link. Keying by
+  // action type + target lets each action own its own card.
+  type AdminActionKind = 'create-admin' | 'reset-password' | 'delete-admin';
+  const [adminAction, setAdminAction] = useState<{
+    kind: AdminActionKind;
+    targetId?: string;
+    message: string;
+    link: string;
+  } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -146,6 +156,7 @@ const AdminDashboard: React.FC = () => {
     isDangerous: boolean;
     onConfirm: () => void;
   } | null>(null);
+  const toast = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -301,14 +312,19 @@ const AdminDashboard: React.FC = () => {
     setConfirmDialog({
       title: 'Remove Practice',
       message: `Are you sure you want to remove "${practice.name}"? This action cannot be undone.`,
-      confirmLabel: 'Remove',
+      // Include the target name so the user can't misclick a practice
+      // they didn't intend to delete.
+      confirmLabel: `Remove ${practice.name}`,
       isDangerous: true,
       onConfirm: async () => {
         try {
-          await supabase.from('practices').delete().eq('id', practice.id);
+          const { error } = await supabase.from('practices').delete().eq('id', practice.id);
+          if (error) throw error;
           await loadDashboardData();
+          toast.success(`Removed ${practice.name}.`);
         } catch (error) {
           console.error('Error deleting practice:', error);
+          toast.error(`Could not remove ${practice.name}. Please try again.`);
         }
         setConfirmDialog(null);
       },
@@ -319,20 +335,23 @@ const AdminDashboard: React.FC = () => {
     setConfirmDialog({
       title: 'Reset Practice Counters',
       message: `Reset patient link usage and satisfaction scores for "${practice.name}"? This will clear usage count, rating count, rating total, and last accessed date.`,
-      confirmLabel: 'Reset Counters',
+      confirmLabel: `Reset counters for ${practice.name}`,
       isDangerous: true,
       onConfirm: async () => {
         try {
-          await supabase.from('practices').update({
+          const { error } = await supabase.from('practices').update({
             link_visit_count: 0,
             patient_rating_count: 0,
             patient_rating_total: 0,
             last_accessed: null,
             updated_at: new Date().toISOString(),
           }).eq('id', practice.id);
+          if (error) throw error;
           await loadDashboardData();
+          toast.success(`Counters reset for ${practice.name}.`);
         } catch (error) {
           console.error('Error resetting counters:', error);
+          toast.error(`Could not reset counters for ${practice.name}. Please try again.`);
         }
         setConfirmDialog(null);
       },
@@ -383,11 +402,13 @@ const AdminDashboard: React.FC = () => {
 
       if (insertError) throw insertError;
 
+      const addedName = newName.trim();
       setNewName('');
       setNewOds('');
       setNewEmail('');
       setShowAddForm(false);
       await loadDashboardData();
+      toast.success(`Added ${addedName}.`);
     } catch (error) {
       console.error('Error adding practice:', error);
       setAddError('Failed to add practice. Please try again.');
@@ -466,7 +487,9 @@ const AdminDashboard: React.FC = () => {
       }
 
       await loadDashboardData();
+      const savedName = editName.trim();
       setEditingPractice(null);
+      toast.success(`Saved changes to ${savedName}.`);
     } catch (error) {
       console.error('Error updating practice:', error);
       setEditError(await getFunctionErrorMessage(error, 'Failed to update practice. Please try again.'));
@@ -481,8 +504,6 @@ const AdminDashboard: React.FC = () => {
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddAdminError('');
-    setAdminActionLink('');
-    setAdminActionMessage('');
 
     if (!newAdminEmail.trim()) {
       setAddAdminError('Administrator email is required');
@@ -498,12 +519,16 @@ const AdminDashboard: React.FC = () => {
       setNewAdminName('');
       setNewAdminEmail('');
       setShowAddAdminForm(false);
-      setAdminActionMessage(
-        data?.created === false
-          ? `Global administrator access added for ${nextEmail}. Any existing practice memberships remain in place.`
-          : `Administrator created. Copy the setup link below and send it to ${nextEmail}.`,
-      );
-      setAdminActionLink(data?.resetLink || '');
+      setAdminAction({
+        kind: 'create-admin',
+        targetId: nextEmail,
+        message:
+          data?.created === false
+            ? `Global administrator access added for ${nextEmail}. Any existing practice memberships remain in place.`
+            : `Administrator created. Copy the setup link below and send it to ${nextEmail}.`,
+        link: data?.resetLink || '',
+      });
+      toast.success(`Administrator ready for ${nextEmail}.`);
       loadAdmins();
     } catch (error) {
       console.error('Error adding admin:', error);
