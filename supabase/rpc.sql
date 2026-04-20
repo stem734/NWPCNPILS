@@ -36,6 +36,7 @@ BEGIN
 
   RETURN jsonb_build_object(
     'valid', true,
+    'medication_enabled', practice_record.medication_enabled,
     'healthcheck_enabled', practice_record.healthcheck_enabled,
     'screening_enabled', practice_record.screening_enabled,
     'immunisation_enabled', practice_record.immunisation_enabled,
@@ -144,6 +145,10 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  IF NOT practice_record.medication_enabled THEN
     RETURN '[]'::jsonb;
   END IF;
 

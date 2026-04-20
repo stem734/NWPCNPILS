@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS practices (
   auth_uid uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   selected_medications text[] DEFAULT '{}',
   medication_review_dates jsonb DEFAULT '{}',
+  medication_enabled boolean NOT NULL DEFAULT true,
   healthcheck_enabled boolean NOT NULL DEFAULT false,
   screening_enabled boolean NOT NULL DEFAULT false,
   immunisation_enabled boolean NOT NULL DEFAULT false,
@@ -194,13 +195,17 @@ CREATE TABLE IF NOT EXISTS firebase_uid_map (
 
 -- RPC FUNCTIONS
 CREATE OR REPLACE FUNCTION validate_practice(org_name text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  practice_record practices%ROWTYPE;
 BEGIN
   IF org_name IS NULL OR trim(org_name) = '' THEN RETURN jsonb_build_object('valid', false, 'error', 'Organisation name is required'); END IF;
-  IF NOT EXISTS(SELECT 1 FROM practices WHERE name_lowercase = lower(trim(org_name)) AND is_active = true) THEN
+  SELECT * INTO practice_record FROM practices WHERE name_lowercase = lower(trim(org_name)) AND is_active = true LIMIT 1;
+  IF NOT FOUND THEN
     RETURN jsonb_build_object('valid', false, 'error', 'Practice not registered');
   END IF;
   RETURN jsonb_build_object(
     'valid', true,
+    'medication_enabled', practice_record.medication_enabled,
     'healthcheck_enabled', practice_record.healthcheck_enabled,
     'screening_enabled', practice_record.screening_enabled,
     'immunisation_enabled', practice_record.immunisation_enabled,
@@ -241,6 +246,7 @@ CREATE OR REPLACE FUNCTION resolve_patient_medication_cards(org_name text, reque
       AND trim(org_name) <> ''
       AND name_lowercase = lower(trim(org_name))
       AND is_active = true
+      AND medication_enabled = true
     LIMIT 1
   ), deduped_codes AS (
     SELECT DISTINCT ON (trim(requested.code)) trim(requested.code) AS code, requested.ord

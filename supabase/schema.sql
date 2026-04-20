@@ -18,6 +18,7 @@ CREATE TABLE practices (
   auth_uid                uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   selected_medications    text[] DEFAULT '{}',
   medication_review_dates jsonb DEFAULT '{}',
+  medication_enabled      boolean NOT NULL DEFAULT true,
   healthcheck_enabled     boolean NOT NULL DEFAULT false,
   screening_enabled       boolean NOT NULL DEFAULT false,
   immunisation_enabled    boolean NOT NULL DEFAULT false,

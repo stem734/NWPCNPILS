@@ -14,6 +14,7 @@ interface Practice {
   is_active: boolean;
   ods_code?: string;
   contact_email?: string;
+  medication_enabled?: boolean;
   healthcheck_enabled?: boolean;
   screening_enabled?: boolean;
   immunisation_enabled?: boolean;
@@ -139,6 +140,7 @@ const AdminDashboard: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editOds, setEditOds] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editMedicationEnabled, setEditMedicationEnabled] = useState(true);
   const [editHealthcheckEnabled, setEditHealthcheckEnabled] = useState(false);
   const [editScreeningEnabled, setEditScreeningEnabled] = useState(false);
   const [editImmunisationEnabled, setEditImmunisationEnabled] = useState(false);
@@ -424,6 +426,7 @@ const AdminDashboard: React.FC = () => {
     setEditName(practice.name);
     setEditOds(practice.ods_code || '');
     setEditEmail(practice.contact_email || '');
+    setEditMedicationEnabled(practice.medication_enabled !== false);
     setEditHealthcheckEnabled(practice.healthcheck_enabled === true);
     setEditScreeningEnabled(practice.screening_enabled === true);
     setEditImmunisationEnabled(practice.immunisation_enabled === true);
@@ -452,6 +455,7 @@ const AdminDashboard: React.FC = () => {
         name: editName.trim(),
         ods_code: editOds.trim().toUpperCase(),
         contact_email: editEmail.trim(),
+        medication_enabled: editMedicationEnabled,
         healthcheck_enabled: editHealthcheckEnabled,
         screening_enabled: editScreeningEnabled,
         immunisation_enabled: editImmunisationEnabled,
@@ -823,6 +827,10 @@ const AdminDashboard: React.FC = () => {
                   </p>
                   <div style={{ display: 'grid', gap: '0.7rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
+                      <input type="checkbox" checked={editMedicationEnabled} onChange={(e) => setEditMedicationEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+                      Enable Medication Cards
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
                       <input type="checkbox" checked={editHealthcheckEnabled} onChange={(e) => setEditHealthcheckEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
                       Enable Health Checks
                     </label>
@@ -1074,6 +1082,7 @@ const AdminDashboard: React.FC = () => {
                   )}
                 </div>
                 <div className="dashboard-chip-row" style={{ marginTop: '0.6rem' }}>
+                  <span className={`dashboard-badge ${practice.medication_enabled !== false ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Medication {practice.medication_enabled !== false ? 'on' : 'off'}</span>
                   <span className={`dashboard-badge ${practice.healthcheck_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Health checks {practice.healthcheck_enabled ? 'on' : 'off'}</span>
                   <span className={`dashboard-badge ${practice.screening_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Screening {practice.screening_enabled ? 'on' : 'off'}</span>
                   <span className={`dashboard-badge ${practice.immunisation_enabled ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>Immunisations {practice.immunisation_enabled ? 'on' : 'off'}</span>

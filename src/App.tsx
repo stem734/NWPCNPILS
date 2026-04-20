@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useSearchParams, useLocation
 import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { ExternalLink, Info, ShieldAlert, FlaskConical, AlertCircle, Star, ShieldCheck, Printer } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from './protocolService';
+import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from './practiceFeatures';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import PracticeSignup from './pages/PracticeSignup';
@@ -106,6 +107,7 @@ export const ResourceView: React.FC = () => {
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [practiceFeatures, setPracticeFeatures] = useState<PracticeFeatureSettings>(DEFAULT_PRACTICE_FEATURE_SETTINGS);
   const { medicationMap: allMeds } = useMedicationCatalog();
   const [resolvedContents, setResolvedContents] = useState<Array<{
     state: 'global' | 'custom' | 'placeholder';
@@ -166,12 +168,13 @@ export const ResourceView: React.FC = () => {
       const cached = window.sessionStorage.getItem(cacheKey);
       if (cached) {
         try {
-          const parsed = JSON.parse(cached) as { expiresAt?: number; valid?: boolean };
+          const parsed = JSON.parse(cached) as { expiresAt?: number; valid?: boolean; practiceFeatures?: PracticeFeatureSettings };
           if (isFreshValidationCache(parsed)) {
             if (!cancelled) {
               setIsAuthorised(true);
               setAuthError(null);
               setIsValidating(false);
+              setPracticeFeatures(parsed.practiceFeatures || DEFAULT_PRACTICE_FEATURE_SETTINGS);
             }
             return;
           }
@@ -184,6 +187,7 @@ export const ResourceView: React.FC = () => {
       if (!cancelled) {
         setIsAuthorised(null);
         setAuthError(null);
+        setPracticeFeatures(DEFAULT_PRACTICE_FEATURE_SETTINGS);
       }
       loadingTimer = window.setTimeout(() => {
         if (!cancelled) {
@@ -200,11 +204,13 @@ export const ResourceView: React.FC = () => {
       setIsAuthorised(result.valid);
       setAuthError(result.valid ? null : result.error || 'Practice not registered');
       setIsValidating(false);
+      setPracticeFeatures(result.valid ? result.practiceFeatures : DEFAULT_PRACTICE_FEATURE_SETTINGS);
 
       if (result.valid) {
         window.sessionStorage.setItem(cacheKey, JSON.stringify({
           valid: true,
           expiresAt: Date.now() + VALIDATION_CACHE_TTL_MS,
+          practiceFeatures: result.practiceFeatures,
         }));
       } else {
         window.sessionStorage.removeItem(cacheKey);
@@ -277,7 +283,7 @@ export const ResourceView: React.FC = () => {
         return;
       }
 
-      if (isAuthorised !== true) {
+      if (isAuthorised !== true || !practiceFeatures.medication_enabled) {
         if (!cancelled) {
           setResolvedContents([]);
           setIsResolvingContents(false);
@@ -304,7 +310,7 @@ export const ResourceView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [allMeds, isAuthorised, isDemoMode, orgName, requestedCodes]);
+  }, [allMeds, isAuthorised, isDemoMode, orgName, practiceFeatures.medication_enabled, requestedCodes]);
 
   const contents = useMemo(() => {
     if (isDemoMode || !orgName) {
@@ -376,6 +382,19 @@ export const ResourceView: React.FC = () => {
         <p style={{ color: '#d5281b', marginBottom: '1rem' }}>{authError}</p>
         <p style={{ fontSize: '0.9rem', color: '#4c6272' }}>
           If your practice would like to use this service, please contact your PCN coordinator.
+        </p>
+      </div>
+    );
+  }
+
+  if (orgName && isAuthorised === true && !practiceFeatures.medication_enabled) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
+        <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
+        <h1>Medication Cards Unavailable</h1>
+        <p style={{ color: '#d5281b', marginBottom: '1rem' }}>Medication cards are not enabled for this practice yet.</p>
+        <p style={{ fontSize: '0.9rem', color: '#4c6272' }}>
+          Please contact your GP practice if you were expecting medication information here.
         </p>
       </div>
     );

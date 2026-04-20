@@ -124,6 +124,7 @@ const PracticeDashboard: React.FC = () => {
             patient_rating_total,
             last_accessed,
             selected_medications,
+            medication_enabled,
             healthcheck_enabled,
             screening_enabled,
             immunisation_enabled,
