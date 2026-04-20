@@ -435,6 +435,20 @@ const PracticeDashboard: React.FC = () => {
     }
   };
 
+  const applyGlobalTemplate = async (code: string) => {
+    const { error: invokeError } = await supabase.functions.invoke('accept-global-medication-card', {
+      body: {
+        practiceId: selectedPracticeId,
+        code,
+        disclaimerAccepted: true,
+      },
+    });
+
+    if (invokeError) {
+      throw invokeError;
+    }
+  };
+
   const acceptGlobalCard = (medication: MedicationRecord, confirmLabel = 'Accept Global Template') => {
     if (!selectedPracticeId) return;
 
@@ -444,19 +458,34 @@ const PracticeDashboard: React.FC = () => {
       checkboxLabel: 'I have reviewed this template and accept responsibility for deciding whether it is suitable for my practice.',
       confirmLabel,
       onConfirm: async () => {
-        await invokeAndReload(async () => {
-          const { error: invokeError } = await supabase.functions.invoke('accept-global-medication-card', {
-            body: {
-              practiceId: selectedPracticeId,
-              code: medication.code,
-              disclaimerAccepted: true,
-            },
-          });
+        await invokeAndReload(
+          async () => {
+            await applyGlobalTemplate(medication.code);
+          },
+          `${medication.code} is now using the global template.`,
+        );
+      },
+    });
+  };
 
-          if (invokeError) {
-            throw invokeError;
-          }
-        }, `${medication.code} is now using the global template.`);
+  const acceptAllGlobalCards = () => {
+    if (!selectedPracticeId || allMedications.length === 0) return;
+
+    setDisclaimerRequest({
+      title: 'Accept All Global Templates',
+      message:
+        'This will apply the shared global template to every medication code in this practice, replacing any practice-specific versions. You can recreate practice versions later if needed.',
+      checkboxLabel: 'I have reviewed this action and understand it will switch every medication code to the shared global template.',
+      confirmLabel: 'Accept All Global',
+      onConfirm: async () => {
+        await invokeAndReload(
+          async () => {
+            for (const medication of allMedications) {
+              await applyGlobalTemplate(medication.code);
+            }
+          },
+          `All ${allMedications.length} medication codes are now using the global template.`,
+        );
       },
     });
   };
@@ -895,14 +924,24 @@ const PracticeDashboard: React.FC = () => {
                 Each code can be left unconfigured, linked to the shared global template, or maintained as a practice-owned version.
               </p>
             </div>
-            <div className="dashboard-search">
-              <input
-                type="text"
-                value={librarySearch}
-                onChange={(event) => setLibrarySearch(event.target.value)}
-                placeholder="Search by code, title, category, or description"
-                style={{ width: '100%', padding: '0.75rem 0.9rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem' }}
-              />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(100%, 520px)' }}>
+              <div className="dashboard-search">
+                <input
+                  type="text"
+                  value={librarySearch}
+                  onChange={(event) => setLibrarySearch(event.target.value)}
+                  placeholder="Search by code, title, category, or description"
+                  style={{ width: '100%', padding: '0.75rem 0.9rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem' }}
+                />
+              </div>
+              <button
+                onClick={acceptAllGlobalCards}
+                className="action-button"
+                style={{ backgroundColor: '#005eb8', justifyContent: 'center' }}
+                disabled={allMedications.length === 0}
+              >
+                <CheckCircle size={16} /> Accept All Global Templates
+              </button>
             </div>
           </div>
 
@@ -950,8 +989,13 @@ const PracticeDashboard: React.FC = () => {
                       </button>
 
                       {state !== 'custom' && (
-                        <button onClick={() => acceptGlobalCard(medication, state === 'global' ? 'Use Global Template' : 'Accept Global Template')} className="dashboard-pill-button dashboard-pill-button--primary">
-                          <CheckCircle size={14} /> {state === 'global' ? 'Use Global Instead' : 'Accept Global'}
+                        <button
+                          onClick={() => state === 'global' ? undefined : acceptGlobalCard(medication, 'Accept Global Template')}
+                          className="dashboard-pill-button dashboard-pill-button--primary"
+                          disabled={state === 'global'}
+                          style={state === 'global' ? { opacity: 0.75, cursor: 'default' } : undefined}
+                        >
+                          <CheckCircle size={14} /> {state === 'global' ? 'Using Global Template' : 'Accept Global Template'}
                         </button>
                       )}
 
