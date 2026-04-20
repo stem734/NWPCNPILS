@@ -143,10 +143,6 @@ const DrugBuilder: React.FC = () => {
   const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
   const [ltcEditorOpen, setLtcEditorOpen] = useState(false);
-  const [localSupportName, setLocalSupportName] = useState('');
-  const [localSupportPhone, setLocalSupportPhone] = useState('');
-  const [localSupportEmail, setLocalSupportEmail] = useState('');
-  const [localSupportWebsite, setLocalSupportWebsite] = useState('');
   const [templateActionKey, setTemplateActionKey] = useState('');
   const [historyState, setHistoryState] = useState<{
     builderType: CardTemplateBuilderType;
@@ -349,18 +345,6 @@ const DrugBuilder: React.FC = () => {
   const selectedImmunisationTemplate = immunisationTemplates[immunisationSelections[0]] || IMMUNISATION_TEMPLATES.flu;
   const selectedLongTermConditionTemplate =
     longTermConditionTemplates[selectedLongTermCondition] || LONG_TERM_CONDITION_TEMPLATES.asthma;
-
-  const buildHealthCheckVariantPreviewUrl = (domainId: ClinicalDomainId, resultCode: string, previewOnly = false) => {
-    const metric = PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode[resultCode] || PREVIEW_DOMAIN_CONFIGS[domainId].defaultMetric;
-    const params = new URLSearchParams({ type: 'healthcheck' });
-    params.set('hc', `${domainId}:${metric.value}:${resultCode}`);
-    if (previewOnly) params.set('previewOnly', '1');
-    if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
-    if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
-    if (healthCheckLocalSupportEmail.trim()) params.set('localEmail', healthCheckLocalSupportEmail.trim());
-    if (healthCheckLocalSupportWebsite.trim()) params.set('localWebsite', healthCheckLocalSupportWebsite.trim());
-    return buildPatientUrl(params);
-  };
 
   const healthCheckCatalogueRows = CLINICAL_DOMAIN_IDS.map((domainId) => {
     const metricByCode = PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode;
