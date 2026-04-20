@@ -11,7 +11,6 @@ import { getFunctionErrorMessage } from '../supabaseFunctionError';
 interface Practice {
   id: string;
   name: string;
-  name_lowercase: string;
   is_active: boolean;
   ods_code?: string;
   contact_email?: string;
@@ -399,7 +398,6 @@ const AdminDashboard: React.FC = () => {
         .from('practices')
         .insert({
           name: newName.trim(),
-          name_lowercase: newName.trim().toLowerCase(),
           ods_code: newOds.trim().toUpperCase(),
           contact_email: newEmail.trim(),
           is_active: true,
@@ -446,7 +444,6 @@ const AdminDashboard: React.FC = () => {
     try {
       await supabase.from('practices').update({
         name: editName.trim(),
-        name_lowercase: editName.trim().toLowerCase(),
         ods_code: editOds.trim().toUpperCase(),
         contact_email: editEmail.trim(),
       }).eq('id', editingPractice.id);

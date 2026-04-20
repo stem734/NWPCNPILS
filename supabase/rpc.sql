@@ -93,7 +93,8 @@ BEGIN
   UPDATE practices
   SET patient_rating_count = patient_rating_count + 1,
       patient_rating_total = patient_rating_total + rating_value
-  WHERE name_lowercase = lower(trim(org_name));
+  WHERE name_lowercase = lower(trim(org_name))
+    AND is_active = true;
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('success', false, 'error', 'Practice not found');
@@ -122,6 +123,10 @@ DECLARE
   placeholder_message constant text := 'No drug information available at your practice for this particular medication.';
 BEGIN
   IF org_name IS NULL OR trim(org_name) = '' THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  IF COALESCE(array_length(requested_codes, 1), 0) > 50 THEN
     RETURN '[]'::jsonb;
   END IF;
 

@@ -23,6 +23,7 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public, pg_catalog
 AS $$
   SELECT EXISTS (
     SELECT 1
@@ -41,6 +42,7 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public, pg_catalog
 AS $$
   SELECT EXISTS (
     SELECT 1
@@ -58,6 +60,7 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public, pg_catalog
 AS $$
   SELECT EXISTS (
     SELECT 1
@@ -74,6 +77,7 @@ $$;
 -- PRACTICES policies
 -- =============================================================================
 DROP POLICY IF EXISTS "practices_insert_anyone" ON practices;
+DROP POLICY IF EXISTS "practices_insert_admin" ON practices;
 DROP POLICY IF EXISTS "practices_insert_authenticated" ON practices;
 DROP POLICY IF EXISTS "practices_select_admin" ON practices;
 DROP POLICY IF EXISTS "practices_select_member" ON practices;
@@ -82,15 +86,21 @@ DROP POLICY IF EXISTS "practices_update_admin" ON practices;
 DROP POLICY IF EXISTS "practices_update_own" ON practices;
 DROP POLICY IF EXISTS "practices_delete_admin" ON practices;
 
--- Only authenticated users can create a practice, and only as a blank, inactive record.
+-- Admins can insert any practice (including active ones created from the admin dashboard).
+CREATE POLICY "practices_insert_admin"
+  ON practices FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin());
+
+-- Non-admin authenticated users can only self-register a blank inactive practice.
 -- Prevents anonymous spam and pre-population of sensitive fields.
 CREATE POLICY "practices_insert_authenticated"
   ON practices FOR INSERT
   TO authenticated
   WITH CHECK (
-    name IS NOT NULL
+    NOT is_admin()
+    AND name IS NOT NULL
     AND trim(name) <> ''
-    AND name_lowercase = lower(trim(name))
     AND is_active = false
     AND auth_uid IS NULL
     AND selected_medications = '{}'::text[]

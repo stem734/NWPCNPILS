@@ -386,14 +386,6 @@ const HealthCheckView: React.FC = () => {
         </div>
       </div>
 
-      {/* Privacy note */}
-      <section className="hc-privacy-note">
-        <h2 className="hc-privacy-note__title">How your data is used</h2>
-        <p className="hc-privacy-note__summary">
-          Your health check results are stored in your GP practice system and sent to your phone through a secure link.
-          Nottingham West PCN does not hold any personally identifiable data at any point.
-        </p>
-      </section>
     </div>
   );
 };

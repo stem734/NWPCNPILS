@@ -10,7 +10,7 @@
 CREATE TABLE practices (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name                    text NOT NULL,
-  name_lowercase          text NOT NULL,
+  name_lowercase          text NOT NULL GENERATED ALWAYS AS (lower(trim(name))) STORED,
   ods_code                text,
   contact_email           text,
   contact_name            text,
@@ -44,7 +44,7 @@ CREATE TABLE medications (
   trend_links         jsonb DEFAULT '[]',
   sick_days_needed    boolean DEFAULT false,
   review_months       integer DEFAULT 12,
-  content_review_date text DEFAULT '',
+  content_review_date date,
   is_deleted          boolean DEFAULT false,
   created_at          timestamptz DEFAULT now(),
   created_by          uuid,
@@ -153,8 +153,8 @@ CREATE TABLE practice_medication_cards (
   trend_links          jsonb DEFAULT '[]',
   sick_days_needed     boolean DEFAULT false,
   review_months        integer DEFAULT 12,
-  content_review_date  text DEFAULT '',
-  disclaimer_version   text NOT NULL,
+  content_review_date  date,
+  disclaimer_version   text NOT NULL CHECK (length(trim(disclaimer_version)) > 0),
   accepted_at          timestamptz NOT NULL DEFAULT now(),
   accepted_by          uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at           timestamptz DEFAULT now(),
@@ -189,6 +189,7 @@ CREATE TABLE login_audit (
 );
 
 CREATE INDEX idx_login_audit_created_at ON login_audit (created_at DESC);
+CREATE INDEX idx_login_audit_uid       ON login_audit (uid);
 
 -- ===================
 -- AUDIT_LOG TABLE
@@ -198,13 +199,56 @@ CREATE TABLE audit_log (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   action         text NOT NULL CHECK (action IN ('created', 'updated', 'deleted')),
   actor_uid      uuid,
+  practice_id    uuid,
   code           text,
-  timestamp      timestamptz DEFAULT now(),
+  created_at     timestamptz DEFAULT now(),
   previous_state jsonb,
   new_state      jsonb
 );
 
-CREATE INDEX idx_audit_log_timestamp ON audit_log (timestamp DESC);
+CREATE INDEX idx_audit_log_created_at  ON audit_log (created_at DESC);
+CREATE INDEX idx_audit_log_actor_uid   ON audit_log (actor_uid);
+CREATE INDEX idx_audit_log_code        ON audit_log (code);
+CREATE INDEX idx_audit_log_practice_id ON audit_log (practice_id);
+
+-- ===================
+-- updated_at auto-trigger
+-- Applied to every table that has an updated_at column so the timestamp
+-- stays accurate even when rows are modified outside application code.
+-- ===================
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_practices_updated_at
+  BEFORE UPDATE ON practices
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_medications_updated_at
+  BEFORE UPDATE ON medications
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_card_templates_updated_at
+  BEFORE UPDATE ON card_templates
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_practice_memberships_updated_at
+  BEFORE UPDATE ON practice_memberships
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_practice_medication_cards_updated_at
+  BEFORE UPDATE ON practice_medication_cards
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ===================
 -- SYNC TRIGGER: practice_medication_cards → practices
@@ -241,7 +285,6 @@ BEGIN
       FROM practice_medication_cards
       WHERE practice_id = target_practice_id
         AND content_review_date IS NOT NULL
-        AND content_review_date <> ''
     )
   WHERE id = target_practice_id;
 
@@ -252,6 +295,38 @@ $$;
 CREATE TRIGGER trg_sync_practice_medications_cache
   AFTER INSERT OR UPDATE OR DELETE ON practice_medication_cards
   FOR EACH ROW EXECUTE FUNCTION sync_practice_medications_cache();
+
+-- ===================
+-- AUDIT TRIGGER: practice_medication_cards
+-- Records every card change (accept, customise, remove) to audit_log so
+-- there is an immutable trail of who changed what for each practice.
+-- ===================
+CREATE OR REPLACE FUNCTION audit_practice_medication_card_changes()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO audit_log (action, actor_uid, practice_id, code, new_state)
+    VALUES ('created', auth.uid(), NEW.practice_id, NEW.code, to_jsonb(NEW));
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO audit_log (action, actor_uid, practice_id, code, previous_state, new_state)
+    VALUES ('updated', auth.uid(), NEW.practice_id, NEW.code, to_jsonb(OLD), to_jsonb(NEW));
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO audit_log (action, actor_uid, practice_id, code, previous_state)
+    VALUES ('deleted', auth.uid(), OLD.practice_id, OLD.code, to_jsonb(OLD));
+    RETURN OLD;
+  END IF;
+END;
+$$;
+
+CREATE TRIGGER trg_audit_practice_medication_cards
+  AFTER INSERT OR UPDATE OR DELETE ON practice_medication_cards
+  FOR EACH ROW EXECUTE FUNCTION audit_practice_medication_card_changes();
 
 -- ===================
 -- FIREBASE_UID_MAP TABLE (temporary, for migration only)

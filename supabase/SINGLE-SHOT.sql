@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS practices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
-  name_lowercase text NOT NULL,
+  name_lowercase text NOT NULL GENERATED ALWAYS AS (lower(trim(name))) STORED,
   ods_code text,
   contact_email text,
   contact_name text,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS medications (
   trend_links jsonb DEFAULT '[]',
   sick_days_needed boolean DEFAULT false,
   review_months integer DEFAULT 12,
-  content_review_date text DEFAULT '',
+  content_review_date date,
   is_deleted boolean DEFAULT false,
   created_at timestamptz DEFAULT now(),
   created_by uuid,
@@ -105,8 +105,8 @@ CREATE TABLE IF NOT EXISTS practice_medication_cards (
   trend_links jsonb DEFAULT '[]',
   sick_days_needed boolean DEFAULT false,
   review_months integer DEFAULT 12,
-  content_review_date text DEFAULT '',
-  disclaimer_version text NOT NULL,
+  content_review_date date,
+  disclaimer_version text NOT NULL CHECK (length(trim(disclaimer_version)) > 0),
   accepted_at timestamptz NOT NULL DEFAULT now(),
   accepted_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now(),
@@ -132,17 +132,22 @@ CREATE TABLE IF NOT EXISTS login_audit (
   created_at timestamptz DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_login_audit_created_at ON login_audit (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_login_audit_uid       ON login_audit (uid);
 
 CREATE TABLE IF NOT EXISTS audit_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   action text NOT NULL CHECK (action IN ('created', 'updated', 'deleted')),
   actor_uid uuid,
+  practice_id uuid,
   code text,
-  timestamp timestamptz DEFAULT now(),
+  created_at timestamptz DEFAULT now(),
   previous_state jsonb,
   new_state jsonb
 );
-CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log (timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at  ON audit_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor_uid   ON audit_log (actor_uid);
+CREATE INDEX IF NOT EXISTS idx_audit_log_code        ON audit_log (code);
+CREATE INDEX IF NOT EXISTS idx_audit_log_practice_id ON audit_log (practice_id);
 
 CREATE TABLE IF NOT EXISTS card_templates (
   template_key text PRIMARY KEY,
@@ -231,6 +236,7 @@ CREATE OR REPLACE FUNCTION resolve_patient_medication_cards(org_name text, reque
     SELECT DISTINCT ON (trim(requested.code)) trim(requested.code) AS code, requested.ord
     FROM unnest(COALESCE(requested_codes, ARRAY[]::text[])) WITH ORDINALITY AS requested(code, ord)
     WHERE trim(requested.code) <> ''
+      AND COALESCE(array_length(requested_codes, 1), 0) <= 50
     ORDER BY trim(requested.code), requested.ord
   ), ordered_codes AS (
     SELECT code, ord FROM deduped_codes ORDER BY ord
@@ -301,16 +307,18 @@ $$;
 
 -- RLS POLICIES
 DROP POLICY IF EXISTS "practices_insert_anyone" ON practices;
+DROP POLICY IF EXISTS "practices_insert_admin" ON practices;
 DROP POLICY IF EXISTS "practices_insert_authenticated" ON practices;
 DROP POLICY IF EXISTS "practices_select_admin" ON practices;
 DROP POLICY IF EXISTS "practices_select_member" ON practices;
 DROP POLICY IF EXISTS "practices_update_admin" ON practices;
 DROP POLICY IF EXISTS "practices_delete_admin" ON practices;
 
+CREATE POLICY "practices_insert_admin" ON practices FOR INSERT TO authenticated WITH CHECK (is_admin());
 CREATE POLICY "practices_insert_authenticated" ON practices FOR INSERT TO authenticated WITH CHECK (
-  name IS NOT NULL
+  NOT is_admin()
+  AND name IS NOT NULL
   AND trim(name) <> ''
-  AND name_lowercase = lower(trim(name))
   AND is_active = false
   AND auth_uid IS NULL
   AND selected_medications = '{}'::text[]
@@ -410,6 +418,23 @@ DROP POLICY IF EXISTS "audit_log_insert_admin" ON audit_log;
 CREATE POLICY "audit_log_select_admin" ON audit_log FOR SELECT TO authenticated USING (is_admin());
 CREATE POLICY "audit_log_insert_admin" ON audit_log FOR INSERT TO authenticated WITH CHECK (is_admin());
 
+-- updated_at auto-trigger
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END;
+$$;
+DROP TRIGGER IF EXISTS trg_practices_updated_at ON practices;
+CREATE TRIGGER trg_practices_updated_at BEFORE UPDATE ON practices FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_medications_updated_at ON medications;
+CREATE TRIGGER trg_medications_updated_at BEFORE UPDATE ON medications FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_card_templates_updated_at ON card_templates;
+CREATE TRIGGER trg_card_templates_updated_at BEFORE UPDATE ON card_templates FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
+CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_practice_memberships_updated_at ON practice_memberships;
+CREATE TRIGGER trg_practice_memberships_updated_at BEFORE UPDATE ON practice_memberships FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_practice_medication_cards_updated_at ON practice_medication_cards;
+CREATE TRIGGER trg_practice_medication_cards_updated_at BEFORE UPDATE ON practice_medication_cards FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- SYNC TRIGGER: keeps practices.selected_medications / medication_review_dates
 -- derived from practice_medication_cards to prevent dual-write drift.
 CREATE OR REPLACE FUNCTION sync_practice_medications_cache() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
@@ -427,7 +452,7 @@ BEGIN
       SELECT COALESCE(jsonb_object_agg(code, content_review_date), '{}'::jsonb)
       FROM practice_medication_cards
       WHERE practice_id = target_practice_id
-        AND content_review_date IS NOT NULL AND content_review_date <> ''
+        AND content_review_date IS NOT NULL
     )
   WHERE id = target_practice_id;
   RETURN NULL;
@@ -438,5 +463,28 @@ DROP TRIGGER IF EXISTS trg_sync_practice_medications_cache ON practice_medicatio
 CREATE TRIGGER trg_sync_practice_medications_cache
   AFTER INSERT OR UPDATE OR DELETE ON practice_medication_cards
   FOR EACH ROW EXECUTE FUNCTION sync_practice_medications_cache();
+
+-- AUDIT TRIGGER: practice_medication_cards
+CREATE OR REPLACE FUNCTION audit_practice_medication_card_changes() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO audit_log (action, actor_uid, practice_id, code, new_state)
+    VALUES ('created', auth.uid(), NEW.practice_id, NEW.code, to_jsonb(NEW));
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO audit_log (action, actor_uid, practice_id, code, previous_state, new_state)
+    VALUES ('updated', auth.uid(), NEW.practice_id, NEW.code, to_jsonb(OLD), to_jsonb(NEW));
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO audit_log (action, actor_uid, practice_id, code, previous_state)
+    VALUES ('deleted', auth.uid(), OLD.practice_id, OLD.code, to_jsonb(OLD));
+    RETURN OLD;
+  END IF;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_audit_practice_medication_cards ON practice_medication_cards;
+CREATE TRIGGER trg_audit_practice_medication_cards
+  AFTER INSERT OR UPDATE OR DELETE ON practice_medication_cards
+  FOR EACH ROW EXECUTE FUNCTION audit_practice_medication_card_changes();
 
 -- DEPLOYMENT COMPLETE

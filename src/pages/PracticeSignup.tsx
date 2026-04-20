@@ -27,7 +27,6 @@ const PracticeSignup: React.FC = () => {
 
       const { error: insertError } = await supabase.from('practices').insert({
         name: name.trim(),
-        name_lowercase: name.trim().toLowerCase(),
         ods_code: odsCode.trim().toUpperCase(),
         contact_email: contactEmail.trim(),
         contact_name: contactName.trim(),
