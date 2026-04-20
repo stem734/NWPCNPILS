@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { FlaskConical, CheckCircle } from 'lucide-react';
+import PracticeForm from '../components/PracticeForm';
+import { validatePracticeContactEmail } from '../practiceValidation';
 
 const PracticeSignup: React.FC = () => {
   const [name, setName] = useState('');
@@ -16,12 +18,12 @@ const PracticeSignup: React.FC = () => {
     setError('');
     setLoading(true);
 
-    // TODO: Uncomment for production - restrict to nhs.net only
-    // if (!contactEmail.trim().toLowerCase().endsWith('@nhs.net')) {
-    //   setError('Only nhs.net email addresses are accepted');
-    //   setLoading(false);
-    //   return;
-    // }
+    const emailError = validatePracticeContactEmail(contactEmail);
+    if (emailError) {
+      setError(emailError);
+      setLoading(false);
+      return;
+    }
 
     try {
 
@@ -47,13 +49,13 @@ const PracticeSignup: React.FC = () => {
     return (
       <div style={{ maxWidth: '500px', margin: '2rem auto' }}>
         <div className="card" style={{ textAlign: 'center' }}>
-          <CheckCircle size={64} color="#007f3b" style={{ marginBottom: '1rem' }} />
-          <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>Registration Submitted</h1>
-          <p style={{ color: '#4c6272', marginBottom: '1.5rem' }}>
+          <CheckCircle size={64} color="var(--nhs-green)" style={{ marginBottom: '1rem' }} />
+          <h1 style={{ fontSize: '1.5rem', color: 'var(--nhs-green)' }}>Registration Submitted</h1>
+          <p style={{ color: 'var(--nhs-secondary-text)', marginBottom: '1.5rem' }}>
             Thank you for registering <strong>{name}</strong>.
             Your application is now pending review by the MyMedInfo team.
           </p>
-          <div style={{ padding: '1rem', background: '#eef7ff', borderRadius: '8px', borderLeft: '4px solid #005eb8' }}>
+          <div style={{ padding: '1rem', background: 'var(--nhs-blue-tint)', borderRadius: '8px', borderLeft: '4px solid var(--nhs-blue)' }}>
             <p style={{ margin: 0, fontSize: '0.9rem' }}>
               <strong>What happens next?</strong><br />
               We will review your application and activate your practice.
@@ -70,103 +72,25 @@ const PracticeSignup: React.FC = () => {
     <div style={{ maxWidth: '500px', margin: '2rem auto' }}>
       <div className="card">
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <FlaskConical size={48} color="#005eb8" style={{ marginBottom: '0.5rem' }} />
+          <FlaskConical size={48} color="var(--nhs-blue)" style={{ marginBottom: '0.5rem' }} />
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Practice Registration</h1>
-          <p style={{ color: '#4c6272' }}>Register your practice for MyMedInfo</p>
+          <p style={{ color: 'var(--nhs-secondary-text)' }}>Register your practice for MyMedInfo</p>
         </div>
 
-        {error && (
-          <div style={{ padding: '0.75rem', background: '#fde8e8', color: '#d5281b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.9rem' }}>
-              Organisation Name *
-            </label>
-            <p style={{ fontSize: '0.8rem', color: '#4c6272', margin: '0 0 0.5rem' }}>
-              Enter the exact name as it appears in SystmOne
-            </p>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-              placeholder="e.g. Riverside Medical Centre"
-              style={{
-                width: '100%', padding: '0.75rem', border: '2px solid #d8dde0',
-                borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.9rem' }}>
-              ODS Code *
-            </label>
-            <input
-              type="text"
-              value={odsCode}
-              onChange={e => setOdsCode(e.target.value)}
-              required
-              placeholder="e.g. C84001"
-              style={{
-                width: '100%', padding: '0.75rem', border: '2px solid #d8dde0',
-                borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.9rem' }}>
-              Contact Name *
-            </label>
-            <input
-              type="text"
-              value={contactName}
-              onChange={e => setContactName(e.target.value)}
-              required
-              placeholder="e.g. Dr Sarah Jones"
-              style={{
-                width: '100%', padding: '0.75rem', border: '2px solid #d8dde0',
-                borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.9rem' }}>
-              Contact Email *
-            </label>
-            <input
-              type="email"
-              value={contactEmail}
-              onChange={e => setContactEmail(e.target.value)}
-              required
-              placeholder="e.g. sarah.jones@nhs.net"
-              style={{
-                width: '100%', padding: '0.75rem', border: '2px solid #d8dde0',
-                borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div style={{ padding: '1rem', background: '#fff9c4', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-            <strong>Important:</strong> The Organisation Name must match exactly what appears in SystmOne.
-            This is how the system identifies your practice when patients access medication information.
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="action-button"
-            style={{ width: '100%', justifyContent: 'center', opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? 'Submitting...' : 'Register Practice'}
-          </button>
-        </form>
+        <PracticeForm
+          values={{ name, odsCode, contactName, contactEmail }}
+          error={error}
+          loading={loading}
+          submitLabel="Register Practice"
+          onSubmit={handleSubmit}
+          onChange={(field, value) => {
+            if (field === 'name') setName(value);
+            if (field === 'odsCode') setOdsCode(value);
+            if (field === 'contactName') setContactName(value);
+            if (field === 'contactEmail') setContactEmail(value);
+          }}
+          showContactName
+        />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Edit2, Mail, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '../supabase';
 import ConfirmDialog from './ConfirmDialog';
+import Modal from './Modal';
 import type { AppUserSummary, PracticeSummary } from '../practicePortal';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 
@@ -524,42 +525,14 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
       )}
 
       {editingUser && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-user-practice-access-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1200,
-            background: 'rgba(15, 32, 45, 0.55)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1.5rem',
-          }}
-          onClick={resetForm}
+        <Modal
+          isOpen
+          onClose={resetForm}
+          size="xl"
+          title="Edit User Practice Access"
+          bodyClassName="practice-user-management__modal-body"
         >
-          <div
-            ref={editModalRef}
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              width: 'min(860px, 100%)',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              background: '#ffffff',
-              borderRadius: '16px',
-              boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
-              padding: '1.5rem',
-            }}
-          >
-            <div className="dashboard-panel-header">
-              <h2 id="edit-user-practice-access-title" className="dashboard-panel-title">Edit User Practice Access</h2>
-              <button onClick={resetForm} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272' }}>
-                Cancel
-              </button>
-            </div>
-
+          <div ref={editModalRef}>
             {error && (
               <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
                 {error}
@@ -568,7 +541,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
 
             {userForm}
           </div>
-        </div>
+        </Modal>
       )}
 
       <div className="dashboard-panel dashboard-section">

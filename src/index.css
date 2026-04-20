@@ -2,14 +2,20 @@
 
 :root {
   --nhs-blue: #005eb8;
+  --nhs-blue-ink: #003a73;
+  --nhs-blue-tint: #eef7ff;
+  --nhs-blue-soft: #d6e8f7;
   --nhs-white: #ffffff;
   --nhs-grey: #f0f4f5;
+  --nhs-surface: #ffffff;
   --nhs-text: #212b32;
   --nhs-secondary-text: #4c6272;
   --nhs-border: #d8dde0;
+  --nhs-border-strong: #bfc7cc;
   --nhs-green: #007f3b;
   --nhs-red: #d5281b;
   --nhs-yellow: #ffeb3b;
+  --nhs-overlay: rgba(15, 32, 45, 0.55);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
@@ -170,6 +176,469 @@ main {
   border: 1px solid var(--nhs-border);
   margin-bottom: 2rem;
   animation: fadeIn 0.5s ease-out;
+}
+
+.action-button--full {
+  width: 100%;
+  justify-content: center;
+}
+
+.form-field {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.form-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--nhs-border);
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.form-field__help {
+  font-size: 0.8rem;
+  color: var(--nhs-secondary-text);
+  margin: 0 0 0.5rem;
+}
+
+.form-banner {
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.form-banner--error {
+  background: #fde8e8;
+  color: var(--nhs-red);
+}
+
+.form-banner--success {
+  background: #f0f9f0;
+  color: var(--nhs-green);
+}
+
+.form-callout {
+  padding: 1rem;
+  background: var(--nhs-blue-soft);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  border-left: 4px solid var(--nhs-blue);
+}
+
+.login-card {
+  max-width: 400px;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.login-card__icon {
+  margin-bottom: 1rem;
+}
+
+.login-card__title {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-card__subtitle {
+  color: var(--nhs-secondary-text);
+  margin-bottom: 2rem;
+}
+
+.login-card__reset-link {
+  background: none;
+  border: none;
+  color: var(--nhs-blue);
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+.practice-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.practice-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.ui-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--nhs-overlay);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ui-modal__panel {
+  background: var(--nhs-surface);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 32, 45, 0.24);
+  width: 100%;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ui-modal__panel--sm {
+  max-width: 400px;
+}
+
+.ui-modal__panel--md {
+  max-width: 560px;
+}
+
+.ui-modal__panel--lg {
+  max-width: 760px;
+}
+
+.ui-modal__panel--xl {
+  max-width: 1120px;
+}
+
+.ui-modal__header,
+.ui-modal__footer {
+  padding: 1.25rem 1.5rem;
+}
+
+.ui-modal__header {
+  border-bottom: 1px solid var(--nhs-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.ui-modal__header-copy {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.ui-modal__header-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-modal__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--nhs-text);
+}
+
+.ui-modal__subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--nhs-secondary-text);
+  font-size: 0.95rem;
+}
+
+.ui-modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.ui-modal__close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--nhs-secondary-text);
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-modal__body {
+  padding: 1.5rem;
+  overflow: auto;
+}
+
+.confirm-dialog__body,
+.disclaimer-dialog__body,
+.medication-preview__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.confirm-dialog__message,
+.disclaimer-dialog__message {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--nhs-text);
+  line-height: 1.6;
+}
+
+.disclaimer-dialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.disclaimer-dialog__checkbox {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.disclaimer-dialog__checkbox input {
+  width: 18px;
+  height: 18px;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.medication-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.medication-preview__badge {
+  display: inline-block;
+  padding: 0.2rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: white;
+  width: fit-content;
+}
+
+.medication-preview__badge[data-badge='NEW'] {
+  background: var(--nhs-blue);
+}
+
+.medication-preview__badge[data-badge='REAUTH'] {
+  background: var(--nhs-green);
+}
+
+.medication-preview__badge[data-badge='GENERAL'] {
+  background: #4c6272;
+}
+
+.medication-preview__callout {
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--nhs-blue);
+}
+
+.medication-preview__callout--blue {
+  background: var(--nhs-blue-tint);
+}
+
+.medication-preview__callout--grey {
+  background: #f0f4f5;
+}
+
+.medication-preview__callout-title {
+  font-weight: 700;
+  color: var(--nhs-blue);
+  margin-bottom: 0.25rem;
+}
+
+.medication-preview__callout-title--dark {
+  color: var(--nhs-text);
+}
+
+.medication-preview__callout-body {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--nhs-text);
+}
+
+.medication-preview__callout-body--muted {
+  color: var(--nhs-secondary-text);
+}
+
+.medication-preview__title {
+  font-size: 1.3rem;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.medication-preview__title-icon {
+  color: var(--nhs-blue);
+  display: flex;
+}
+
+.medication-preview__description {
+  color: var(--nhs-text);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.medication-preview__section h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.medication-preview__key-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.medication-preview__key-item {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: flex-start;
+}
+
+.medication-preview__alert {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fde8e8;
+  border-radius: 8px;
+  border-left: 4px solid var(--nhs-red);
+}
+
+.medication-preview__alert-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.medication-preview__alert p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--nhs-text);
+}
+
+.medication-preview__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.medication-preview__link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.medication-preview__link--nhs {
+  background: var(--nhs-blue-tint);
+}
+
+.medication-preview__link--trend {
+  background: #f0f9f0;
+}
+
+.medication-preview__link-pill {
+  background: var(--nhs-blue);
+  color: white;
+  padding: 0.15rem 0.4rem;
+  font-weight: 800;
+  font-size: 0.7rem;
+  border-radius: 2px;
+}
+
+.medication-preview__link span {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.medication-preview__footer-copy {
+  font-size: 0.8rem;
+  color: var(--nhs-secondary-text);
+  text-align: center;
+  width: 100%;
+}
+
+.dashboard-modal__body,
+.practice-user-management__modal-body {
+  padding-top: 1.25rem;
+}
+
+.dashboard-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-settings {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--nhs-border);
+  background: #f8fbfd;
+}
+
+.dashboard-settings h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: var(--nhs-text);
+}
+
+.dashboard-settings p {
+  margin: 0 0 0.9rem;
+  color: var(--nhs-secondary-text);
+  font-size: 0.92rem;
+}
+
+.dashboard-settings__grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.dashboard-setting-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  color: var(--nhs-text);
+}
+
+.dashboard-setting-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.builder-editor__body {
+  padding-top: 1.25rem;
+}
+
+.ui-modal__footer {
+  border-top: 1px solid var(--nhs-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 @keyframes fadeIn {

@@ -8,6 +8,9 @@ import PracticeUserManagement from '../components/PracticeUserManagement';
 import { useToast } from '../components/Toast';
 import { practiceUrl, resolvePath } from '../subdomainUtils';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
+import Modal from '../components/Modal';
+import PracticeForm from '../components/PracticeForm';
+import { validatePracticeContactEmail } from '../practiceValidation';
 
 interface Practice {
   id: string;
@@ -382,11 +385,11 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    // TODO: Uncomment for production - restrict to nhs.net only
-    // if (!newEmail.trim().toLowerCase().endsWith('@nhs.net')) {
-    //   setAddError('Only nhs.net email addresses are accepted');
-    //   return;
-    // }
+    const emailError = validatePracticeContactEmail(newEmail);
+    if (emailError) {
+      setAddError(emailError);
+      return;
+    }
 
     try {
       // 1. Create the practice document
@@ -732,39 +735,21 @@ const AdminDashboard: React.FC = () => {
               <X size={20} />
             </button>
           </div>
-          {addError && (
-            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
-              {addError}
-            </div>
-          )}
-          <form onSubmit={addPractice} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div className="dashboard-field">
-              <label>Organisation Name *</label>
-              <input
-                type="text" value={newName} onChange={e => setNewName(e.target.value)} required
-                placeholder="Exact name as in SystmOne"
-              />
-            </div>
-            <div className="dashboard-form-grid">
-              <div className="dashboard-field">
-                <label>ODS Code</label>
-                <input
-                  type="text" value={newOds} onChange={e => setNewOds(e.target.value)}
-                  placeholder="e.g. C84001"
-                />
-              </div>
-              <div className="dashboard-field">
-                <label>Contact Email *</label>
-                <input
-                  type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required
-                  placeholder="e.g. practice.manager@nhs.net"
-                />
-              </div>
-            </div>
-            <button type="submit" className="action-button" style={{ alignSelf: 'flex-start' }}>
-              <Plus size={16} /> Add Practice
-            </button>
-          </form>
+          <PracticeForm
+            values={{ name: newName, odsCode: newOds, contactName: '', contactEmail: newEmail }}
+            error={addError}
+            loading={false}
+            submitLabel="Add Practice"
+            onSubmit={addPractice}
+            onChange={(field, value) => {
+              if (field === 'name') setNewName(value);
+              if (field === 'odsCode') setNewOds(value);
+              if (field === 'contactEmail') setNewEmail(value);
+            }}
+            showContactName={false}
+            showImportantNotice={false}
+            contactNameRequired={false}
+          />
         </div>
       )}
 
@@ -804,159 +789,128 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {editingPractice && (
-        <>
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 999 }} />
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            backgroundColor: 'white', borderRadius: '8px', width: '90%', maxWidth: '500px',
-            maxHeight: '90vh', display: 'flex', flexDirection: 'column', zIndex: 1000,
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#1a1a1a' }}>Edit Practice</h2>
-              <button onClick={() => setEditingPractice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272', padding: '0.5rem' }}>
-                <X size={24} />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-              {editError && (
-                <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
-                  {editError}
-                </div>
-              )}
-              <form onSubmit={savePracticeEdit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }} id="edit-practice-form">
-                <div className="dashboard-field">
-                  <label>Organisation Name *</label>
-                  <input
-                    type="text" value={editName} onChange={e => setEditName(e.target.value)} required
-                    placeholder="Exact name as in SystmOne"
-                  />
-                </div>
-                <div className="dashboard-form-grid">
-                  <div className="dashboard-field">
-                    <label>ODS Code</label>
-                    <input
-                      type="text" value={editOds} onChange={e => setEditOds(e.target.value)}
-                      placeholder="e.g. C84001"
-                    />
-                  </div>
-                  <div className="dashboard-field">
-                    <label>Contact Email *</label>
-                    <input
-                      type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} required
-                      placeholder="e.g. admin@nhs.net"
-                    />
-                  </div>
-                </div>
-                <div style={{ padding: '1rem', borderRadius: '12px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-                  <h3 style={{ margin: '0 0 0.35rem', fontSize: '1rem', color: '#1a1a1a' }}>Patient Information Functions</h3>
-                  <p style={{ margin: '0 0 0.9rem', color: '#4c6272', fontSize: '0.92rem' }}>
-                    These shared card sets are controlled by administrators and stay off until enabled here for the practice.
-                  </p>
-                  <div style={{ display: 'grid', gap: '0.7rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
-                      <input type="checkbox" checked={editMedicationEnabled} onChange={(e) => setEditMedicationEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                      Enable Medication Cards
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
-                      <input type="checkbox" checked={editHealthcheckEnabled} onChange={(e) => setEditHealthcheckEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                      Enable Health Checks
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
-                      <input type="checkbox" checked={editScreeningEnabled} onChange={(e) => setEditScreeningEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                      Enable Screening
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
-                      <input type="checkbox" checked={editImmunisationEnabled} onChange={(e) => setEditImmunisationEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                      Enable Immunisations
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600, color: '#1a1a1a' }}>
-                      <input type="checkbox" checked={editLtcEnabled} onChange={(e) => setEditLtcEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                      Enable Long Term Conditions
-                    </label>
-                  </div>
-                </div>
-              </form>
-            </div>
-            <div style={{ padding: '1.5rem', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setEditingPractice(null)} style={{
-                padding: '0.75rem 1.5rem', backgroundColor: '#4c6272', color: 'white',
-                border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500
-              }}>
+        <Modal
+          isOpen
+          onClose={() => setEditingPractice(null)}
+          size="md"
+          title="Edit Practice"
+          bodyClassName="dashboard-modal__body"
+          footer={(
+            <>
+              <button type="button" onClick={() => setEditingPractice(null)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
                 Cancel
               </button>
-              <button type="submit" form="edit-practice-form" style={{
-                padding: '0.75rem 1.5rem', backgroundColor: '#007f3b', color: 'white',
-                border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500
-              }}>
+              <button type="submit" form="edit-practice-form" className="action-button" style={{ backgroundColor: 'var(--nhs-green)' }}>
                 Save Changes
               </button>
+            </>
+          )}
+        >
+          {editError && (
+            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
+              {editError}
             </div>
-          </div>
-        </>
+          )}
+          <form onSubmit={savePracticeEdit} className="dashboard-modal__form" id="edit-practice-form">
+            <div className="dashboard-field">
+              <label>Organisation Name *</label>
+              <input
+                type="text" value={editName} onChange={e => setEditName(e.target.value)} required
+                placeholder="Exact name as in SystmOne"
+              />
+            </div>
+            <div className="dashboard-form-grid">
+              <div className="dashboard-field">
+                <label>ODS Code</label>
+                <input
+                  type="text" value={editOds} onChange={e => setEditOds(e.target.value)}
+                  placeholder="e.g. C84001"
+                />
+              </div>
+              <div className="dashboard-field">
+                <label>Contact Email *</label>
+                <input
+                  type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} required
+                  placeholder="e.g. admin@nhs.net"
+                />
+              </div>
+            </div>
+            <div className="dashboard-settings">
+              <h3>Patient Information Functions</h3>
+              <p>These shared card sets are controlled by administrators and stay off until enabled here for the practice.</p>
+              <div className="dashboard-settings__grid">
+                <label className="dashboard-setting-toggle">
+                  <input type="checkbox" checked={editMedicationEnabled} onChange={(e) => setEditMedicationEnabled(e.target.checked)} />
+                  Enable Medication Cards
+                </label>
+                <label className="dashboard-setting-toggle">
+                  <input type="checkbox" checked={editHealthcheckEnabled} onChange={(e) => setEditHealthcheckEnabled(e.target.checked)} />
+                  Enable Health Checks
+                </label>
+                <label className="dashboard-setting-toggle">
+                  <input type="checkbox" checked={editScreeningEnabled} onChange={(e) => setEditScreeningEnabled(e.target.checked)} />
+                  Enable Screening
+                </label>
+                <label className="dashboard-setting-toggle">
+                  <input type="checkbox" checked={editImmunisationEnabled} onChange={(e) => setEditImmunisationEnabled(e.target.checked)} />
+                  Enable Immunisations
+                </label>
+                <label className="dashboard-setting-toggle">
+                  <input type="checkbox" checked={editLtcEnabled} onChange={(e) => setEditLtcEnabled(e.target.checked)} />
+                  Enable Long Term Conditions
+                </label>
+              </div>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {editingAdmin && (
-        <>
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 999 }} />
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            backgroundColor: 'white', borderRadius: '8px', width: '90%', maxWidth: '500px',
-            maxHeight: '90vh', display: 'flex', flexDirection: 'column', zIndex: 1000,
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#1a1a1a' }}>Edit Administrator</h2>
-              <button onClick={() => setEditingAdmin(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272', padding: '0.5rem' }}>
-                <X size={24} />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-              {editAdminError && (
-                <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
-                  {editAdminError}
-                </div>
-              )}
-              <form onSubmit={saveAdminEdit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }} id="edit-admin-form">
-                <div className="dashboard-field">
-                  <label>Administrator Name *</label>
-                  <input
-                    type="text" value={editAdminName} onChange={e => setEditAdminName(e.target.value)} required
-                  />
-                </div>
-                <div className="dashboard-field">
-                  <label>Administrator Email *</label>
-                  <input
-                    type="email" value={editAdminEmail} onChange={e => setEditAdminEmail(e.target.value)} required
-                  />
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={editAdminActive}
-                    onChange={e => setEditAdminActive(e.target.checked)}
-                    style={{ width: '18px', height: '18px' }}
-                  />
-                  Administrator account active
-                </label>
-              </form>
-            </div>
-            <div style={{ padding: '1.5rem', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setEditingAdmin(null)} style={{
-                padding: '0.75rem 1.5rem', backgroundColor: '#4c6272', color: 'white',
-                border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500
-              }}>
+        <Modal
+          isOpen
+          onClose={() => setEditingAdmin(null)}
+          size="sm"
+          title="Edit Administrator"
+          bodyClassName="dashboard-modal__body"
+          footer={(
+            <>
+              <button type="button" onClick={() => setEditingAdmin(null)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
                 Cancel
               </button>
-              <button type="submit" form="edit-admin-form" style={{
-                padding: '0.75rem 1.5rem', backgroundColor: '#007f3b', color: 'white',
-                border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500
-              }}>
+              <button type="submit" form="edit-admin-form" className="action-button" style={{ backgroundColor: 'var(--nhs-green)' }}>
                 Save Changes
               </button>
+            </>
+          )}
+        >
+          {editAdminError && (
+            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
+              {editAdminError}
             </div>
-          </div>
-        </>
+          )}
+          <form onSubmit={saveAdminEdit} className="dashboard-modal__form" id="edit-admin-form">
+            <div className="dashboard-field">
+              <label>Administrator Name *</label>
+              <input
+                type="text" value={editAdminName} onChange={e => setEditAdminName(e.target.value)} required
+              />
+            </div>
+            <div className="dashboard-field">
+              <label>Administrator Email *</label>
+              <input
+                type="email" value={editAdminEmail} onChange={e => setEditAdminEmail(e.target.value)} required
+              />
+            </div>
+            <label className="dashboard-setting-toggle">
+              <input
+                type="checkbox"
+                checked={editAdminActive}
+                onChange={e => setEditAdminActive(e.target.checked)}
+              />
+              Administrator account active
+            </label>
+          </form>
+        </Modal>
       )}
 
       {activeTab === 'practiceUsers' && (
