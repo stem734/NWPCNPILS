@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe } from 'lucide-react';
+import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe, X } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import HealthCheckCard from '../components/HealthCheckCard';
 import { resolvePath } from '../subdomainUtils';
