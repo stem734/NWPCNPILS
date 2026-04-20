@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, CheckCircle, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe, X } from 'lucide-react';
+import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe, X } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import HealthCheckCard from '../components/HealthCheckCard';
 import { resolvePath } from '../subdomainUtils';
@@ -121,9 +121,7 @@ const CardBuilder: React.FC = () => {
 
   // Save state
   const [saving, setSaving] = useState(false);
-  const [savedCode, setSavedCode] = useState('');
   const [saveError, setSaveError] = useState('');
-  const [savedAction, setSavedAction] = useState<'created' | 'updated'>('created');
 
   const [deletingCode, setDeletingCode] = useState('');
   const [healthCheckLocalSupportName, setHealthCheckLocalSupportName] = useState('');
@@ -284,8 +282,6 @@ const CardBuilder: React.FC = () => {
     setEditingCode(medication.code);
     setRequestedCode(medication.code);
     setHasContent(true);
-    setSavedCode('');
-    setSavedAction('updated');
     setSaveError('');
     setGenError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -312,8 +308,6 @@ const CardBuilder: React.FC = () => {
     setEditingCode('');
     setRequestedCode('');
     setHasContent(true);
-    setSavedCode('');
-    setSavedAction('created');
     setSaveError('');
     setGenError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -573,7 +567,6 @@ const CardBuilder: React.FC = () => {
 
         setTrendLinks((c.trendLinks as TrendLink[]) || []);
         setHasContent(true);
-        setSavedCode('');
         setRequestedCode('');
       }
     } catch (err) {
@@ -598,6 +591,7 @@ const CardBuilder: React.FC = () => {
     setSaving(true);
     setSaveError('');
     try {
+      const saveAction = editingCode ? 'updated' : 'created';
       const { data, error: invokeError } = await supabase.functions.invoke('save-medication', {
         body: {
           code: editingCode || undefined,
@@ -617,9 +611,8 @@ const CardBuilder: React.FC = () => {
       });
       if (invokeError) throw invokeError;
       if (data.success) {
-        setSavedAction(editingCode ? 'updated' : 'created');
-        setSavedCode(data.code);
         await reloadMeds();
+        showBuilderNotice('medication', `Card ${saveAction} successfully.`);
       }
     } catch (err) {
       console.error('Save error:', err);
@@ -695,8 +688,6 @@ const CardBuilder: React.FC = () => {
     setHasContent(false);
     setEditingCode('');
     setRequestedCode('');
-    setSavedCode('');
-    setSavedAction('created');
     setSaveError('');
     setGenError('');
   };
@@ -841,74 +832,6 @@ const CardBuilder: React.FC = () => {
 
   if (!authenticated) return null;
 
-  // Success screen after saving
-  if (savedCode) {
-    return (
-      <>
-        {confirmDialog && (
-          <ConfirmDialog
-            title={confirmDialog.title}
-            message={confirmDialog.message}
-            confirmLabel={confirmDialog.confirmLabel}
-            isDangerous={confirmDialog.isDangerous}
-            onConfirm={confirmDialog.onConfirm}
-            onCancel={() => setConfirmDialog(null)}
-          />
-        )}
-      <div className="dashboard-shell" style={{ maxWidth: '700px' }}>
-        <div className="card" style={{ textAlign: 'center' }}>
-          <CheckCircle size={64} color="#007f3b" style={{ marginBottom: '1rem' }} />
-          <h1 style={{ fontSize: '1.5rem', color: '#007f3b' }}>
-            Card {savedAction === 'created' ? 'Created' : 'Updated'}
-          </h1>
-          <p style={{ color: '#4c6272', marginBottom: '1.5rem' }}>
-            <strong>{title}</strong> has been {savedAction === 'created' ? 'created' : 'updated'} successfully.
-          </p>
-
-          <div style={{
-            padding: '1.5rem', background: '#eef7ff', borderRadius: '12px',
-            border: '2px solid #005eb8', marginBottom: '1.5rem',
-          }}>
-            <div style={{ fontSize: '0.85rem', color: '#4c6272', marginBottom: '0.5rem' }}>Medication Card Code</div>
-            <div style={{
-              fontSize: '3rem', fontWeight: 800, color: '#005eb8',
-              fontFamily: 'monospace', letterSpacing: '0.1em',
-            }}>
-              {savedCode}
-            </div>
-            <button
-              onClick={() => copyCode(savedCode)}
-              className="action-button"
-              style={{ marginTop: '1rem', backgroundColor: '#005eb8' }}
-            >
-              <Copy size={16} /> Copy Code
-            </button>
-          </div>
-
-          <div style={{
-            padding: '1rem', background: '#fff9c4', borderRadius: '8px',
-            fontSize: '0.9rem', marginBottom: '1.5rem', textAlign: 'left',
-          }}>
-            <strong>Add to SystmOne Protocol:</strong>
-            <br />
-            Add code <strong>{savedCode}</strong> to your medication protocol output.
-            When included in the URL as <code>codes=...{savedCode}</code>, patients will see this medication information.
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            <button onClick={resetForm} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-              <Plus size={16} /> Create Another
-            </button>
-            <button onClick={() => navigate(resolvePath('/admin/dashboard'))} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-              <ArrowLeft size={16} /> Back to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-      </>
-    );
-  }
-
   return (
     <>
       {confirmDialog && (
@@ -921,7 +844,7 @@ const CardBuilder: React.FC = () => {
           onCancel={() => setConfirmDialog(null)}
         />
       )}
-    <div className="dashboard-shell">
+      <div className="dashboard-shell">
       {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
 
       <div className="dashboard-header">
@@ -970,6 +893,11 @@ const CardBuilder: React.FC = () => {
       {/* Step 1: Search and Generate */}
       {selectedOutputType === 'medication' && (
       <>
+      {builderNotice?.type === 'medication' && (
+        <div style={{ marginBottom: '1rem', padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', fontSize: '0.88rem', fontWeight: 600 }}>
+          {builderNotice.message}
+        </div>
+      )}
       <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
           1. {editingCode ? `Editing Medication Card ${editingCode}` : 'Medication Card'}
