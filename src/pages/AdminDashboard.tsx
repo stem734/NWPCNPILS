@@ -110,12 +110,16 @@ type AdminDashboardPayload = {
   }>;
 };
 
-const PRACTICE_FUNCTIONS: Array<{ key: keyof Pick<Practice, 'medication_enabled' | 'healthcheck_enabled' | 'screening_enabled' | 'immunisation_enabled' | 'ltc_enabled'>; label: string }> = [
-  { key: 'medication_enabled', label: 'Medication cards' },
-  { key: 'healthcheck_enabled', label: 'Health checks' },
-  { key: 'screening_enabled', label: 'Screening' },
-  { key: 'immunisation_enabled', label: 'Immunisations' },
-  { key: 'ltc_enabled', label: 'Long term conditions' },
+const PRACTICE_FUNCTIONS: Array<{
+  key: keyof Pick<Practice, 'medication_enabled' | 'healthcheck_enabled' | 'screening_enabled' | 'immunisation_enabled' | 'ltc_enabled'>;
+  label: string;
+  isEnabled: (practice: Practice) => boolean;
+}> = [
+  { key: 'medication_enabled', label: 'Medication cards', isEnabled: (practice) => practice.medication_enabled !== false },
+  { key: 'healthcheck_enabled', label: 'Health checks', isEnabled: (practice) => practice.healthcheck_enabled === true },
+  { key: 'screening_enabled', label: 'Screening', isEnabled: (practice) => practice.screening_enabled === true },
+  { key: 'immunisation_enabled', label: 'Immunisations', isEnabled: (practice) => practice.immunisation_enabled === true },
+  { key: 'ltc_enabled', label: 'Long term conditions', isEnabled: (practice) => practice.ltc_enabled === true },
 ];
 
 const AdminDashboard: React.FC = () => {
@@ -1078,7 +1082,7 @@ const AdminDashboard: React.FC = () => {
                 className={`dashboard-list-card dashboard-list-card--practice ${practice.is_active ? 'dashboard-list-card--practice-active' : 'dashboard-list-card--practice-inactive'}`}
               >
                 {(() => {
-                  const activeFunctions = PRACTICE_FUNCTIONS.filter((feature) => practice[feature.key] !== false);
+                  const activeFunctions = PRACTICE_FUNCTIONS.filter((feature) => feature.isEnabled(practice));
 
                   return (
                     <>
