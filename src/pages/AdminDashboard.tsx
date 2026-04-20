@@ -42,17 +42,6 @@ type AdminRow = {
   global_role: 'owner' | 'admin' | null;
 };
 
-interface MedicationHistoryEntry {
-  id: string;
-  template_key: string;
-  template_id: string;
-  label: string;
-  version: number;
-  action: 'created' | 'updated' | 'restored' | 'deleted';
-  created_by: string | null;
-  createdAtMs: number;
-}
-
 interface LoginAuditEntry {
   id: string;
   uid: string;
@@ -84,17 +73,6 @@ interface LoginAuditGroup {
 type AdminDashboardPayload = {
   practices?: Practice[];
   admins?: AdminRow[];
-  medicationHistory?: Array<{
-    id: string;
-    template_key: string;
-    template_id: string;
-    label: string;
-    version: number;
-    action: 'created' | 'updated' | 'restored' | 'deleted';
-    created_by: string | null;
-    created_at?: string;
-    timestamp?: string;
-  }>;
   loginAudit?: Array<{
     id: string;
     uid: string;
@@ -124,16 +102,13 @@ const PRACTICE_FUNCTIONS: Array<{
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'practices' | 'practiceUsers' | 'admins' | 'setup' | 'audit'>('practices');
-  const [auditTab, setAuditTab] = useState<'login' | 'medication'>('login');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
-  const [medicationHistory, setMedicationHistory] = useState<MedicationHistoryEntry[]>([]);
   const [loginAudit, setLoginAudit] = useState<LoginAuditEntry[]>([]);
   const [practiceSearch, setPracticeSearch] = useState('');
   const [practiceStatusFilter, setPracticeStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = useState(true);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
-  const [loadingAudits, setLoadingAudits] = useState(true);
   const [loadingLoginAudit, setLoadingLoginAudit] = useState(true);
   const [expandedLoginAudit, setExpandedLoginAudit] = useState<Record<string, boolean>>({});
   const [authenticated, setAuthenticated] = useState(false);
@@ -201,7 +176,6 @@ const AdminDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     setLoadingAdmins(true);
-    setLoadingAudits(true);
     setLoadingLoginAudit(true);
     setLoadError('');
 
@@ -221,18 +195,6 @@ const AdminDashboard: React.FC = () => {
             is_active: row.is_active,
             role: row.global_role as 'owner' | 'admin',
           })),
-      );
-      setMedicationHistory(
-        (payload.medicationHistory || []).map((row) => ({
-          id: row.id,
-          template_key: row.template_key,
-          template_id: row.template_id,
-          label: row.label,
-          version: row.version,
-          action: row.action,
-          created_by: row.created_by,
-          createdAtMs: new Date(row.created_at || row.timestamp || 0).getTime(),
-        })),
       );
       setLoginAudit(
         (payload.loginAudit || []).map((row) => ({
@@ -255,21 +217,15 @@ const AdminDashboard: React.FC = () => {
       setLoadError(message);
       setPractices([]);
       setAdminUsers([]);
-      setMedicationHistory([]);
       setLoginAudit([]);
     } finally {
       setLoading(false);
       setLoadingAdmins(false);
-      setLoadingAudits(false);
       setLoadingLoginAudit(false);
     }
   };
 
   const loadAdmins = async () => {
-    await loadDashboardData();
-  };
-
-  const loadAudits = async () => {
     await loadDashboardData();
   };
 
@@ -316,6 +272,11 @@ const AdminDashboard: React.FC = () => {
       }))
       .sort((left, right) => right.latestCreatedAtMs - left.latestCreatedAtMs);
   }, [loginAudit]);
+
+  const practiceSignupLink = useMemo(
+    () => new URL(practiceUrl('/signup'), window.location.origin).toString(),
+    [],
+  );
 
   const toggleLoginAuditGroup = (key: string) => {
     setExpandedLoginAudit((current) => ({
@@ -673,7 +634,7 @@ const AdminDashboard: React.FC = () => {
           Setup
         </button>
         <button className={`dashboard-tab${activeTab === 'audit' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('audit')}>
-          Audit Log
+          User Audit
         </button>
       </div>
 
@@ -1210,7 +1171,7 @@ const AdminDashboard: React.FC = () => {
           fontFamily: 'monospace', fontSize: '0.85rem', wordBreak: 'break-all',
           border: '1px solid #005eb8'
         }}>
-          {practiceUrl('/signup')}
+          {practiceSignupLink}
         </div>
         <div className="dashboard-banner dashboard-banner--info" style={{ marginTop: '1rem' }}>
           Use the Users tab to create accounts, assign users to multiple practices, and send reset links after accounts are created.
@@ -1219,38 +1180,17 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {activeTab === 'audit' && (
-      <>
-      <div className="dashboard-tabs" style={{ marginBottom: '1rem' }}>
-          <button
-            className={`dashboard-tab${auditTab === 'login' ? ' dashboard-tab--active' : ''}`}
-            onClick={() => setAuditTab('login')}
-          >
-            Login Audit
-          </button>
-          <button
-            className={`dashboard-tab${auditTab === 'medication' ? ' dashboard-tab--active' : ''}`}
-            onClick={() => setAuditTab('medication')}
-          >
-            Medication History
-          </button>
-        </div>
-
-        {auditTab === 'login' && (
         <div className="dashboard-panel dashboard-section">
           <div className="dashboard-panel-header">
             <div>
               <h2 className="dashboard-panel-title">
-              Recent Login Audit ({groupedLoginAudit.length})
+              Recent User Audit ({groupedLoginAudit.length})
               </h2>
               <p className="dashboard-panel-subtitle">Successful sign-ins grouped by user so repeated logins stay tidy.</p>
             </div>
             <button onClick={loadLoginAudit} className="action-button" style={{ backgroundColor: '#4c6272' }}>
               <RefreshCw size={16} /> Refresh Logins
             </button>
-          </div>
-
-          <div className="dashboard-banner dashboard-banner--info" style={{ marginBottom: '1rem' }}>
-            Failed sign-in attempts are not captured here because the password check is handled directly by Firebase Auth.
           </div>
 
           {loadingLoginAudit ? (
@@ -1318,66 +1258,6 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
-        )}
-
-        {auditTab === 'medication' && (
-        <div className="dashboard-panel dashboard-section">
-          <div className="dashboard-panel-header">
-            <div>
-              <h2 className="dashboard-panel-title">
-              Medication History ({medicationHistory.length})
-              </h2>
-              <p className="dashboard-panel-subtitle">Shared revision history for medication cards.</p>
-            </div>
-            <button onClick={loadAudits} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-              <RefreshCw size={16} /> Refresh
-            </button>
-          </div>
-
-          {loadingAudits ? (
-            <p style={{ color: '#4c6272' }}>Loading medication history...</p>
-          ) : medicationHistory.length === 0 ? (
-            <p style={{ color: '#4c6272' }}>No medication history found.</p>
-          ) : (
-            <div className="dashboard-list">
-              {medicationHistory.map((entry) => {
-                const actorEmail = adminUsers.find((admin) => admin.uid === entry.created_by)?.email || entry.created_by || 'Unknown';
-                const dateObj = new Date(entry.createdAtMs);
-                const isDeleted = entry.action === 'deleted';
-                const isCreated = entry.action === 'created';
-
-                return (
-                <div
-                  key={entry.id}
-                  className="dashboard-list-card"
-                >
-                  <div style={{
-                    padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem',
-                    fontWeight: 800, fontFamily: 'monospace', background: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8'), color: 'white',
-                    minWidth: '40px', textAlign: 'center',
-                  }}>
-                    {entry.template_id || '???'}
-                  </div>
-                  <div className="dashboard-list-main" style={{ marginLeft: '1rem' }}>
-                    <div className="dashboard-list-title">{entry.label}</div>
-                    <div className="dashboard-meta" style={{ marginTop: '0.25rem' }}>
-                      <span style={{
-                        fontWeight: 700,
-                        color: isDeleted ? '#d5281b' : (isCreated ? '#007f3b' : '#005eb8')
-                      }}>
-                        v{entry.version} · {entry.action.toUpperCase()}
-                      </span>
-                      <span>by {actorEmail}</span>
-                      <span>{dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString()}</span>
-                    </div>
-                  </div>
-                </div>
-              )})}
-            </div>
-          )}
-        </div>
-        )}
-      </>
       )}
     </div>
     </>

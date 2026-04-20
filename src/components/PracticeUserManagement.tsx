@@ -53,6 +53,30 @@ const normalisePractice = (
   return practice ?? null;
 };
 
+const getUserAccountType = (appUser: AppUserSummary) => {
+  if (appUser.global_role && appUser.memberships.length > 0) {
+    return {
+      label: 'GLOBAL ADMIN + PRACTICE USER',
+      toneClassName: 'dashboard-badge--amber',
+      helperText: 'Global administrator access is managed separately from practice access.',
+    };
+  }
+
+  if (appUser.global_role) {
+    return {
+      label: 'GLOBAL ADMIN ONLY',
+      toneClassName: 'dashboard-badge--amber',
+      helperText: 'This account has global access but no practice memberships.',
+    };
+  }
+
+  return {
+    label: 'PRACTICE USER',
+    toneClassName: 'dashboard-badge--blue',
+    helperText: '',
+  };
+};
+
 const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practices }) => {
   const [users, setUsers] = useState<AppUserSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -551,7 +575,7 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
         <div className="dashboard-panel-header">
           <div>
             <h2 className="dashboard-panel-title">Users ({users.length})</h2>
-            <p className="dashboard-panel-subtitle">Assign users to one or more practices, including users who also have global administrator access.</p>
+            <p className="dashboard-panel-subtitle">Manage practice access here. Global administrator access is shown clearly and should be managed from the Administrators tab.</p>
           </div>
           <div className="dashboard-inline-actions">
             <button onClick={() => void loadUsers()} className="action-button" style={{ backgroundColor: '#4c6272' }}>
@@ -571,51 +595,63 @@ const PracticeUserManagement: React.FC<PracticeUserManagementProps> = ({ practic
           <p style={{ color: '#4c6272' }}>No users found yet.</p>
         ) : (
           <div className="dashboard-list">
-            {users.map((appUser) => (
-              <div key={appUser.uid} className="dashboard-list-card">
-                <div className="dashboard-list-main">
-                  <div className="dashboard-list-title">{appUser.name || appUser.email}</div>
-                  <div className="dashboard-meta">
-                    <span>{appUser.email}</span>
-                    <span className={`dashboard-badge ${appUser.is_active ? 'dashboard-badge--green' : 'dashboard-badge--red'}`}>
-                      {appUser.is_active ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                    {appUser.global_role && (
-                      <span className={`dashboard-badge ${appUser.global_role === 'owner' ? 'dashboard-badge--amber' : 'dashboard-badge--blue'}`}>
-                        {appUser.global_role.toUpperCase()}
+            {users.map((appUser) => {
+              const accountType = getUserAccountType(appUser);
+
+              return (
+                <div key={appUser.uid} className="dashboard-list-card">
+                  <div className="dashboard-list-main">
+                    <div className="dashboard-list-title">{appUser.name || appUser.email}</div>
+                    <div className="dashboard-meta">
+                      <span>{appUser.email}</span>
+                      <span className={`dashboard-badge ${appUser.is_active ? 'dashboard-badge--green' : 'dashboard-badge--red'}`}>
+                        {appUser.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </span>
-                    )}
-                    <span>{appUser.memberships.length} practice{appUser.memberships.length === 1 ? '' : 's'}</span>
-                  </div>
-                  {appUser.memberships.length > 0 ? (
-                    <div className="dashboard-chip-row" style={{ marginTop: '0.6rem' }}>
-                      {appUser.memberships.map((membership) => (
-                        <span key={membership.id} className={`dashboard-chip${membership.is_default ? ' dashboard-chip--active' : ''}`}>
-                          {membership.practice.name}{membership.is_default ? ' (Default)' : ''}
+                      <span className={`dashboard-badge ${accountType.toneClassName}`}>
+                        {accountType.label}
+                      </span>
+                      {appUser.global_role && (
+                        <span className={`dashboard-badge ${appUser.global_role === 'owner' ? 'dashboard-badge--amber' : 'dashboard-badge--blue'}`}>
+                          ROLE: {appUser.global_role.toUpperCase()}
                         </span>
-                      ))}
+                      )}
+                      <span>{appUser.memberships.length} practice{appUser.memberships.length === 1 ? '' : 's'}</span>
                     </div>
-                  ) : (
-                    <p style={{ marginTop: '0.6rem', color: '#4c6272', fontSize: '0.9rem' }}>
-                      No practice access assigned yet.
-                    </p>
-                  )}
-                </div>
-                <div className="dashboard-list-actions">
-                  <button onClick={() => openEditForm(appUser)} className="dashboard-pill-button dashboard-pill-button--primary">
-                    <Edit2 size={14} /> Edit
-                  </button>
-                  <button onClick={() => void sendPasswordReset(appUser)} className="dashboard-pill-button">
-                    <Mail size={14} /> Reset Password
-                  </button>
-                  {appUser.global_role !== 'owner' && (
-                    <button onClick={() => deleteUser(appUser)} className="dashboard-pill-button dashboard-pill-button--danger">
-                      <Trash2 size={14} /> Delete
+                    {accountType.helperText && (
+                      <p style={{ marginTop: '0.5rem', color: '#4c6272', fontSize: '0.9rem' }}>
+                        {accountType.helperText}
+                      </p>
+                    )}
+                    {appUser.memberships.length > 0 ? (
+                      <div className="dashboard-chip-row" style={{ marginTop: '0.6rem' }}>
+                        {appUser.memberships.map((membership) => (
+                          <span key={membership.id} className={`dashboard-chip${membership.is_default ? ' dashboard-chip--active' : ''}`}>
+                            {membership.practice.name}{membership.is_default ? ' (Default)' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ marginTop: '0.6rem', color: '#4c6272', fontSize: '0.9rem' }}>
+                        No practice access assigned yet.
+                      </p>
+                    )}
+                  </div>
+                  <div className="dashboard-list-actions">
+                    <button onClick={() => openEditForm(appUser)} className="dashboard-pill-button dashboard-pill-button--primary">
+                      <Edit2 size={14} /> Edit
                     </button>
-                  )}
+                    <button onClick={() => void sendPasswordReset(appUser)} className="dashboard-pill-button">
+                      <Mail size={14} /> Reset Password
+                    </button>
+                    {!appUser.global_role && (
+                      <button onClick={() => deleteUser(appUser)} className="dashboard-pill-button dashboard-pill-button--danger">
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
