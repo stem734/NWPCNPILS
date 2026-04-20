@@ -463,7 +463,7 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      await supabase.from('practices').update({
+      const updatePayload = {
         name: editName.trim(),
         ods_code: editOds.trim().toUpperCase(),
         contact_email: editEmail.trim(),
@@ -472,13 +472,43 @@ const AdminDashboard: React.FC = () => {
         screening_enabled: editScreeningEnabled,
         immunisation_enabled: editImmunisationEnabled,
         ltc_enabled: editLtcEnabled,
-      }).eq('id', editingPractice.id);
+      };
 
-      setEditingPractice(null);
+      let { error } = await supabase
+        .from('practices')
+        .update(updatePayload)
+        .eq('id', editingPractice.id);
+
+      if (error && /medication_enabled/i.test(error.message)) {
+        const fallbackResult = await supabase
+          .from('practices')
+          .update({
+            name: updatePayload.name,
+            ods_code: updatePayload.ods_code,
+            contact_email: updatePayload.contact_email,
+            healthcheck_enabled: updatePayload.healthcheck_enabled,
+            screening_enabled: updatePayload.screening_enabled,
+            immunisation_enabled: updatePayload.immunisation_enabled,
+            ltc_enabled: updatePayload.ltc_enabled,
+          })
+          .eq('id', editingPractice.id);
+
+        error = fallbackResult.error;
+
+        if (!error) {
+          setEditError('Practice saved, but medication card toggling needs the latest Supabase migration before it will persist.');
+        }
+      }
+
+      if (error) {
+        throw error;
+      }
+
       await loadDashboardData();
+      setEditingPractice(null);
     } catch (error) {
       console.error('Error updating practice:', error);
-      setEditError('Failed to update practice. Please try again.');
+      setEditError(await getFunctionErrorMessage(error, 'Failed to update practice. Please try again.'));
     }
   };
 
