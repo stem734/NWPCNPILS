@@ -1548,48 +1548,45 @@ const DrugBuilder: React.FC = () => {
           </div>
 
           {healthCheckEditorOpen && (
-            <div
-              onClick={() => setHealthCheckEditorOpen(false)}
-              style={{
+            <>
+              <div style={{
                 position: 'fixed',
                 inset: 0,
                 background: 'rgba(15, 32, 45, 0.55)',
+                zIndex: 1099,
+              }} />
+              <div style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 'min(1120px, 90vw)',
+                maxHeight: '90vh',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1.5rem',
+                flexDirection: 'column',
+                background: '#ffffff',
+                borderRadius: '16px',
+                boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
                 zIndex: 1100,
               }}
-            >
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: 'min(1120px, 100%)',
-                  maxHeight: '90vh',
-                  overflowY: 'auto',
-                  background: '#ffffff',
-                  borderRadius: '16px',
-                  boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
-                  padding: '1.5rem',
-                }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
                   <div>
-                    <h3 style={{ margin: 0, color: '#003087' }}>Edit Health Check Card</h3>
-                    <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>
+                    <h3 style={{ margin: 0, color: '#003087', fontSize: '1.25rem', fontWeight: 600 }}>Edit Health Check Card</h3>
+                    <p style={{ margin: '0.35rem 0 0', color: '#4c6272', fontSize: '0.9rem' }}>
                       {selectedHealthCheckMetric.label} - {resolvedSelectedHealthCheckVariantCode}
                     </p>
                   </div>
                   <button
                     onClick={() => setHealthCheckEditorOpen(false)}
-                    className="action-button-sm"
-                    style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.5rem 0.75rem' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    Close
+                    <X size={24} />
                   </button>
                 </div>
 
-                <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+                  <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                       <div>
@@ -1687,12 +1684,12 @@ const DrugBuilder: React.FC = () => {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                      <div style={{ flex: 1 }}>
                         <h4 style={{ margin: 0 }}>Resource and Support Links</h4>
                         <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>Add national NHS links and local support contacts shown in the next-steps section.</p>
                       </div>
-                      <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+                      <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8', flexShrink: 0, whiteSpace: 'nowrap' }}>
                         <Plus size={16} /> Add Link
                       </button>
                     </div>
@@ -1822,9 +1819,29 @@ const DrugBuilder: React.FC = () => {
                       expanded
                     />
                   </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '1.5rem', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setHealthCheckEditorOpen(false)}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#4c6272',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.95rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </>
       )}
