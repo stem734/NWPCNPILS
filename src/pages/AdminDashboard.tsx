@@ -141,17 +141,8 @@ const AdminDashboard: React.FC = () => {
   const [editAdminEmail, setEditAdminEmail] = useState('');
   const [editAdminActive, setEditAdminActive] = useState(true);
   const [editAdminError, setEditAdminError] = useState('');
-  // Admin actions (add-admin, reset-password, delete-admin) previously
-  // shared a single link/message state which meant starting any new
-  // action silently discarded the previously-shown link. Keying by
-  // action type + target lets each action own its own card.
-  type AdminActionKind = 'create-admin' | 'reset-password' | 'delete-admin';
-  const [adminAction, setAdminAction] = useState<{
-    kind: AdminActionKind;
-    targetId?: string;
-    message: string;
-    link: string;
-  } | null>(null);
+  const [adminActionMessage, setAdminActionMessage] = useState('');
+  const [adminActionLink, setAdminActionLink] = useState('');
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -522,15 +513,12 @@ const AdminDashboard: React.FC = () => {
       setNewAdminName('');
       setNewAdminEmail('');
       setShowAddAdminForm(false);
-      setAdminAction({
-        kind: 'create-admin',
-        targetId: nextEmail,
-        message:
-          data?.created === false
-            ? `Global administrator access added for ${nextEmail}. Any existing practice memberships remain in place.`
-            : `Administrator created. Copy the setup link below and send it to ${nextEmail}.`,
-        link: data?.resetLink || '',
-      });
+      setAdminActionMessage(
+        data?.created === false
+          ? `Global administrator access added for ${nextEmail}. Any existing practice memberships remain in place.`
+          : `Administrator created. Copy the setup link below and send it to ${nextEmail}.`,
+      );
+      setAdminActionLink(data?.resetLink || '');
       toast.success(`Administrator ready for ${nextEmail}.`);
       loadAdmins();
     } catch (error) {

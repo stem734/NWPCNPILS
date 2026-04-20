@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useReducer, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe, X } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import HealthCheckCard from '../components/HealthCheckCard';
-import Modal from '../components/Modal';
 import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
@@ -39,110 +38,6 @@ interface TrendLink {
 }
 
 type OutputBuilderType = 'medication' | 'healthcheck' | 'screening' | 'immunisation' | 'ltc';
-
-type BuilderConfirmDialog = {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  isDangerous: boolean;
-  onConfirm: () => void;
-} | null;
-
-type BuilderHistoryState = {
-  builderType: CardTemplateBuilderType;
-  templateId: string;
-  label: string;
-  revisions: CardTemplateRevisionRecord[];
-  loading: boolean;
-} | null;
-
-type BuilderUiState = {
-  selectedOutputType: OutputBuilderType;
-  previewMed: MedicationRecord | null;
-  selectedHealthCheckDomain: ClinicalDomainId;
-  selectedHealthCheckVariantCode: string;
-  healthCheckEditorOpen: boolean;
-  screeningEditorOpen: boolean;
-  immunisationEditorOpen: boolean;
-  ltcEditorOpen: boolean;
-  historyState: BuilderHistoryState;
-  confirmDialog: BuilderConfirmDialog;
-  builderNotice: { type: OutputBuilderType; message: string } | null;
-};
-
-type BuilderUiAction =
-  | { type: 'selectOutputType'; outputType: OutputBuilderType }
-  | { type: 'setPreviewMed'; med: MedicationRecord | null }
-  | { type: 'openHealthCheckEditor'; domainId: ClinicalDomainId; resultCode: string }
-  | { type: 'setSelectedHealthCheckDomain'; domainId: ClinicalDomainId }
-  | { type: 'setSelectedHealthCheckVariantCode'; resultCode: string }
-  | { type: 'setHealthCheckEditorOpen'; open: boolean }
-  | { type: 'setScreeningEditorOpen'; open: boolean }
-  | { type: 'setImmunisationEditorOpen'; open: boolean }
-  | { type: 'setLtcEditorOpen'; open: boolean }
-  | { type: 'setHistoryState'; historyState: BuilderHistoryState }
-  | { type: 'setConfirmDialog'; confirmDialog: BuilderConfirmDialog }
-  | { type: 'setBuilderNotice'; builderNotice: BuilderUiState['builderNotice'] };
-
-const initialBuilderUiState: BuilderUiState = {
-  selectedOutputType: 'medication',
-  previewMed: null,
-  selectedHealthCheckDomain: 'bp',
-  selectedHealthCheckVariantCode: 'BPNORMAL',
-  healthCheckEditorOpen: false,
-  screeningEditorOpen: false,
-  immunisationEditorOpen: false,
-  ltcEditorOpen: false,
-  historyState: null,
-  confirmDialog: null,
-  builderNotice: null,
-};
-
-const builderUiReducer = (state: BuilderUiState, action: BuilderUiAction): BuilderUiState => {
-  switch (action.type) {
-    case 'selectOutputType':
-      return {
-        ...state,
-        selectedOutputType: action.outputType,
-        previewMed: null,
-        healthCheckEditorOpen: false,
-        screeningEditorOpen: false,
-        immunisationEditorOpen: false,
-        ltcEditorOpen: false,
-        historyState: null,
-        confirmDialog: null,
-      };
-    case 'setPreviewMed':
-      return { ...state, previewMed: action.med };
-    case 'openHealthCheckEditor':
-      return {
-        ...state,
-        selectedHealthCheckDomain: action.domainId,
-        selectedHealthCheckVariantCode: action.resultCode,
-        healthCheckEditorOpen: true,
-      };
-    case 'setSelectedHealthCheckDomain':
-      return { ...state, selectedHealthCheckDomain: action.domainId };
-    case 'setSelectedHealthCheckVariantCode':
-      return { ...state, selectedHealthCheckVariantCode: action.resultCode };
-    case 'setHealthCheckEditorOpen':
-      return { ...state, healthCheckEditorOpen: action.open };
-    case 'setScreeningEditorOpen':
-      return { ...state, screeningEditorOpen: action.open };
-    case 'setImmunisationEditorOpen':
-      return { ...state, immunisationEditorOpen: action.open };
-    case 'setLtcEditorOpen':
-      return { ...state, ltcEditorOpen: action.open };
-    case 'setHistoryState':
-      return { ...state, historyState: action.historyState };
-    case 'setConfirmDialog':
-      return { ...state, confirmDialog: action.confirmDialog };
-    case 'setBuilderNotice':
-      return { ...state, builderNotice: action.builderNotice };
-    default:
-      return state;
-  }
-};
 
 const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>> =>
   CLINICAL_DOMAIN_IDS.reduce((domainAcc, domainId) => {
@@ -195,7 +90,7 @@ const createDefaultLongTermConditionState = (): Record<string, LongTermCondition
 const CardBuilder: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
-  const [uiState, dispatchUi] = useReducer(builderUiReducer, initialBuilderUiState);
+  const [selectedOutputType, setSelectedOutputType] = useState<OutputBuilderType>('medication');
   const {
     medications: existingMeds,
     loading: loadingMeds,
@@ -222,6 +117,8 @@ const CardBuilder: React.FC = () => {
   const [hasContent, setHasContent] = useState(false);
   const [editingCode, setEditingCode] = useState('');
   const [requestedCode, setRequestedCode] = useState('');
+  const [previewMed, setPreviewMed] = useState<MedicationRecord | null>(null);
+
   // Save state
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -231,39 +128,35 @@ const CardBuilder: React.FC = () => {
   const [healthCheckLocalSupportPhone, setHealthCheckLocalSupportPhone] = useState('');
   const [healthCheckLocalSupportEmail, setHealthCheckLocalSupportEmail] = useState('');
   const [healthCheckLocalSupportWebsite, setHealthCheckLocalSupportWebsite] = useState('');
+  const [selectedHealthCheckDomain, setSelectedHealthCheckDomain] = useState<ClinicalDomainId>('bp');
+  const [selectedHealthCheckVariantCode, setSelectedHealthCheckVariantCode] = useState('BPNORMAL');
+  const [healthCheckEditorOpen, setHealthCheckEditorOpen] = useState(false);
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
   const [screeningTemplates, setScreeningTemplates] = useState<Record<string, ScreeningTemplate>>(() => createDefaultScreeningState());
   const [screeningType, setScreeningType] = useState('cervical');
+  const [screeningEditorOpen, setScreeningEditorOpen] = useState(false);
   const [immunisationTemplates, setImmunisationTemplates] = useState<Record<string, ImmunisationTemplate>>(() => createDefaultImmunisationState());
   const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
+  const [immunisationEditorOpen, setImmunisationEditorOpen] = useState(false);
   const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
+  const [ltcEditorOpen, setLtcEditorOpen] = useState(false);
   const [templateActionKey, setTemplateActionKey] = useState('');
-  const {
-    selectedOutputType,
-    previewMed,
-    selectedHealthCheckDomain,
-    selectedHealthCheckVariantCode,
-    healthCheckEditorOpen,
-    screeningEditorOpen,
-    immunisationEditorOpen,
-    ltcEditorOpen,
-    historyState,
-    confirmDialog,
-    builderNotice,
-  } = uiState;
-
-  const setSelectedOutputType = (outputType: OutputBuilderType) => dispatchUi({ type: 'selectOutputType', outputType });
-  const setPreviewMed = (med: MedicationRecord | null) => dispatchUi({ type: 'setPreviewMed', med });
-  const setSelectedHealthCheckDomain = (domainId: ClinicalDomainId) => dispatchUi({ type: 'setSelectedHealthCheckDomain', domainId });
-  const setSelectedHealthCheckVariantCode = (resultCode: string) => dispatchUi({ type: 'setSelectedHealthCheckVariantCode', resultCode });
-  const setHealthCheckEditorOpen = (open: boolean) => dispatchUi({ type: 'setHealthCheckEditorOpen', open });
-  const setScreeningEditorOpen = (open: boolean) => dispatchUi({ type: 'setScreeningEditorOpen', open });
-  const setImmunisationEditorOpen = (open: boolean) => dispatchUi({ type: 'setImmunisationEditorOpen', open });
-  const setLtcEditorOpen = (open: boolean) => dispatchUi({ type: 'setLtcEditorOpen', open });
-  const setHistoryState = (value: BuilderHistoryState) => dispatchUi({ type: 'setHistoryState', historyState: value });
-  const setConfirmDialog = (value: BuilderConfirmDialog) => dispatchUi({ type: 'setConfirmDialog', confirmDialog: value });
-  const setBuilderNotice = (value: BuilderUiState['builderNotice']) => dispatchUi({ type: 'setBuilderNotice', builderNotice: value });
+  const [historyState, setHistoryState] = useState<{
+    builderType: CardTemplateBuilderType;
+    templateId: string;
+    label: string;
+    revisions: CardTemplateRevisionRecord[];
+    loading: boolean;
+  } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    isDangerous: boolean;
+    onConfirm: () => void;
+  } | null>(null);
+  const [builderNotice, setBuilderNotice] = useState<{ type: OutputBuilderType; message: string } | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
@@ -806,7 +699,7 @@ const CardBuilder: React.FC = () => {
   const showBuilderNotice = (type: OutputBuilderType, message: string) => {
     setBuilderNotice({ type, message });
     window.setTimeout(() => {
-      setBuilderNotice(null);
+      setBuilderNotice((current) => (current?.type === type ? null : current));
     }, 2200);
   };
 
@@ -900,7 +793,7 @@ const CardBuilder: React.FC = () => {
       applyTemplatePayloadToState(historyState.builderType, historyState.templateId, revision.payload);
 
       const revisions = await fetchCardTemplateRevisions(historyState.builderType, historyState.templateId);
-      setHistoryState({ ...historyState, revisions, loading: false });
+      setHistoryState((current) => current ? { ...current, revisions, loading: false } : current);
       showBuilderNotice(historyState.builderType as OutputBuilderType, `${historyState.label} restored.`);
     } catch (err) {
       const message = await getFunctionErrorMessage(err, 'Failed to restore template.');
@@ -1468,29 +1361,29 @@ const CardBuilder: React.FC = () => {
             </div>
           </div>
 
-	      {healthCheckEditorOpen && (
-	        <div>
-	          <div style={{
-	            position: 'fixed',
-	            inset: 0,
-	            background: 'rgba(15, 32, 45, 0.55)',
-	            zIndex: 1099,
-	          }} />
-	          <div style={{
-	            position: 'fixed',
-	            top: '50%',
-	            left: '50%',
-	            transform: 'translate(-50%, -50%)',
-	            width: 'min(1120px, 90vw)',
-	            maxHeight: '90vh',
-	            display: 'flex',
-	            flexDirection: 'column',
-	            background: '#ffffff',
-	            borderRadius: '16px',
-	            boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
-	            zIndex: 1100,
-	          }}
-	          >
+          {healthCheckEditorOpen && (
+            <>
+              <div style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(15, 32, 45, 0.55)',
+                zIndex: 1099,
+              }} />
+              <div style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 'min(1120px, 90vw)',
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column',
+                background: '#ffffff',
+                borderRadius: '16px',
+                boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
+                zIndex: 1100,
+              }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
                   <div>
                     <h3 style={{ margin: 0, color: '#003087', fontSize: '1.25rem', fontWeight: 600 }}>Edit Health Check Card</h3>
@@ -1779,9 +1672,12 @@ const CardBuilder: React.FC = () => {
                   >
                     Save Changes
                   </button>
-	                </div>
-	              </div>
-	      )}
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
 
       {selectedOutputType === 'screening' && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #005eb8' }}>
@@ -1938,7 +1834,8 @@ const CardBuilder: React.FC = () => {
       )}
 
       {screeningEditorOpen && (
-        <Modal isOpen onClose={() => setScreeningEditorOpen(false)} size="xl" bodyClassName="builder-editor__body">
+        <div onClick={() => setScreeningEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1100 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <h3 style={{ margin: 0, color: '#003087' }}>Edit Screening Card</h3>
@@ -1973,12 +1870,14 @@ const CardBuilder: React.FC = () => {
                   </div>
                 ))}
               </div>
-	            </div>
-	        </Modal>
-	      )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {immunisationEditorOpen && (
-        <Modal isOpen onClose={() => setImmunisationEditorOpen(false)} size="xl" bodyClassName="builder-editor__body">
+        <div onClick={() => setImmunisationEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1100 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <h3 style={{ margin: 0, color: '#003087' }}>Edit Immunisation Card</h3>
@@ -2013,33 +1912,14 @@ const CardBuilder: React.FC = () => {
                   </div>
                 ))}
               </div>
-	              </div>
-	        </Modal>
-	      )}
+            </div>
+          </div>
+        </div>
+      )}
 
-	      {ltcEditorOpen && (
-	        <>
-	          <div style={{
-	            position: 'fixed',
-	            inset: 0,
-	            background: 'rgba(15, 32, 45, 0.55)',
-	            zIndex: 1099,
-	          }} />
-	          <div style={{
-	            position: 'fixed',
-	            top: '50%',
-	            left: '50%',
-	            transform: 'translate(-50%, -50%)',
-	            width: 'min(1120px, 90vw)',
-	            maxHeight: '90vh',
-	            display: 'flex',
-	            flexDirection: 'column',
-	            background: '#ffffff',
-	            borderRadius: '16px',
-	            boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
-	            zIndex: 1100,
-	          }}
-	          >
+      {ltcEditorOpen && (
+        <div onClick={() => setLtcEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1100 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(1040px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <h3 style={{ margin: 0, color: '#003087' }}>Edit Long Term Condition Card</h3>
@@ -2078,23 +1958,24 @@ const CardBuilder: React.FC = () => {
                   <textarea value={section.points.join('\n')} onChange={(e) => updateLongTermAdditionalSection(selectedLongTermCondition, sectionIndex, 'points', e.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
                 </div>
               ))}
-	              <div>
-	                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
-	                {selectedLongTermConditionTemplate.nhsLinks.map((link, index) => (
-	                  <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
-	                    <input type="text" value={link.title} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-	                    <input type="text" value={link.url} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'url', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-	                    <textarea value={link.description} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'description', e.target.value)} rows={2} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-	                  </div>
-	                ))}
-	              </div>
-	                </div>
-	              </div>
-	        </>
-	      )}
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
+                {selectedLongTermConditionTemplate.nhsLinks.map((link, index) => (
+                  <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
+                    <input type="text" value={link.title} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <input type="text" value={link.url} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'url', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <textarea value={link.description} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'description', e.target.value)} rows={2} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {historyState && (
-        <Modal isOpen onClose={() => setHistoryState(null)} size="lg" bodyClassName="builder-editor__body">
+        <div onClick={() => setHistoryState(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 32, 45, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 1200 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(760px, 100%)', maxHeight: '85vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <h3 style={{ margin: 0, color: '#003087' }}>Template Audit History</h3>
@@ -2128,9 +2009,11 @@ const CardBuilder: React.FC = () => {
                     </button>
                   </div>
                 ))}
-	              </div>
-	        </Modal>
-	      )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
