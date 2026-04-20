@@ -8,7 +8,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import PracticeSignup from './pages/PracticeSignup';
 import PracticeLogin from './pages/PracticeLogin';
 import PracticeDashboard from './pages/PracticeDashboard';
-import DrugBuilder from './pages/DrugBuilder';
+import CardBuilder from './pages/CardBuilder';
 import Landing from './pages/Landing';
 import Demo from './pages/Demo';
 import ResetPassword from './pages/ResetPassword';
@@ -601,8 +601,8 @@ const SubdomainRoutes: React.FC = () => {
       <Routes>
         <Route path="/" element={<AdminLogin />} />
         <Route path="/dashboard" element={<AdminDashboard />} />
-        <Route path="/drug-builder" element={<DrugBuilder />} />
-        <Route path="/card-builder" element={<DrugBuilder />} />
+        <Route path="/drug-builder" element={<CardBuilder />} />
+        <Route path="/card-builder" element={<CardBuilder />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     );
@@ -629,8 +629,8 @@ const SubdomainRoutes: React.FC = () => {
       <Route path="/admin" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/signup" element={<PracticeSignup />} />
-      <Route path="/admin/drug-builder" element={<DrugBuilder />} />
-      <Route path="/admin/card-builder" element={<DrugBuilder />} />
+      <Route path="/admin/drug-builder" element={<CardBuilder />} />
+      <Route path="/admin/card-builder" element={<CardBuilder />} />
       <Route path="/practice" element={<PracticeLogin />} />
       <Route path="/practice/dashboard" element={<PracticeDashboard />} />
       <Route path="/reset-password" element={<ResetPassword />} />

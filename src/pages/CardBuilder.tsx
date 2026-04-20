@@ -87,7 +87,7 @@ const createDefaultImmunisationState = (): Record<string, ImmunisationTemplate> 
 const createDefaultLongTermConditionState = (): Record<string, LongTermConditionTemplate> =>
   Object.fromEntries(Object.entries(LONG_TERM_CONDITION_TEMPLATES).map(([key, template]) => [key, cloneLongTermConditionTemplate(template)]));
 
-const DrugBuilder: React.FC = () => {
+const CardBuilder: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
   const [selectedOutputType, setSelectedOutputType] = useState<OutputBuilderType>('medication');
@@ -1418,14 +1418,6 @@ const DrugBuilder: React.FC = () => {
                       <Edit2 size={14} /> Edit
                     </button>
                     <button
-                      onClick={() => saveHealthCheckTemplate(row.domainId)}
-                      disabled={templateActionKey === `healthcheck:${row.domainId}`}
-                      className="action-button-sm"
-                      style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
-                    >
-                      <Save size={14} /> Save
-                    </button>
-                    <button
                       onClick={() => loadTemplateHistory('healthcheck', row.domainId, row.label)}
                       className="action-button-sm"
                       style={{ background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
@@ -1792,14 +1784,6 @@ const DrugBuilder: React.FC = () => {
                         <Edit2 size={14} /> Edit
                       </button>
                       <button
-                        onClick={() => saveScreeningTemplate(template.id)}
-                        disabled={templateActionKey === `screening:${template.id}`}
-                        className="action-button-sm"
-                        style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
-                      >
-                        <Save size={14} /> Save
-                      </button>
-                      <button
                         onClick={() => loadTemplateHistory('screening', template.id, template.label)}
                         className="action-button-sm"
                         style={{ background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
@@ -1854,14 +1838,6 @@ const DrugBuilder: React.FC = () => {
                         <Edit2 size={14} /> Edit
                       </button>
                       <button
-                        onClick={() => saveImmunisationTemplate(template.id)}
-                        disabled={templateActionKey === `immunisation:${template.id}`}
-                        className="action-button-sm"
-                        style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
-                      >
-                        <Save size={14} /> Save
-                      </button>
-                      <button
                         onClick={() => loadTemplateHistory('immunisation', template.id, template.label)}
                         className="action-button-sm"
                         style={{ background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
@@ -1910,14 +1886,6 @@ const DrugBuilder: React.FC = () => {
                       </button>
                       <button onClick={() => { setSelectedLongTermCondition(template.id); setLtcEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Edit2 size={14} /> Edit
-                      </button>
-                      <button
-                        onClick={() => saveLtcTemplate(template.id)}
-                        disabled={templateActionKey === `ltc:${template.id}`}
-                        className="action-button-sm"
-                        style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
-                      >
-                        <Save size={14} /> Save
                       </button>
                       <button
                         onClick={() => loadTemplateHistory('ltc', template.id, template.label)}
@@ -2123,4 +2091,4 @@ const DrugBuilder: React.FC = () => {
   );
 };
 
-export default DrugBuilder;
+export default CardBuilder;
