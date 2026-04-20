@@ -45,13 +45,24 @@ export async function validateOrganisation(orgName: string): Promise<{
   }
 }
 
-export async function recordPatientAccess(orgName: string): Promise<void> {
-  if (!orgName.trim()) return;
+/**
+ * Records a patient access and reports whether the practice is still
+ * valid. The server returns `null`/an error when the practice has been
+ * deactivated so the caller can invalidate any cached validation.
+ */
+export async function recordPatientAccess(orgName: string): Promise<{ ok: boolean }> {
+  if (!orgName.trim()) return { ok: true };
 
   try {
-    await supabase.rpc('record_patient_access', { org_name: orgName });
+    const { error } = await supabase.rpc('record_patient_access', { org_name: orgName });
+    if (error) {
+      console.error('Patient access logging error:', error);
+      return { ok: false };
+    }
+    return { ok: true };
   } catch (error) {
     console.error('Patient access logging error:', error);
+    return { ok: false };
   }
 }
 
@@ -68,15 +79,27 @@ export function parseMedicationCodes(codesParam: string): string[] {
     .filter(c => /^\d{3}$/.test(c));
 }
 
-export async function resolveOrganisationMedicationCards(orgName: string, codes: string[]): Promise<ResolvedMedicationCard[]> {
+export type MedicationResolutionResult =
+  | { ok: true; cards: ResolvedMedicationCard[] }
+  | { ok: false; error: string };
+
+export async function resolveOrganisationMedicationCards(
+  orgName: string,
+  codes: string[],
+): Promise<MedicationResolutionResult> {
   if (!orgName.trim() || codes.length === 0) {
-    return [];
+    return { ok: true, cards: [] };
   }
 
   try {
-    return await resolvePatientMedicationCards(orgName, codes);
+    const cards = await resolvePatientMedicationCards(orgName, codes);
+    return { ok: true, cards };
   } catch (error) {
     console.error('Medication resolution error:', error);
-    return [];
+    return {
+      ok: false,
+      error:
+        'We could not load your medication information right now. Please check your internet connection and try again.',
+    };
   }
 }

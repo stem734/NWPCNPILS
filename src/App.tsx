@@ -20,11 +20,15 @@ import { getMedicationIcon } from './medicationIcons';
 import { supabase } from './supabase';
 import { getSubdomain } from './subdomainUtils';
 import { getDemoNoticeText } from './demoHelpers';
+import { isIssuedDateStale } from './dateHelpers';
 
 declare const __APP_COMMIT_COUNT__: string;
 declare const __APP_COMMIT_HASH__: string;
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
+// Bump when the cache shape or feature-flag schema changes so
+// returning patients don't get stuck on stale data after a deploy.
+const VALIDATION_CACHE_VERSION = 'v2';
 const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   NEW: 0,
   REAUTH: 1,
@@ -32,7 +36,16 @@ const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
 };
 
 const getValidationCacheKey = (orgName: string) =>
-  `practice-validation:${orgName.trim().toLowerCase()}`;
+  `practice-validation:${VALIDATION_CACHE_VERSION}:${orgName.trim().toLowerCase()}`;
+
+const clearValidationCache = (orgName: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(getValidationCacheKey(orgName));
+  } catch {
+    // sessionStorage may be unavailable (private mode); safe to ignore.
+  }
+};
 
 const isFreshValidationCache = (value: { expiresAt?: number; valid?: boolean }) =>
   value.valid === true &&
@@ -79,35 +92,15 @@ export const ResourceView: React.FC = () => {
   const isDemoMode = searchParams.get('demo') === '1';
 
 
-  const isOutOfDate = useMemo(() => {
-    if (!dateParam) return false;
-    
-    // SystmOne often uses DD/MM/YYYY or YYYY-MM-DD
-    // If it's DD/MM/YYYY, new Date() might fail on some browsers depending on locale
-    let dateToParse = dateParam;
-    if (dateParam.includes('/')) {
-      const parts = dateParam.split('/');
-      if (parts.length === 3) {
-        // Assume DD/MM/YYYY -> MM/DD/YYYY for Date constructor safety or use YYYY-MM-DD
-        if (parts[2].length === 4) {
-          dateToParse = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-      }
-    }
-
-    const issuedDate = new Date(dateToParse);
-    if (isNaN(issuedDate.getTime())) return false;
-
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-    return issuedDate < sixMonthsAgo;
-  }, [dateParam]);
+  const isOutOfDate = useMemo(() => isIssuedDateStale(dateParam, 6), [dateParam]);
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [practiceFeatures, setPracticeFeatures] = useState<PracticeFeatureSettings>(DEFAULT_PRACTICE_FEATURE_SETTINGS);
+  // Bumped when we detect the cached validation may be stale (e.g. the
+  // practice was deactivated) to force the validation effect to re-run.
+  const [validationNonce, setValidationNonce] = useState(0);
   const { medicationMap: allMeds } = useMedicationCatalog();
   const [resolvedContents, setResolvedContents] = useState<Array<{
     state: 'global' | 'custom' | 'placeholder';
@@ -123,21 +116,39 @@ export const ResourceView: React.FC = () => {
     reviewMonths?: number;
   }>>([]);
   const [isResolvingContents, setIsResolvingContents] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
   const loggedAccessKeyRef = useRef<string | null>(null);
 
   const [rating, setRating] = useState<number>(0);
   const [hasRated, setHasRated] = useState<boolean>(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
 
+  const [ratingError, setRatingError] = useState<string | null>(null);
+
   const handleRating = async (value: number) => {
     if (hasRated || !orgName) return;
     setRating(value);
+    setRatingError(null);
     setIsSubmittingRating(true);
     try {
-      await supabase.rpc('submit_patient_rating', { org_name: orgName, rating_value: value });
-      setHasRated(true);
+      const { data, error } = await supabase.rpc('submit_patient_rating', {
+        org_name: orgName,
+        rating_value: value,
+      });
+      if (error) {
+        throw error;
+      }
+      const result = data as { success?: boolean; error?: string; rate_limited?: boolean } | null;
+      if (result && result.success === false) {
+        setRatingError(result.error || 'Unable to submit rating. Please try again later.');
+        setRating(0);
+      } else {
+        setHasRated(true);
+      }
     } catch (err) {
       console.error('Failed to submit rating:', err);
+      setRatingError('Unable to submit rating. Please try again later.');
+      setRating(0);
     }
     setIsSubmittingRating(false);
   };
@@ -225,7 +236,7 @@ export const ResourceView: React.FC = () => {
         window.clearTimeout(loadingTimer);
       }
     };
-  }, [isDemoMode, orgName]);
+  }, [isDemoMode, orgName, validationNonce]);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -244,7 +255,19 @@ export const ResourceView: React.FC = () => {
     }
 
     loggedAccessKeyRef.current = accessKey;
-    void recordPatientAccess(orgName);
+    void (async () => {
+      const result = await recordPatientAccess(orgName);
+      if (!result.ok) {
+        // Practice may have been deactivated while the cached validation
+        // was still fresh; drop the cache and force a re-validation so
+        // the patient doesn't keep seeing stale content for up to 5min.
+        clearValidationCache(orgName);
+        loggedAccessKeyRef.current = null;
+        setIsAuthorised(null);
+        setAuthError(null);
+        setValidationNonce((n) => n + 1);
+      }
+    })();
   }, [codesParam, isAuthorised, isDemoMode, orgName, rawCode]);
 
   const requestedCodes = useMemo(() => {
@@ -263,6 +286,7 @@ export const ResourceView: React.FC = () => {
       if (requestedCodes.length === 0) {
         if (!cancelled) {
           setResolvedContents([]);
+          setResolveError(null);
           setIsResolvingContents(false);
         }
         return;
@@ -278,6 +302,7 @@ export const ResourceView: React.FC = () => {
               })
               .filter((item): item is NonNullable<typeof item> => item !== null),
           );
+          setResolveError(null);
           setIsResolvingContents(false);
         }
         return;
@@ -286,6 +311,7 @@ export const ResourceView: React.FC = () => {
       if (isAuthorised !== true || !practiceFeatures.medication_enabled) {
         if (!cancelled) {
           setResolvedContents([]);
+          setResolveError(null);
           setIsResolvingContents(false);
         }
         return;
@@ -294,9 +320,15 @@ export const ResourceView: React.FC = () => {
       setIsResolvingContents(true);
 
       try {
-        const cards = await resolveOrganisationMedicationCards(orgName, requestedCodes);
+        const result = await resolveOrganisationMedicationCards(orgName, requestedCodes);
         if (!cancelled) {
-          setResolvedContents(cards);
+          if (result.ok) {
+            setResolvedContents(result.cards);
+            setResolveError(null);
+          } else {
+            setResolvedContents([]);
+            setResolveError(result.error);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -396,6 +428,34 @@ export const ResourceView: React.FC = () => {
         <p style={{ fontSize: '0.9rem', color: '#4c6272' }}>
           Please contact your GP practice if you were expecting medication information here.
         </p>
+      </div>
+    );
+  }
+
+  if (resolveError && orgName && requestedCodes.length > 0) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
+        <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
+        <h1>Medication Information Unavailable</h1>
+        <p style={{ color: '#d5281b', marginBottom: '1rem' }}>{resolveError}</p>
+        <p style={{ fontSize: '0.9rem', color: '#4c6272', marginBottom: '1rem' }}>
+          This is usually a temporary issue. Please try again in a moment.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          style={{
+            backgroundColor: '#005eb8',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '0.75rem 1.5rem',
+            fontSize: '1rem',
+            cursor: 'pointer',
+          }}
+        >
+          Try again
+        </button>
       </div>
     );
   }
@@ -603,6 +663,14 @@ export const ResourceView: React.FC = () => {
                 </button>
               ))}
             </div>
+          )}
+          {ratingError && !hasRated && (
+            <p
+              role="alert"
+              style={{ marginTop: '1rem', color: '#d5281b', fontSize: '0.95rem' }}
+            >
+              {ratingError}
+            </p>
           )}
         </div>
       )}

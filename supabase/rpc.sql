@@ -80,14 +80,37 @@ GRANT EXECUTE ON FUNCTION record_patient_access TO anon;
 GRANT EXECUTE ON FUNCTION record_patient_access TO authenticated;
 
 -- ===================
+-- patient_rating_submissions: rolling-window rate-limit log for ratings.
+-- The RPC caps submissions per practice per minute to prevent abuse of
+-- the anon-callable submit_patient_rating RPC.
+-- ===================
+CREATE TABLE IF NOT EXISTS patient_rating_submissions (
+  id bigserial PRIMARY KEY,
+  practice_id uuid NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  submitted_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_patient_rating_submissions_practice_time
+  ON patient_rating_submissions (practice_id, submitted_at DESC);
+
+ALTER TABLE patient_rating_submissions ENABLE ROW LEVEL SECURITY;
+-- No policies: only the SECURITY DEFINER RPC below touches this table.
+
+-- ===================
 -- submit_patient_rating(org_name text, rating_value integer)
--- Atomically increments patient_rating_count and patient_rating_total.
+-- Atomically increments patient_rating_count and patient_rating_total,
+-- with a rolling-window rate-limit of 10 submissions per practice per
+-- minute to discourage brute-force skewing of scores.
 -- ===================
 CREATE OR REPLACE FUNCTION submit_patient_rating(org_name text, rating_value integer)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  target_practice_id uuid;
+  recent_submissions integer;
+  rate_limit_per_minute constant integer := 10;
 BEGIN
   IF org_name IS NULL OR trim(org_name) = '' THEN
     RETURN jsonb_build_object('success', false, 'error', 'Organisation name is required');
@@ -97,15 +120,41 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Rating must be between 1 and 5');
   END IF;
 
+  SELECT id INTO target_practice_id
+  FROM practices
+  WHERE name_lowercase = lower(trim(org_name))
+    AND is_active = true
+  LIMIT 1;
+
+  IF target_practice_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Practice not found');
+  END IF;
+
+  -- Opportunistically garbage-collect log entries older than 1 hour to
+  -- keep the table small; this runs inside the RPC transaction.
+  DELETE FROM patient_rating_submissions
+  WHERE submitted_at < now() - interval '1 hour';
+
+  SELECT count(*) INTO recent_submissions
+  FROM patient_rating_submissions
+  WHERE practice_id = target_practice_id
+    AND submitted_at > now() - interval '1 minute';
+
+  IF recent_submissions >= rate_limit_per_minute THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'Too many ratings recently. Please try again in a minute.',
+      'rate_limited', true
+    );
+  END IF;
+
+  INSERT INTO patient_rating_submissions (practice_id)
+  VALUES (target_practice_id);
+
   UPDATE practices
   SET patient_rating_count = patient_rating_count + 1,
       patient_rating_total = patient_rating_total + rating_value
-  WHERE name_lowercase = lower(trim(org_name))
-    AND is_active = true;
-
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Practice not found');
-  END IF;
+  WHERE id = target_practice_id;
 
   RETURN jsonb_build_object('success', true);
 END;
