@@ -121,6 +121,9 @@ const DOMAIN_FEATURE_KEY: Record<PracticeTemplateBuilderType, keyof PracticeSumm
   ltc: 'ltc_enabled',
 };
 
+const domainFeatureEnabled = (practice: PracticeSummary, domain: DashboardDomain) =>
+  domain === 'medication' ? practice.medication_enabled !== false : practice[DOMAIN_FEATURE_KEY[domain]] === true;
+
 const isEditablePatientTemplate = (value: unknown): value is EditablePatientTemplate => {
   const row = value as Partial<EditablePatientTemplate> | null;
   return Boolean(row && typeof row.id === 'string' && typeof row.label === 'string' && Array.isArray(row.guidance) && Array.isArray(row.nhsLinks));
@@ -449,6 +452,29 @@ const PracticeDashboard: React.FC = () => {
 
   const activeTemplateDomain = activeDomain === 'medication' ? null : activeDomain;
   const selectedDomainTemplates = activeTemplateDomain ? nonMedicationTemplates[activeTemplateDomain] : [];
+
+  const serviceSummaries = useMemo(() => {
+    if (!selectedPractice) return [];
+
+    return DASHBOARD_DOMAINS.map((domain) => {
+      const isActive = domainFeatureEnabled(selectedPractice, domain.id);
+      const practiceVersionCount = domain.id === 'medication'
+        ? customCount
+        : practiceTemplateRows.filter((row) => row.builder_type === domain.id).length;
+      const totalTemplateCount = domain.id === 'medication'
+        ? allMedications.length
+        : nonMedicationTemplates[domain.id].length;
+
+      return {
+        ...domain,
+        isActive,
+        practiceVersionCount,
+        totalTemplateCount,
+      };
+    });
+  }, [allMedications.length, customCount, nonMedicationTemplates, practiceTemplateRows, selectedPractice]);
+
+  const activeServiceCount = serviceSummaries.filter((service) => service.isActive).length;
 
   const lastAccessedLabel = selectedPractice?.last_accessed
     ? new Date(selectedPractice.last_accessed).toLocaleString('en-GB', {
@@ -944,24 +970,54 @@ const PracticeDashboard: React.FC = () => {
         <div className="dashboard-panel" style={{ borderLeft: '4px solid #005eb8' }}>
           <div className="dashboard-panel-header">
             <div>
-              <h2 className="dashboard-panel-title">Content Domain</h2>
-              <p className="dashboard-panel-subtitle">Choose which patient information cards you want to configure for this practice.</p>
+              <h2 className="dashboard-panel-title">Active Services</h2>
+              <p className="dashboard-panel-subtitle">
+                {activeServiceCount} of {serviceSummaries.length} patient information services are active for this practice.
+              </p>
             </div>
           </div>
-          <div className="dashboard-field" style={{ maxWidth: '420px' }}>
-            <label>Editing Domain</label>
-            <select
-              value={activeDomain}
-              onChange={(event) => {
-                setActiveDomain(event.target.value as DashboardDomain);
-                setDraft(null);
-                setTemplateDraft(null);
-              }}
-            >
-              {DASHBOARD_DOMAINS.map((domain) => (
-                <option key={domain.id} value={domain.id}>{domain.label}</option>
-              ))}
-            </select>
+
+          <div className="dashboard-service-grid">
+            {serviceSummaries.map((service) => (
+              <button
+                key={service.id}
+                type="button"
+                onClick={() => {
+                  setActiveDomain(service.id);
+                  setDraft(null);
+                  setTemplateDraft(null);
+                }}
+                className={`dashboard-service-card${activeDomain === service.id ? ' dashboard-service-card--active' : ''}`}
+              >
+                <span className={`dashboard-badge ${service.isActive ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>
+                  {service.isActive ? 'ACTIVE' : 'NOT ACTIVE'}
+                </span>
+                <strong>{service.label}</strong>
+                <span>
+                  {service.practiceVersionCount} practice version{service.practiceVersionCount === 1 ? '' : 's'} / {service.totalTemplateCount} template{service.totalTemplateCount === 1 ? '' : 's'}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="dashboard-tabs" role="tablist" aria-label="Card domains" style={{ marginTop: '1rem', marginBottom: 0 }}>
+            {serviceSummaries.map((service) => (
+              <button
+                key={`${service.id}-tab`}
+                type="button"
+                role="tab"
+                aria-selected={activeDomain === service.id}
+                onClick={() => {
+                  setActiveDomain(service.id);
+                  setDraft(null);
+                  setTemplateDraft(null);
+                }}
+                className={`dashboard-tab${activeDomain === service.id ? ' dashboard-tab--active' : ''}`}
+              >
+                {service.label}
+                {!service.isActive && <span className="dashboard-tab-note">Inactive</span>}
+              </button>
+            ))}
           </div>
         </div>
       </section>
