@@ -670,13 +670,13 @@ const CardBuilder: React.FC = () => {
       const importedLinks: HealthCheckBuilderLink[] = selectedResources
         .map((resource) => ({
           title: resource.title,
-          showTitleOnCard: true,
+          showTitleOnCard: resource.show_title_on_card,
           website: resource.website,
-          websiteLabel: resource.website ? 'Website' : '',
+          websiteLabel: resource.website_label || (resource.website ? 'Website' : ''),
           phone: resource.phone,
-          phoneLabel: resource.phone ? 'Call' : '',
+          phoneLabel: resource.phone_label || (resource.phone ? 'Call' : ''),
           email: resource.email,
-          emailLabel: resource.email ? 'Email' : '',
+          emailLabel: resource.email_label || (resource.email ? 'Email' : ''),
         }))
         .filter((link) => link.title && (link.website || link.phone || link.email))
         .filter((link) => {
@@ -2338,7 +2338,7 @@ const CardBuilder: React.FC = () => {
                     <span>
                       <strong style={{ display: 'block' }}>{resource.title}</strong>
                       <span style={{ color: '#4c6272', fontSize: '0.86rem' }}>
-                        {[resource.category, resource.website, resource.phone, resource.email].filter(Boolean).join(' | ')}
+                        {[resource.category, resource.city, resource.county_area, resource.website, resource.phone, resource.email].filter(Boolean).join(' | ')}
                       </span>
                       {resource.description && <span style={{ display: 'block', color: '#4c6272', fontSize: '0.86rem', marginTop: '0.2rem' }}>{resource.description}</span>}
                     </span>

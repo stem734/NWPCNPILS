@@ -3,12 +3,19 @@ import { supabase } from './supabase';
 export type LocalResourceLink = {
   id: string;
   title: string;
+  show_title_on_card: boolean;
   description: string;
   category: string;
   website: string;
+  website_label: string;
   phone: string;
+  phone_label: string;
   email: string;
+  email_label: string;
+  city: string;
+  county_area: string;
   is_active: boolean;
+  legacy_firestore_id?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -23,12 +30,19 @@ const coerceLocalResourceLink = (value: unknown): LocalResourceLink => {
   return {
     id: coerceString(row.id),
     title: coerceString(row.title),
+    show_title_on_card: row.show_title_on_card !== false,
     description: coerceString(row.description),
     category: coerceString(row.category),
     website: coerceString(row.website),
+    website_label: coerceString(row.website_label),
     phone: coerceString(row.phone),
+    phone_label: coerceString(row.phone_label),
     email: coerceString(row.email),
+    email_label: coerceString(row.email_label),
+    city: coerceString(row.city),
+    county_area: coerceString(row.county_area),
     is_active: row.is_active !== false,
+    legacy_firestore_id: coerceString(row.legacy_firestore_id),
     created_at: coerceString(row.created_at),
     updated_at: coerceString(row.updated_at),
   };
@@ -36,11 +50,17 @@ const coerceLocalResourceLink = (value: unknown): LocalResourceLink => {
 
 export const emptyLocalResourceDraft = (): LocalResourceDraft => ({
   title: '',
+  show_title_on_card: true,
   description: '',
   category: '',
   website: '',
+  website_label: '',
   phone: '',
+  phone_label: '',
   email: '',
+  email_label: '',
+  city: '',
+  county_area: '',
   is_active: true,
 });
 
@@ -67,11 +87,17 @@ export async function upsertLocalResourceLink(resource: Partial<LocalResourceLin
   const payload = {
     ...(resource.id ? { id: resource.id } : {}),
     title: resource.title.trim(),
+    show_title_on_card: resource.show_title_on_card,
     description: resource.description.trim(),
     category: resource.category.trim(),
     website: resource.website.trim(),
+    website_label: resource.website_label.trim(),
     phone: resource.phone.trim(),
+    phone_label: resource.phone_label.trim(),
     email: resource.email.trim(),
+    email_label: resource.email_label.trim(),
+    city: resource.city.trim(),
+    county_area: resource.county_area.trim(),
     is_active: resource.is_active,
   };
 

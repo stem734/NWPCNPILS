@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "migrate:local-resources": "tsx scripts/migrate-local-resources.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

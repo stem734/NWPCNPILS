@@ -11,6 +11,7 @@ import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import Modal from '../components/Modal';
 import PracticeForm from '../components/PracticeForm';
 import { validatePracticeContactEmail } from '../practiceValidation';
+import { ENGLAND_CITIES, ENGLAND_COUNTY_AREAS } from '../englandLocations';
 import {
   deleteLocalResourceLink,
   emptyLocalResourceDraft,
@@ -292,11 +293,17 @@ const AdminDashboard: React.FC = () => {
     setEditingLocalResource(resource || null);
     setLocalResourceDraft(resource ? {
       title: resource.title,
+      show_title_on_card: resource.show_title_on_card,
       description: resource.description,
       category: resource.category,
       website: resource.website,
+      website_label: resource.website_label,
       phone: resource.phone,
+      phone_label: resource.phone_label,
       email: resource.email,
+      email_label: resource.email_label,
+      city: resource.city,
+      county_area: resource.county_area,
       is_active: resource.is_active,
     } : emptyLocalResourceDraft());
     setShowLocalResourceForm(true);
@@ -366,7 +373,7 @@ const AdminDashboard: React.FC = () => {
     const query = localResourceSearch.trim().toLowerCase();
     if (!query) return localResources;
     return localResources.filter((resource) =>
-      [resource.title, resource.description, resource.category, resource.website, resource.phone, resource.email]
+      [resource.title, resource.description, resource.category, resource.website, resource.phone, resource.email, resource.city, resource.county_area]
         .some((value) => value.toLowerCase().includes(query)),
     );
   }, [localResourceSearch, localResources]);
@@ -1062,7 +1069,7 @@ const AdminDashboard: React.FC = () => {
           )}
           <form onSubmit={saveLocalResource} className="dashboard-modal__form" id="local-resource-form">
             <div className="dashboard-field">
-              <label>Resource Title *</label>
+              <label>Service title *</label>
               <input
                 type="text"
                 value={localResourceDraft.title}
@@ -1070,6 +1077,14 @@ const AdminDashboard: React.FC = () => {
                 required
               />
             </div>
+            <label className="dashboard-setting-toggle">
+              <input
+                type="checkbox"
+                checked={localResourceDraft.show_title_on_card}
+                onChange={(event) => updateLocalResourceDraft('show_title_on_card', event.target.checked)}
+              />
+              Show title on card
+            </label>
             <div className="dashboard-field">
               <label>Category</label>
               <input
@@ -1087,18 +1102,9 @@ const AdminDashboard: React.FC = () => {
                 rows={3}
               />
             </div>
-            <div className="dashboard-field">
-              <label>Website</label>
-              <input
-                type="url"
-                value={localResourceDraft.website}
-                onChange={(event) => updateLocalResourceDraft('website', event.target.value)}
-                placeholder="https://..."
-              />
-            </div>
             <div className="dashboard-form-grid">
               <div className="dashboard-field">
-                <label>Phone</label>
+                <label>Phone number</label>
                 <input
                   type="text"
                   value={localResourceDraft.phone}
@@ -1106,12 +1112,78 @@ const AdminDashboard: React.FC = () => {
                 />
               </div>
               <div className="dashboard-field">
-                <label>Email</label>
+                <label>Phone link text (optional)</label>
+                <input
+                  type="text"
+                  value={localResourceDraft.phone_label}
+                  onChange={(event) => updateLocalResourceDraft('phone_label', event.target.value)}
+                  placeholder="e.g. Call service"
+                />
+              </div>
+            </div>
+            <div className="dashboard-form-grid">
+              <div className="dashboard-field">
+                <label>Email address</label>
                 <input
                   type="email"
                   value={localResourceDraft.email}
                   onChange={(event) => updateLocalResourceDraft('email', event.target.value)}
                 />
+              </div>
+              <div className="dashboard-field">
+                <label>Email link text (optional)</label>
+                <input
+                  type="text"
+                  value={localResourceDraft.email_label}
+                  onChange={(event) => updateLocalResourceDraft('email_label', event.target.value)}
+                  placeholder="e.g. Email the team"
+                />
+              </div>
+            </div>
+            <div className="dashboard-form-grid">
+              <div className="dashboard-field">
+                <label>Website</label>
+                <input
+                  type="url"
+                  value={localResourceDraft.website}
+                  onChange={(event) => updateLocalResourceDraft('website', event.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="dashboard-field">
+                <label>Website link text (optional)</label>
+                <input
+                  type="text"
+                  value={localResourceDraft.website_label}
+                  onChange={(event) => updateLocalResourceDraft('website_label', event.target.value)}
+                  placeholder="e.g. Visit website"
+                />
+              </div>
+            </div>
+            <div className="dashboard-form-grid">
+              <div className="dashboard-field">
+                <label>City</label>
+                <select
+                  value={localResourceDraft.city}
+                  onChange={(event) => updateLocalResourceDraft('city', event.target.value)}
+                >
+                  <option value="">Select a city</option>
+                  {ENGLAND_CITIES.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="dashboard-field">
+                <label>County / Area</label>
+                <select
+                  value={localResourceDraft.county_area}
+                  onChange={(event) => updateLocalResourceDraft('county_area', event.target.value)}
+                >
+                  <option value="">Select a county / area</option>
+                  {ENGLAND_COUNTY_AREAS.map((area) => (
+                    <option key={area} value={area}>{area}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <label className="dashboard-setting-toggle">
@@ -1422,6 +1494,8 @@ const AdminDashboard: React.FC = () => {
                   {resource.website && <span>{resource.website}</span>}
                   {resource.phone && <span>{resource.phone}</span>}
                   {resource.email && <span>{resource.email}</span>}
+                  {resource.city && <span>{resource.city}</span>}
+                  {resource.county_area && <span>{resource.county_area}</span>}
                 </div>
                 {resource.description && <p style={{ margin: '0.45rem 0 0', color: '#4c6272' }}>{resource.description}</p>}
               </div>
