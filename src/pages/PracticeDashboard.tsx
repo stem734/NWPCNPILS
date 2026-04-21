@@ -22,6 +22,24 @@ import DisclaimerDialog from '../components/DisclaimerDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getMedicationIcon } from '../medicationIcons';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
+import { fetchCardTemplates } from '../cardTemplateStore';
+import type { CardTemplateRecord, HealthCheckTemplatePayload } from '../cardTemplateTypes';
+import {
+  IMMUNISATION_TEMPLATES,
+  LONG_TERM_CONDITION_TEMPLATES,
+  SCREENING_TEMPLATES,
+  type ImmunisationTemplate,
+  type LongTermConditionTemplate,
+  type PatientResourceLink,
+  type ScreeningTemplate,
+} from '../patientTemplateCatalog';
+import {
+  clearPracticeCardTemplate,
+  fetchPracticeCardTemplates,
+  savePracticeCardTemplate,
+  type PracticeCardTemplateRow,
+  type PracticeTemplateBuilderType,
+} from '../practiceCardTemplateStore';
 import {
   CUSTOM_CARD_DISCLAIMER_TEXT,
   GLOBAL_TEMPLATE_DISCLAIMER_TEXT,
@@ -55,6 +73,22 @@ type CustomCardDraft = {
   contentReviewDate: string;
 };
 
+type DashboardDomain = 'medication' | PracticeTemplateBuilderType;
+type EditablePatientTemplate = ScreeningTemplate | ImmunisationTemplate | LongTermConditionTemplate;
+
+type PracticeTemplateDraft = {
+  builderType: PracticeTemplateBuilderType;
+  templateId: string;
+  label: string;
+  headline: string;
+  explanation: string;
+  importantMessage: string;
+  guidanceText: string;
+  linksText: string;
+  payloadJson: string;
+  isJsonMode: boolean;
+};
+
 type DisclaimerRequest = {
   title: string;
   message: string;
@@ -64,6 +98,45 @@ type DisclaimerRequest = {
 };
 
 const EMPTY_TREND_LINK = { title: '', url: '' };
+
+const DASHBOARD_DOMAINS: Array<{ id: DashboardDomain; label: string }> = [
+  { id: 'medication', label: 'Medication cards' },
+  { id: 'healthcheck', label: 'Health checks' },
+  { id: 'screening', label: 'Screening' },
+  { id: 'immunisation', label: 'Immunisations' },
+  { id: 'ltc', label: 'Long term conditions' },
+];
+
+const NON_MEDICATION_DOMAIN_LABELS: Record<PracticeTemplateBuilderType, string> = {
+  healthcheck: 'Health checks',
+  screening: 'Screening',
+  immunisation: 'Immunisations',
+  ltc: 'Long term conditions',
+};
+
+const DOMAIN_FEATURE_KEY: Record<PracticeTemplateBuilderType, keyof PracticeSummary> = {
+  healthcheck: 'healthcheck_enabled',
+  screening: 'screening_enabled',
+  immunisation: 'immunisation_enabled',
+  ltc: 'ltc_enabled',
+};
+
+const isEditablePatientTemplate = (value: unknown): value is EditablePatientTemplate => {
+  const row = value as Partial<EditablePatientTemplate> | null;
+  return Boolean(row && typeof row.id === 'string' && typeof row.label === 'string' && Array.isArray(row.guidance) && Array.isArray(row.nhsLinks));
+};
+
+const resourceLinksToText = (links: PatientResourceLink[]) =>
+  links.map((link) => [link.title, link.url, link.description].join(' | ')).join('\n');
+
+const textToResourceLinks = (value: string): PatientResourceLink[] =>
+  value
+    .split('\n')
+    .map((line) => {
+      const [title = '', url = '', description = ''] = line.split('|').map((part) => part.trim());
+      return { title, url, description };
+    })
+    .filter((link) => link.title && link.url);
 
 const normalisePracticeSummary = (value: PracticeSummary | PracticeSummary[] | null | undefined): PracticeSummary | null => {
   const practice = Array.isArray(value) ? value[0] : value;
@@ -80,9 +153,18 @@ const PracticeDashboard: React.FC = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [librarySearch, setLibrarySearch] = useState('');
+  const [activeDomain, setActiveDomain] = useState<DashboardDomain>('medication');
   const [previewMed, setPreviewMed] = useState<MedContent | null>(null);
   const [draft, setDraft] = useState<CustomCardDraft | null>(null);
   const [draftCode, setDraftCode] = useState('');
+  const [practiceTemplateRows, setPracticeTemplateRows] = useState<PracticeCardTemplateRow[]>([]);
+  const [globalTemplateRows, setGlobalTemplateRows] = useState<Record<PracticeTemplateBuilderType, CardTemplateRecord[]>>({
+    healthcheck: [],
+    screening: [],
+    immunisation: [],
+    ltc: [],
+  });
+  const [templateDraft, setTemplateDraft] = useState<PracticeTemplateDraft | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
@@ -206,6 +288,35 @@ const PracticeDashboard: React.FC = () => {
     }
   }, []);
 
+  const loadPracticeTemplates = useCallback(async (practiceId: string) => {
+    try {
+      setPracticeTemplateRows(await fetchPracticeCardTemplates(practiceId));
+    } catch (err) {
+      console.error('Error loading practice templates:', err);
+      setPracticeTemplateRows([]);
+      setError('Unable to load personalised templates for this practice. Apply the practice_card_templates migration if this is a new deployment.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadGlobalTemplates = async () => {
+      try {
+        const [healthcheck, screening, immunisation, ltc] = await Promise.all([
+          fetchCardTemplates<HealthCheckTemplatePayload>('healthcheck'),
+          fetchCardTemplates<ScreeningTemplate>('screening'),
+          fetchCardTemplates<ImmunisationTemplate>('immunisation'),
+          fetchCardTemplates<LongTermConditionTemplate>('ltc'),
+        ]);
+
+        setGlobalTemplateRows({ healthcheck, screening, immunisation, ltc });
+      } catch (err) {
+        console.error('Error loading global templates:', err);
+      }
+    };
+
+    void loadGlobalTemplates();
+  }, []);
+
   useEffect(() => {
     const hydrate = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -237,7 +348,8 @@ const PracticeDashboard: React.FC = () => {
 
     window.sessionStorage.setItem(PRACTICE_SELECTION_STORAGE_KEY, selectedPracticeId);
     void loadPracticeCards(selectedPracticeId);
-  }, [loadPracticeCards, selectedPracticeId]);
+    void loadPracticeTemplates(selectedPracticeId);
+  }, [loadPracticeCards, loadPracticeTemplates, selectedPracticeId]);
 
   const selectedMembership = useMemo(
     () => memberships.find((membership) => membership.practice_id === selectedPracticeId) || null,
@@ -285,6 +397,58 @@ const PracticeDashboard: React.FC = () => {
       ].some((value) => value.toLowerCase().includes(query));
     });
   }, [allMedications, librarySearch]);
+
+  const practiceTemplateMap = useMemo(
+    () => Object.fromEntries(practiceTemplateRows.map((row) => [`${row.builder_type}:${row.template_id}`, row])),
+    [practiceTemplateRows],
+  );
+
+  const nonMedicationTemplates = useMemo(() => {
+    const globalRowsByDomain = {
+      healthcheck: globalTemplateRows.healthcheck.map((row) => ({
+        builderType: 'healthcheck' as const,
+        templateId: row.template_id,
+        label: row.label,
+        payload: row.payload,
+        isJsonMode: true,
+      })),
+      screening: Object.values(SCREENING_TEMPLATES).map((template) => {
+        const globalRow = globalTemplateRows.screening.find((row) => row.template_id === template.id);
+        return {
+          builderType: 'screening' as const,
+          templateId: template.id,
+          label: globalRow?.label || template.label,
+          payload: (globalRow?.payload || template) as ScreeningTemplate,
+          isJsonMode: false,
+        };
+      }),
+      immunisation: Object.values(IMMUNISATION_TEMPLATES).map((template) => {
+        const globalRow = globalTemplateRows.immunisation.find((row) => row.template_id === template.id);
+        return {
+          builderType: 'immunisation' as const,
+          templateId: template.id,
+          label: globalRow?.label || template.label,
+          payload: (globalRow?.payload || template) as ImmunisationTemplate,
+          isJsonMode: false,
+        };
+      }),
+      ltc: Object.values(LONG_TERM_CONDITION_TEMPLATES).map((template) => {
+        const globalRow = globalTemplateRows.ltc.find((row) => row.template_id === template.id);
+        return {
+          builderType: 'ltc' as const,
+          templateId: template.id,
+          label: globalRow?.label || template.label,
+          payload: (globalRow?.payload || template) as LongTermConditionTemplate,
+          isJsonMode: false,
+        };
+      }),
+    };
+
+    return globalRowsByDomain;
+  }, [globalTemplateRows]);
+
+  const activeTemplateDomain = activeDomain === 'medication' ? null : activeDomain;
+  const selectedDomainTemplates = activeTemplateDomain ? nonMedicationTemplates[activeTemplateDomain] : [];
 
   const lastAccessedLabel = selectedPractice?.last_accessed
     ? new Date(selectedPractice.last_accessed).toLocaleString('en-GB', {
@@ -371,6 +535,53 @@ const PracticeDashboard: React.FC = () => {
   const resetEditor = () => {
     setDraft(null);
     setDraftCode('');
+  };
+
+  const openTemplateEditor = (
+    builderType: PracticeTemplateBuilderType,
+    templateId: string,
+    label: string,
+    payload: unknown,
+    isJsonMode: boolean,
+  ) => {
+    const customRow = practiceTemplateMap[`${builderType}:${templateId}`];
+    const effectivePayload = customRow?.payload || payload;
+    const editablePayload = isEditablePatientTemplate(effectivePayload) ? effectivePayload : null;
+
+    setTemplateDraft({
+      builderType,
+      templateId,
+      label: customRow?.label || label,
+      headline: editablePayload?.headline || '',
+      explanation: editablePayload?.explanation || '',
+      importantMessage: editablePayload && 'importantMessage' in editablePayload ? (editablePayload as LongTermConditionTemplate).importantMessage || '' : '',
+      guidanceText: editablePayload?.guidance.join('\n') || '',
+      linksText: editablePayload ? resourceLinksToText(editablePayload.nhsLinks) : '',
+      payloadJson: JSON.stringify(effectivePayload, null, 2),
+      isJsonMode,
+    });
+  };
+
+  const buildTemplateDraftPayload = (draftValue: PracticeTemplateDraft) => {
+    if (draftValue.isJsonMode) {
+      return JSON.parse(draftValue.payloadJson);
+    }
+
+    const basePayload = selectedDomainTemplates.find((template) => template.templateId === draftValue.templateId)?.payload;
+    const existing = isEditablePatientTemplate(basePayload) ? basePayload : null;
+    if (!existing) {
+      throw new Error('Unable to build template payload.');
+    }
+
+    return {
+      ...existing,
+      label: draftValue.label.trim(),
+      headline: draftValue.headline.trim(),
+      explanation: draftValue.explanation.trim(),
+      guidance: draftValue.guidanceText.split('\n').map((item) => item.trim()).filter(Boolean),
+      nhsLinks: textToResourceLinks(draftValue.linksText),
+      ...('importantMessage' in existing ? { importantMessage: draftValue.importantMessage.trim() } : {}),
+    };
   };
 
   const updateDraft = <K extends keyof CustomCardDraft>(key: K, value: CustomCardDraft[K]) => {
@@ -506,6 +717,48 @@ const PracticeDashboard: React.FC = () => {
     });
   };
 
+  const saveTemplateDraft = () => {
+    if (!selectedPracticeId || !templateDraft) return;
+
+    setDisclaimerRequest({
+      title: 'Save Practice Template',
+      message: CUSTOM_CARD_DISCLAIMER_TEXT,
+      checkboxLabel: 'I understand that my practice is responsible for this custom patient information.',
+      confirmLabel: 'Save Practice Template',
+      onConfirm: async () => {
+        await invokeAndReload(async () => {
+          const payload = buildTemplateDraftPayload(templateDraft);
+          await savePracticeCardTemplate({
+            practiceId: selectedPracticeId,
+            builderType: templateDraft.builderType,
+            templateId: templateDraft.templateId,
+            label: templateDraft.label.trim(),
+            payload,
+          });
+          await loadPracticeTemplates(selectedPracticeId);
+          setTemplateDraft(null);
+        }, `${templateDraft.label} now has a practice-specific version.`);
+      },
+    });
+  };
+
+  const clearTemplateCustomisation = (builderType: PracticeTemplateBuilderType, templateId: string, label: string) => {
+    if (!selectedPracticeId) return;
+
+    setConfirmDialog({
+      title: 'Clear Practice Template',
+      message: `Remove the practice-specific version for ${label}? Patients will see the shared global template instead.`,
+      confirmLabel: 'Clear Practice Version',
+      isDangerous: true,
+      onConfirm: () => {
+        void invokeAndReload(async () => {
+          await clearPracticeCardTemplate(selectedPracticeId, builderType, templateId);
+          await loadPracticeTemplates(selectedPracticeId);
+        }, `${label} is now using the shared global template.`);
+      },
+    });
+  };
+
   const clearConfiguredCard = (medication: MedicationRecord) => {
     if (!selectedPracticeId) return;
 
@@ -635,7 +888,7 @@ const PracticeDashboard: React.FC = () => {
           <p>Review the medication library, accept global templates, and maintain practice-owned card versions for this practice.</p>
         </div>
         <div className="dashboard-actions">
-          <button onClick={() => void loadPracticeCards(selectedPracticeId)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+          <button onClick={() => { void loadPracticeCards(selectedPracticeId); void loadPracticeTemplates(selectedPracticeId); }} className="action-button" style={{ backgroundColor: '#4c6272' }}>
             <RefreshCw size={16} /> Refresh
           </button>
           <button onClick={handleSignOut} className="action-button" style={{ backgroundColor: '#d5281b' }}>
@@ -665,22 +918,6 @@ const PracticeDashboard: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div className="dashboard-chip-row" style={{ marginTop: '0.75rem' }}>
-              {memberships.map((membership) => (
-                <span
-                  key={`${membership.practice_id}-chip`}
-                  className={`dashboard-chip${membership.practice_id === selectedPracticeId ? ' dashboard-chip--active' : ''}`}
-                >
-                  {membership.practice.name}
-                  {membership.practice_id === selectedPracticeId || membership.is_default
-                    ? ` (${[
-                        membership.practice_id === selectedPracticeId ? 'Current' : null,
-                        membership.is_default ? 'Default' : null,
-                      ].filter(Boolean).join(', ')})`
-                    : ''}
-                </span>
-              ))}
-            </div>
           </div>
         </section>
       )}
@@ -703,6 +940,163 @@ const PracticeDashboard: React.FC = () => {
         </div>
       )}
 
+      <section className="dashboard-section">
+        <div className="dashboard-panel" style={{ borderLeft: '4px solid #005eb8' }}>
+          <div className="dashboard-panel-header">
+            <div>
+              <h2 className="dashboard-panel-title">Content Domain</h2>
+              <p className="dashboard-panel-subtitle">Choose which patient information cards you want to configure for this practice.</p>
+            </div>
+          </div>
+          <div className="dashboard-field" style={{ maxWidth: '420px' }}>
+            <label>Editing Domain</label>
+            <select
+              value={activeDomain}
+              onChange={(event) => {
+                setActiveDomain(event.target.value as DashboardDomain);
+                setDraft(null);
+                setTemplateDraft(null);
+              }}
+            >
+              {DASHBOARD_DOMAINS.map((domain) => (
+                <option key={domain.id} value={domain.id}>{domain.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      {activeTemplateDomain && (
+        <section className="dashboard-section">
+          <div className="dashboard-panel">
+            <div className="dashboard-toolbar">
+              <div>
+                <h2 className="dashboard-panel-title">{NON_MEDICATION_DOMAIN_LABELS[activeTemplateDomain]} Templates</h2>
+                <p className="dashboard-panel-subtitle">
+                  Create practice-specific versions of shared templates. Patients will see your practice version when one exists.
+                </p>
+              </div>
+              {selectedPractice[DOMAIN_FEATURE_KEY[activeTemplateDomain]] !== true && (
+                <span className="dashboard-badge dashboard-badge--amber">Not enabled for patients yet</span>
+              )}
+            </div>
+
+            {selectedDomainTemplates.length === 0 ? (
+              <p style={{ color: '#4c6272' }}>
+                No shared templates were found for this domain yet. Add a global template in the admin card builder first.
+              </p>
+            ) : (
+              <div className="dashboard-list">
+                {selectedDomainTemplates.map((template) => {
+                  const customRow = practiceTemplateMap[`${template.builderType}:${template.templateId}`];
+                  const state = customRow ? 'custom' : 'global';
+
+                  return (
+                    <div key={`${template.builderType}-${template.templateId}`} className="dashboard-list-card">
+                      <div className="dashboard-list-main">
+                        <div className="dashboard-list-title">{customRow?.label || template.label}</div>
+                        <div className="dashboard-meta">
+                          <span className="dashboard-badge dashboard-badge--blue">{template.templateId}</span>
+                          <span className={`dashboard-badge ${state === 'custom' ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>
+                            {state === 'custom' ? 'USING PRACTICE VERSION' : 'USING GLOBAL TEMPLATE'}
+                          </span>
+                        </div>
+                        <p className="dashboard-list-copy" style={{ marginTop: '0.5rem' }}>
+                          {state === 'custom'
+                            ? 'Patients will see this practice-specific version.'
+                            : 'Patients will see the shared global template until you create a practice version.'}
+                        </p>
+                      </div>
+                      <div className="dashboard-list-actions">
+                        <button
+                          onClick={() => openTemplateEditor(template.builderType, template.templateId, template.label, template.payload, template.isJsonMode)}
+                          className="dashboard-pill-button dashboard-pill-button--success"
+                        >
+                          {state === 'custom' ? <><Edit2 size={14} /> Edit Practice Version</> : <><Plus size={14} /> Create Practice Version</>}
+                        </button>
+                        {customRow && (
+                          <button
+                            onClick={() => clearTemplateCustomisation(template.builderType, template.templateId, customRow.label || template.label)}
+                            className="dashboard-pill-button dashboard-pill-button--danger"
+                          >
+                            <Trash2 size={14} /> Clear Practice Version
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {templateDraft && (
+        <section className="dashboard-section">
+          <div className="dashboard-panel" style={{ borderLeft: '4px solid #007f3b' }}>
+            <div className="dashboard-panel-header">
+              <div>
+                <h2 className="dashboard-panel-title">Practice Template: {templateDraft.label}</h2>
+                <p className="dashboard-panel-subtitle">Personalise this template for {selectedPractice.name}.</p>
+              </div>
+              <button onClick={() => setTemplateDraft(null)} className="dashboard-pill-button dashboard-pill-button--muted">
+                Cancel
+              </button>
+            </div>
+
+            {templateDraft.isJsonMode ? (
+              <div className="dashboard-field">
+                <label>Template JSON</label>
+                <textarea
+                  value={templateDraft.payloadJson}
+                  rows={18}
+                  onChange={(event) => setTemplateDraft((current) => current ? { ...current, payloadJson: event.target.value } : current)}
+                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical', fontFamily: 'monospace' }}
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="dashboard-field">
+                  <label>Label</label>
+                  <input value={templateDraft.label} onChange={(event) => setTemplateDraft((current) => current ? { ...current, label: event.target.value } : current)} />
+                </div>
+                <div className="dashboard-field">
+                  <label>Headline</label>
+                  <input value={templateDraft.headline} onChange={(event) => setTemplateDraft((current) => current ? { ...current, headline: event.target.value } : current)} />
+                </div>
+                <div className="dashboard-field">
+                  <label>Explanation</label>
+                  <textarea value={templateDraft.explanation} rows={4} onChange={(event) => setTemplateDraft((current) => current ? { ...current, explanation: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+                </div>
+                {templateDraft.builderType === 'ltc' && (
+                  <div className="dashboard-field">
+                    <label>Important message</label>
+                    <textarea value={templateDraft.importantMessage} rows={3} onChange={(event) => setTemplateDraft((current) => current ? { ...current, importantMessage: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+                  </div>
+                )}
+                <div className="dashboard-field">
+                  <label>Guidance points (one per line)</label>
+                  <textarea value={templateDraft.guidanceText} rows={6} onChange={(event) => setTemplateDraft((current) => current ? { ...current, guidanceText: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+                </div>
+                <div className="dashboard-field">
+                  <label>Resource links (title | url | description)</label>
+                  <textarea value={templateDraft.linksText} rows={6} onChange={(event) => setTemplateDraft((current) => current ? { ...current, linksText: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+                </div>
+              </div>
+            )}
+
+            <div className="dashboard-inline-actions" style={{ marginTop: '1.25rem' }}>
+              <button onClick={saveTemplateDraft} disabled={saving} className="action-button" style={{ backgroundColor: '#007f3b', opacity: saving ? 0.7 : 1 }}>
+                <Save size={16} /> {saving ? 'Saving...' : 'Save Practice Template'}
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeDomain === 'medication' && (
+        <>
       <section className="dashboard-section">
         <div className="dashboard-stat-grid">
           <div className="dashboard-stat-card">
@@ -1039,6 +1433,8 @@ const PracticeDashboard: React.FC = () => {
           )}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 };

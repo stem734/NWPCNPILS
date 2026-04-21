@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ClipboardList, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
 import { LONG_TERM_CONDITION_TEMPLATES, type LongTermConditionTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
+import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 
 const LongTermConditionView: React.FC = () => {
@@ -17,6 +18,12 @@ const LongTermConditionView: React.FC = () => {
   useEffect(() => {
     const loadTemplate = async () => {
       try {
+        const [practiceRow] = await fetchPatientPracticeCardTemplates<LongTermConditionTemplate>(org, 'ltc', [fallbackTemplate.id]);
+        if (practiceRow?.payload) {
+          setLoadedTemplate(practiceRow.payload);
+          return;
+        }
+
         const [row] = await fetchCardTemplates<LongTermConditionTemplate>('ltc', [fallbackTemplate.id]);
         setLoadedTemplate(row?.payload || null);
       } catch (error) {
@@ -25,7 +32,7 @@ const LongTermConditionView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [fallbackTemplate]);
+  }, [fallbackTemplate, org]);
 
   if (access.loading) {
     return (

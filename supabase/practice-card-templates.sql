@@ -1,0 +1,110 @@
+-- Practice-specific customisations for non-medication patient card templates.
+-- Medication cards keep using practice_medication_cards because they have a
+-- richer schema and backwards-compatible patient resolver.
+
+CREATE TABLE IF NOT EXISTS practice_card_templates (
+  practice_id         uuid NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  builder_type        text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
+  template_id         text NOT NULL,
+  source_type         text NOT NULL DEFAULT 'custom' CHECK (source_type = 'custom'),
+  label               text NOT NULL,
+  payload             jsonb NOT NULL,
+  disclaimer_version  text NOT NULL CHECK (length(trim(disclaimer_version)) > 0),
+  accepted_at         timestamptz,
+  accepted_by         uuid,
+  updated_at          timestamptz DEFAULT now(),
+  updated_by          uuid,
+  PRIMARY KEY (practice_id, builder_type, template_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_card_templates_practice_id
+  ON practice_card_templates (practice_id);
+CREATE INDEX IF NOT EXISTS idx_practice_card_templates_builder_type
+  ON practice_card_templates (builder_type);
+
+ALTER TABLE practice_card_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "practice_card_templates_select_member" ON practice_card_templates;
+DROP POLICY IF EXISTS "practice_card_templates_write_member" ON practice_card_templates;
+DROP POLICY IF EXISTS "practice_card_templates_update_member" ON practice_card_templates;
+DROP POLICY IF EXISTS "practice_card_templates_delete_member" ON practice_card_templates;
+
+CREATE POLICY "practice_card_templates_select_member"
+  ON practice_card_templates FOR SELECT
+  TO authenticated
+  USING (is_admin() OR is_practice_member(practice_id));
+
+CREATE POLICY "practice_card_templates_write_member"
+  ON practice_card_templates FOR INSERT
+  TO authenticated
+  WITH CHECK (is_admin() OR is_practice_member(practice_id));
+
+CREATE POLICY "practice_card_templates_update_member"
+  ON practice_card_templates FOR UPDATE
+  TO authenticated
+  USING (is_admin() OR is_practice_member(practice_id))
+  WITH CHECK (is_admin() OR is_practice_member(practice_id));
+
+CREATE POLICY "practice_card_templates_delete_member"
+  ON practice_card_templates FOR DELETE
+  TO authenticated
+  USING (is_admin() OR is_practice_member(practice_id));
+
+CREATE OR REPLACE FUNCTION resolve_practice_card_templates(
+  org_name text,
+  requested_builder_type text,
+  requested_template_ids text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  practice_record practices%ROWTYPE;
+BEGIN
+  IF org_name IS NULL OR trim(org_name) = '' THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  IF requested_builder_type NOT IN ('healthcheck', 'screening', 'immunisation', 'ltc') THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  SELECT *
+  INTO practice_record
+  FROM practices
+  WHERE name_lowercase = lower(trim(org_name))
+    AND is_active = true
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  RETURN COALESCE((
+    SELECT jsonb_agg(to_jsonb(rows.*))
+    FROM (
+      SELECT
+        practice_id,
+        builder_type,
+        template_id,
+        source_type,
+        label,
+        payload,
+        disclaimer_version,
+        accepted_at,
+        accepted_by,
+        updated_at,
+        updated_by
+      FROM practice_card_templates
+      WHERE practice_id = practice_record.id
+        AND builder_type = requested_builder_type
+        AND template_id = ANY(requested_template_ids)
+      ORDER BY template_id
+    ) rows
+  ), '[]'::jsonb);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION resolve_practice_card_templates TO anon;
+GRANT EXECUTE ON FUNCTION resolve_practice_card_templates TO authenticated;

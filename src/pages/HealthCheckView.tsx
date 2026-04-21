@@ -6,6 +6,7 @@ import { METRIC_ORDER, METRIC_DEFINITIONS, type ParsedMetric } from '../healthCh
 import { PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
 import HealthCheckCard from '../components/HealthCheckCard';
 import { fetchCardTemplates } from '../cardTemplateStore';
+import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 
@@ -121,15 +122,20 @@ const HealthCheckView: React.FC = () => {
     }
     const loadOverrides = async () => {
       try {
+        const practiceRows = await fetchPatientPracticeCardTemplates<HealthCheckTemplatePayload>(org, 'healthcheck', templateIds);
+        const practiceMap = Object.fromEntries(practiceRows.map((row) => [row.template_id, row.payload]));
         const rows = await fetchCardTemplates<HealthCheckTemplatePayload>('healthcheck', templateIds);
-        setTemplateOverrides(Object.fromEntries(rows.map((row) => [row.template_id, row.payload])));
+        setTemplateOverrides({
+          ...Object.fromEntries(rows.map((row) => [row.template_id, row.payload])),
+          ...practiceMap,
+        });
       } catch (error) {
         console.error('Failed to load health check template overrides', error);
         setTemplateOverrides({});
       }
     };
     loadOverrides();
-  }, [templateIds]);
+  }, [org, templateIds]);
 
   const displayMetrics = useMemo(() => {
     const baseMetrics = previewOnly && previewDomain ? metrics : getDisplayMetrics(metrics);

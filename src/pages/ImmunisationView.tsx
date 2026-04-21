@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe } from 'lucide-react';
 import { IMMUNISATION_TEMPLATES, type ImmunisationTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
+import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 
 /**
@@ -37,15 +38,20 @@ const ImmunisationView: React.FC = () => {
   useEffect(() => {
     const loadTemplates = async () => {
       try {
+        const practiceRows = await fetchPatientPracticeCardTemplates<ImmunisationTemplate>(org, 'immunisation', requestedVaccines);
+        const practiceMap = Object.fromEntries(practiceRows.map((row) => [row.template_id, row.payload]));
         const rows = await fetchCardTemplates<ImmunisationTemplate>('immunisation', requestedVaccines);
-        setLoadedTemplateMap(Object.fromEntries(rows.map((row) => [row.template_id, row.payload])));
+        setLoadedTemplateMap({
+          ...Object.fromEntries(rows.map((row) => [row.template_id, row.payload])),
+          ...practiceMap,
+        });
       } catch (error) {
         console.error('Failed to load immunisation template overrides', error);
         setLoadedTemplateMap({});
       }
     };
     void loadTemplates();
-  }, [requestedVaccines, requestedVaccinesKey]);
+  }, [org, requestedVaccines, requestedVaccinesKey]);
 
   if (access.loading) {
     return (

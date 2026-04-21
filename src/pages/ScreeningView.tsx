@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, ShieldCheck, ExternalLink } from 'lucide-react';
 import { SCREENING_TEMPLATES, type ScreeningTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
+import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 
 /**
@@ -27,6 +28,12 @@ const ScreeningView: React.FC = () => {
   useEffect(() => {
     const loadTemplate = async () => {
       try {
+        const [practiceRow] = await fetchPatientPracticeCardTemplates<ScreeningTemplate>(org, 'screening', [fallbackTemplate.id]);
+        if (practiceRow?.payload) {
+          setLoadedTemplate(practiceRow.payload);
+          return;
+        }
+
         const [row] = await fetchCardTemplates<ScreeningTemplate>('screening', [fallbackTemplate.id]);
         setLoadedTemplate(row?.payload || null);
       } catch (error) {
@@ -35,7 +42,7 @@ const ScreeningView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [fallbackTemplate]);
+  }, [fallbackTemplate, org]);
 
   if (access.loading) {
     return (
