@@ -1228,7 +1228,6 @@ p {
   background: #f8fafb;
   padding: 1rem;
   text-align: left;
-  cursor: pointer;
   display: grid;
   gap: 0.45rem;
   color: var(--nhs-text);
@@ -1247,6 +1246,10 @@ p {
   border-color: #005eb8;
   background: #eef7ff;
   box-shadow: 0 0 0 2px rgba(0, 94, 184, 0.12);
+}
+
+.dashboard-service-card--inactive {
+  opacity: 0.82;
 }
 
 .dashboard-banner {
