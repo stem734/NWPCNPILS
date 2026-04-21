@@ -104,8 +104,16 @@ const PRACTICE_FUNCTIONS: Array<{
   { key: 'ltc_enabled', label: 'Long term conditions', isEnabled: (practice) => practice.ltc_enabled === true },
 ];
 
+const PATHWAY_LIBRARY_AREAS: Array<{ id: string; label: string; description: string }> = [
+  { id: 'healthcheck', label: 'Health checks', description: 'Result pathways, action messaging, and support links by result type.' },
+  { id: 'screening', label: 'Screening', description: 'Template content and resource links for screening pathways.' },
+  { id: 'immunisation', label: 'Immunisations', description: 'Aftercare guidance and local support resources by vaccine template.' },
+  { id: 'ltc', label: 'Long term conditions', description: 'Condition pathway content, escalation zones, and support links.' },
+  { id: 'medication', label: 'Medication cards', description: 'Medication information cards and shared library templates.' },
+];
+
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'practices' | 'practiceUsers' | 'admins' | 'setup' | 'audit'>('practices');
+  const [activeTab, setActiveTab] = useState<'practices' | 'practiceUsers' | 'admins' | 'library' | 'setup' | 'audit'>('practices');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [loginAudit, setLoginAudit] = useState<LoginAuditEntry[]>([]);
@@ -646,6 +654,9 @@ const AdminDashboard: React.FC = () => {
         <button className={`dashboard-tab${activeTab === 'admins' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('admins')}>
           Administrators
         </button>
+        <button className={`dashboard-tab${activeTab === 'library' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('library')}>
+          Pathway Library
+        </button>
         <button className={`dashboard-tab${activeTab === 'setup' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('setup')}>
           Setup
         </button>
@@ -1142,6 +1153,41 @@ const AdminDashboard: React.FC = () => {
         </div>
         <div className="dashboard-banner dashboard-banner--info" style={{ marginTop: '1rem' }}>
           Use the Users tab to create accounts, assign users to multiple practices, and send reset links after accounts are created.
+        </div>
+      </div>
+      )}
+
+      {activeTab === 'library' && (
+      <div className="dashboard-panel dashboard-section">
+        <div className="dashboard-panel-header">
+          <div>
+            <h2 className="dashboard-panel-title">Pathway Library Management</h2>
+            <p className="dashboard-panel-subtitle">Open the builder directly to the pathway domain you want to maintain.</p>
+          </div>
+          <button onClick={() => navigate(resolvePath('/admin/card-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
+            <FlaskConical size={16} /> Open Full Card Builder
+          </button>
+        </div>
+
+        <div className="dashboard-list">
+          {PATHWAY_LIBRARY_AREAS.map((area) => (
+            <div key={area.id} className="dashboard-list-card">
+              <div className="dashboard-list-main">
+                <div className="dashboard-list-title">{area.label}</div>
+                <div className="dashboard-meta" style={{ marginTop: '0.35rem' }}>
+                  <span>{area.description}</span>
+                </div>
+              </div>
+              <div className="dashboard-list-actions">
+                <button
+                  onClick={() => navigate(resolvePath(`/admin/card-builder?builder=${area.id}`))}
+                  className="dashboard-pill-button dashboard-pill-button--primary"
+                >
+                  <Edit2 size={16} /> Manage
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
       )}

@@ -1,7 +1,7 @@
 import React, { useMemo, useReducer, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe, X } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import HealthCheckCard from '../components/HealthCheckCard';
@@ -193,10 +193,17 @@ const createDefaultImmunisationState = (): Record<string, ImmunisationTemplate> 
 const createDefaultLongTermConditionState = (): Record<string, LongTermConditionTemplate> =>
   Object.fromEntries(Object.entries(LONG_TERM_CONDITION_TEMPLATES).map(([key, template]) => [key, cloneLongTermConditionTemplate(template)]));
 
+const isOutputBuilderType = (value: string | null): value is OutputBuilderType =>
+  value === 'medication' || value === 'healthcheck' || value === 'screening' || value === 'immunisation' || value === 'ltc';
+
+const healthCheckLibraryLinkKey = (link: { title?: string; url?: string }) =>
+  `${(link.title || '').trim().toLowerCase()}|${(link.url || '').trim().toLowerCase()}`;
+
 const CardBuilder: React.FC = () => {
   const toast = useToast();
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const [uiState, dispatchUi] = useReducer(builderUiReducer, initialBuilderUiState);
   const {
     medications: existingMeds,
@@ -267,6 +274,8 @@ const CardBuilder: React.FC = () => {
   const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
   const [templateActionKey, setTemplateActionKey] = useState('');
+  const [showHealthCheckLibraryPicker, setShowHealthCheckLibraryPicker] = useState(false);
+  const [selectedHealthCheckLibraryKeys, setSelectedHealthCheckLibraryKeys] = useState<string[]>([]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
@@ -285,6 +294,12 @@ const CardBuilder: React.FC = () => {
       setSelectedHealthCheckVariantCode(domainCodes[0] || '');
     }
   }, [selectedHealthCheckDomain, selectedHealthCheckVariantCode]);
+
+  useEffect(() => {
+    const nextBuilder = new URLSearchParams(location.search).get('builder');
+    if (!isOutputBuilderType(nextBuilder)) return;
+    setSelectedOutputType(nextBuilder);
+  }, [location.search]);
 
   useEffect(() => {
     if (!authenticated) return;
@@ -501,6 +516,7 @@ const CardBuilder: React.FC = () => {
   const healthCheckLibraryMetric = METRIC_DEFINITIONS[selectedHealthCheckDomain];
   const selectedHealthCheckLibraryStatus = resolveHealthCheckLibraryStatus(resolvedSelectedHealthCheckVariantCode);
   const selectedHealthCheckLibraryEntry = healthCheckLibraryMetric?.statuses[selectedHealthCheckLibraryStatus];
+  const selectedHealthCheckLibraryLinks = selectedHealthCheckLibraryEntry?.helpLinks || [];
   const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
     (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
       ? {
@@ -579,14 +595,24 @@ const CardBuilder: React.FC = () => {
     });
   };
 
-  const importHealthCheckLinksFromLibrary = () => {
-    if (!selectedHealthCheckLibraryEntry || selectedHealthCheckLibraryEntry.helpLinks.length === 0) return;
+  const openHealthCheckLibraryPicker = () => {
+    if (selectedHealthCheckLibraryLinks.length === 0) return;
+    setSelectedHealthCheckLibraryKeys(selectedHealthCheckLibraryLinks.map((link) => healthCheckLibraryLinkKey(link)));
+    setShowHealthCheckLibraryPicker(true);
+  };
+
+  const applySelectedHealthCheckLibraryLinks = () => {
+    if (selectedHealthCheckLibraryLinks.length === 0 || selectedHealthCheckLibraryKeys.length === 0) {
+      setShowHealthCheckLibraryPicker(false);
+      return;
+    }
 
     const existingKeys = new Set(
       selectedHealthCheckVariantSafe.links.map((link) => `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}`),
     );
 
-    const importedLinks: HealthCheckBuilderLink[] = selectedHealthCheckLibraryEntry.helpLinks
+    const importedLinks: HealthCheckBuilderLink[] = selectedHealthCheckLibraryLinks
+      .filter((link) => selectedHealthCheckLibraryKeys.includes(healthCheckLibraryLinkKey(link)))
       .map((link) => ({
         title: link.title,
         showTitleOnCard: true,
@@ -604,11 +630,15 @@ const CardBuilder: React.FC = () => {
         return true;
       });
 
-    if (importedLinks.length === 0) return;
+    if (importedLinks.length === 0) {
+      setShowHealthCheckLibraryPicker(false);
+      return;
+    }
 
     updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
       links: [...selectedHealthCheckVariantSafe.links, ...importedLinks],
     });
+    setShowHealthCheckLibraryPicker(false);
   };
 
   const updateScreeningTemplate = (templateId: string, patch: Partial<ScreeningTemplate>) => {
@@ -1666,8 +1696,8 @@ const CardBuilder: React.FC = () => {
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <button
                           type="button"
-                          onClick={importHealthCheckLinksFromLibrary}
-                          disabled={!selectedHealthCheckLibraryEntry || selectedHealthCheckLibraryEntry.helpLinks.length === 0}
+                          onClick={openHealthCheckLibraryPicker}
+                          disabled={selectedHealthCheckLibraryLinks.length === 0}
                           className="action-button"
                           style={{ backgroundColor: '#003a73', flexShrink: 0, whiteSpace: 'nowrap' }}
                         >
@@ -2138,6 +2168,49 @@ const CardBuilder: React.FC = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showHealthCheckLibraryPicker && (
+        <Modal isOpen={showHealthCheckLibraryPicker} onClose={() => setShowHealthCheckLibraryPicker(false)} size="md" title="Add Links From Library">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <p style={{ margin: 0, color: '#4c6272' }}>Choose which library links to add to this result card.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '48vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+              {selectedHealthCheckLibraryLinks.map((link, index) => {
+                const key = healthCheckLibraryLinkKey(link);
+                const checked = selectedHealthCheckLibraryKeys.includes(key);
+
+                return (
+                  <label key={`${key}-${index}`} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', padding: '0.6rem 0.7rem', border: '1px solid #d8dde0', borderRadius: '8px', background: '#f8fbfd', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setSelectedHealthCheckLibraryKeys((current) => {
+                          if (e.target.checked) {
+                            return current.includes(key) ? current : [...current, key];
+                          }
+                          return current.filter((item) => item !== key);
+                        });
+                      }}
+                    />
+                    <span>
+                      <strong style={{ display: 'block' }}>{link.title}</strong>
+                      <span style={{ color: '#4c6272', fontSize: '0.86rem' }}>{link.url}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+              <button type="button" onClick={() => setShowHealthCheckLibraryPicker(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                Cancel
+              </button>
+              <button type="button" onClick={applySelectedHealthCheckLibraryLinks} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                Add Selected Links
+              </button>
             </div>
           </div>
         </Modal>

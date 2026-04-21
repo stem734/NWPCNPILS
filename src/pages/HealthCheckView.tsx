@@ -67,6 +67,20 @@ const getDisplayMetrics = (metrics: ParsedMetric[]): ParsedMetric[] =>
 
 const metricIdToTemplateId = (metricId: string) => metricId.split(':')[0] || metricId;
 
+const getHealthCheckVariant = (payload: HealthCheckTemplatePayload | undefined, resultCodeRaw: string) => {
+  const variants = payload?.variants;
+  if (!variants) return undefined;
+
+  const resultCode = (resultCodeRaw || '').trim();
+  if (resultCode && variants[resultCode]) {
+    return variants[resultCode];
+  }
+
+  const normalised = resultCode.toUpperCase();
+  const matchingKey = Object.keys(variants).find((key) => key.toUpperCase() === normalised);
+  return matchingKey ? variants[matchingKey] : undefined;
+};
+
 const buildPreviewMetrics = (domainId: ClinicalDomainId): ParsedMetric[] => {
   const domainConfig = PREVIEW_DOMAIN_CONFIGS[domainId];
   return Object.entries(domainConfig.metricByCode).map(([resultCode, metric]) => ({
@@ -141,8 +155,7 @@ const HealthCheckView: React.FC = () => {
     const baseMetrics = previewOnly && previewDomain ? metrics : getDisplayMetrics(metrics);
     return baseMetrics.map((metric) => {
       const templatePayload = effectiveTemplateOverrides[metricIdToTemplateId(metric.id)];
-      const resultCode = (metric.resultCode || '').trim();
-      const variant = templatePayload?.variants?.[resultCode];
+      const variant = getHealthCheckVariant(templatePayload, metric.resultCode || '');
       if (!variant) return metric;
       return {
         ...metric,
@@ -353,7 +366,7 @@ const HealthCheckView: React.FC = () => {
             <div className="hc-grid">
               {group.items.map((metric) => {
                 const templatePayload = templateOverrides[metricIdToTemplateId(metric.id)];
-                const variant = templatePayload?.variants?.[(metric.resultCode || '').trim()];
+                const variant = getHealthCheckVariant(templatePayload, metric.resultCode || '');
                 const cholBreakdown = metric.id === 'ldl' && metric.components ? [
                   { label: 'HDL',     value: metric.components.hdl || '', unit: 'mmol/L' },
                   { label: 'LDL',     value: metric.components.ldl || '', unit: 'mmol/L' },
