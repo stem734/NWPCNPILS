@@ -295,9 +295,10 @@ const PracticeDashboard: React.FC = () => {
     try {
       setPracticeTemplateRows(await fetchPracticeCardTemplates(practiceId));
     } catch (err) {
-      console.error('Error loading practice templates:', err);
+      // Non-blocking: keep medication workflow usable even if this optional table
+      // has not been migrated in the environment yet.
+      console.warn('Practice template store unavailable, continuing without non-medication practice templates:', err);
       setPracticeTemplateRows([]);
-      setError('Unable to load personalised templates for this practice. Apply the practice_card_templates migration if this is a new deployment.');
     }
   }, []);
 
