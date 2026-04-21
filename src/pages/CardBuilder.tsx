@@ -11,6 +11,7 @@ import Modal from '../components/Modal';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { HEALTH_CHECK_CARD_LABELS, type HealthCheckCodeFamily } from '../healthCheckCodes';
+import { METRIC_DEFINITIONS } from '../healthCheckData';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
 import {
   SCREENING_TEMPLATES,
@@ -485,6 +486,19 @@ const CardBuilder: React.FC = () => {
       nextStepsText: selectedHealthCheckDomainConfig.defaultNextStepsText,
       links: [],
     };
+  const resolveHealthCheckLibraryStatus = (resultCode: string): 'ok' | 'amber' | 'red' => {
+    const code = resultCode.toUpperCase().trim();
+    if (code === 'BPNORMAL' || code === 'BMINORMAL' || code === 'QRISKLOW' || code === 'HBA1CNORMAL' || code === 'GPPAQACTIVE' || code === 'ALCRISKOK' || code === 'ALCRISKTEETOTAL' || code === 'SMOKNONSMOK' || code === 'SMOKSTOPPED' || code === 'CHOLNORMAL') {
+      return 'ok';
+    }
+    if (code === 'BMI1' || code === 'HBA1CNDH1' || code === 'GPPAQMODACTIVE' || code === 'GPPAQFAIRINACTIVE' || code === 'GPPAQUNABLE' || code === 'ALCRISKTOOMUCH' || code === 'ALCRISKTOOMUCH1' || code === 'CHOLREVIEW') {
+      return 'amber';
+    }
+    return 'red';
+  };
+  const healthCheckLibraryMetric = METRIC_DEFINITIONS[selectedHealthCheckDomain];
+  const selectedHealthCheckLibraryStatus = resolveHealthCheckLibraryStatus(resolvedSelectedHealthCheckVariantCode);
+  const selectedHealthCheckLibraryEntry = healthCheckLibraryMetric?.statuses[selectedHealthCheckLibraryStatus];
   const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
     (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
       ? {
@@ -553,6 +567,45 @@ const CardBuilder: React.FC = () => {
   const removeHealthCheckLink = (index: number) => {
     updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
       links: selectedHealthCheckVariantSafe.links.filter((_, linkIndex) => linkIndex !== index),
+    });
+  };
+
+  const applyHealthCheckPathwayFromLibrary = () => {
+    if (!selectedHealthCheckLibraryEntry) return;
+    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
+      resultsMessage: selectedHealthCheckLibraryEntry.pathway,
+    });
+  };
+
+  const importHealthCheckLinksFromLibrary = () => {
+    if (!selectedHealthCheckLibraryEntry || selectedHealthCheckLibraryEntry.helpLinks.length === 0) return;
+
+    const existingKeys = new Set(
+      selectedHealthCheckVariantSafe.links.map((link) => `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}`),
+    );
+
+    const importedLinks: HealthCheckBuilderLink[] = selectedHealthCheckLibraryEntry.helpLinks
+      .map((link) => ({
+        title: link.title,
+        showTitleOnCard: true,
+        website: link.url,
+        websiteLabel: 'Website',
+        phone: '',
+        phoneLabel: '',
+        email: '',
+        emailLabel: '',
+      }))
+      .filter((link) => {
+        const key = `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}`;
+        if (!link.title || !link.website || existingKeys.has(key)) return false;
+        existingKeys.add(key);
+        return true;
+      });
+
+    if (importedLinks.length === 0) return;
+
+    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
+      links: [...selectedHealthCheckVariantSafe.links, ...importedLinks],
     });
   };
 
@@ -1529,7 +1582,18 @@ const CardBuilder: React.FC = () => {
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>What does this result mean?</label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 0 }}>What does this result mean?</label>
+                        <button
+                          type="button"
+                          onClick={applyHealthCheckPathwayFromLibrary}
+                          disabled={!selectedHealthCheckLibraryEntry}
+                          className="action-button-sm"
+                          style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.35rem 0.55rem' }}
+                        >
+                          Use Library Pathway
+                        </button>
+                      </div>
                       <textarea
                         value={selectedHealthCheckVariantSafe.resultsMessage}
                         onChange={(e) => updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { resultsMessage: e.target.value })}
@@ -1595,9 +1659,20 @@ const CardBuilder: React.FC = () => {
                         <h4 style={{ margin: 0 }}>Resource and Support Links</h4>
                         <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>Add national NHS links and local support contacts shown in the next-steps section.</p>
                       </div>
-                      <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                        <Plus size={16} /> Add Link
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          onClick={importHealthCheckLinksFromLibrary}
+                          disabled={!selectedHealthCheckLibraryEntry || selectedHealthCheckLibraryEntry.helpLinks.length === 0}
+                          className="action-button"
+                          style={{ backgroundColor: '#003a73', flexShrink: 0, whiteSpace: 'nowrap' }}
+                        >
+                          <Plus size={16} /> Add From Library
+                        </button>
+                        <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                          <Plus size={16} /> Add Link
+                        </button>
+                      </div>
                     </div>
 
                     {selectedHealthCheckVariantSafe.links.length === 0 ? (

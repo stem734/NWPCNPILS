@@ -1440,9 +1440,11 @@ const PracticeDashboard: React.FC = () => {
                 const canAcceptGlobalTemplate = medication.source !== 'built-in';
 
                 return (
-                  <div key={medication.code} className="dashboard-list-card">
-                    <div style={{ color: '#005eb8', flexShrink: 0 }}>{getMedicationIcon(medication.code)}</div>
-                    <div className="dashboard-list-main">
+                  <div key={medication.code} className="dashboard-list-card dashboard-list-card--medication">
+                    <div className="dashboard-list-icon dashboard-list-icon--medication" style={{ color: '#005eb8' }}>
+                      {getMedicationIcon(medication.code)}
+                    </div>
+                    <div className="dashboard-list-main dashboard-list-main--medication">
                       <div className="dashboard-list-title">{medication.title}</div>
                       <div className="dashboard-meta">
                         <span className="dashboard-badge dashboard-badge--blue">{medication.code}</span>
@@ -1468,7 +1470,7 @@ const PracticeDashboard: React.FC = () => {
                             : 'Patients will see a placeholder until your practice accepts the global template or saves a practice version.'}
                       </p>
                     </div>
-                    <div className="dashboard-list-actions">
+                    <div className="dashboard-list-actions dashboard-list-actions--medication">
                       <button onClick={() => setPreviewMed(previewMedication)} className="dashboard-pill-button">
                         <Eye size={14} /> {state === 'custom' ? 'Preview Practice' : 'Preview Global'}
                       </button>
