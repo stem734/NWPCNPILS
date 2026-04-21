@@ -251,6 +251,13 @@ const PracticeDashboard: React.FC = () => {
     [practiceCards],
   );
 
+  const globalLibraryMedications = useMemo(
+    () => allMedications.filter((medication) => medication.source !== 'built-in'),
+    [allMedications],
+  );
+
+  const fallbackOnlyMedicationCount = allMedications.length - globalLibraryMedications.length;
+
   const customCount = useMemo(
     () => Object.values(practiceCards).filter((card) => card.source_type === 'custom').length,
     [practiceCards],
@@ -449,6 +456,11 @@ const PracticeDashboard: React.FC = () => {
   const acceptGlobalCard = (medication: MedicationRecord, confirmLabel = 'Accept Global Template') => {
     if (!selectedPracticeId) return;
 
+    if (medication.source === 'built-in') {
+      setError(`Medication ${medication.code} is only available as a local fallback. Seed it into the Supabase medications table before accepting it as a global template.`);
+      return;
+    }
+
     setDisclaimerRequest({
       title: 'Accept Global Template',
       message: GLOBAL_TEMPLATE_DISCLAIMER_TEXT,
@@ -468,6 +480,11 @@ const PracticeDashboard: React.FC = () => {
   const acceptAllGlobalCards = () => {
     if (!selectedPracticeId || allMedications.length === 0) return;
 
+    if (globalLibraryMedications.length === 0) {
+      setError('No Supabase-backed global medication templates are available yet. Seed the medications table, then try again.');
+      return;
+    }
+
     setDisclaimerRequest({
       title: 'Accept All Global Templates',
       message:
@@ -477,11 +494,13 @@ const PracticeDashboard: React.FC = () => {
       onConfirm: async () => {
         await invokeAndReload(
           async () => {
-            for (const medication of allMedications) {
+            for (const medication of globalLibraryMedications) {
               await applyGlobalTemplate(medication.code);
             }
           },
-          `All ${allMedications.length} medication codes are now using the global template.`,
+          fallbackOnlyMedicationCount > 0
+            ? `${globalLibraryMedications.length} Supabase-backed medication codes are now using the global template. ${fallbackOnlyMedicationCount} fallback-only codes need seeding before they can be accepted.`
+            : `All ${globalLibraryMedications.length} medication codes are now using the global template.`,
         );
       },
     });
@@ -935,10 +954,15 @@ const PracticeDashboard: React.FC = () => {
                 onClick={acceptAllGlobalCards}
                 className="action-button"
                 style={{ backgroundColor: '#005eb8', justifyContent: 'center' }}
-                disabled={allMedications.length === 0}
+                disabled={globalLibraryMedications.length === 0}
               >
                 <CheckCircle size={16} /> Accept All Global Templates
               </button>
+              {fallbackOnlyMedicationCount > 0 && (
+                <p style={{ margin: 0, color: '#8a5f00', fontSize: '0.86rem', lineHeight: 1.4 }}>
+                  {fallbackOnlyMedicationCount} medication code{fallbackOnlyMedicationCount === 1 ? '' : 's'} are local fallbacks and need seeding into Supabase before they can be accepted as global templates.
+                </p>
+              )}
             </div>
           </div>
 
@@ -950,6 +974,7 @@ const PracticeDashboard: React.FC = () => {
                 const practiceCard = practiceCards[medication.code];
                 const state: 'global' | 'custom' | 'unconfigured' = practiceCard?.source_type ?? 'unconfigured';
                 const previewMedication = buildMedicationPreview(medication, practiceCard);
+                const canAcceptGlobalTemplate = medication.source !== 'built-in';
 
                 return (
                   <div key={medication.code} className="dashboard-list-card">
@@ -987,12 +1012,13 @@ const PracticeDashboard: React.FC = () => {
 
                       {state !== 'custom' && (
                         <button
-                          onClick={() => state === 'global' ? undefined : acceptGlobalCard(medication, 'Accept Global Template')}
+                          onClick={() => state === 'global' || !canAcceptGlobalTemplate ? undefined : acceptGlobalCard(medication, 'Accept Global Template')}
                           className="dashboard-pill-button dashboard-pill-button--primary"
-                          disabled={state === 'global'}
-                          style={state === 'global' ? { opacity: 0.75, cursor: 'default' } : undefined}
+                          disabled={state === 'global' || !canAcceptGlobalTemplate}
+                          title={!canAcceptGlobalTemplate ? 'Seed this medication into Supabase before accepting it as a global template.' : undefined}
+                          style={state === 'global' || !canAcceptGlobalTemplate ? { opacity: 0.75, cursor: 'default' } : undefined}
                         >
-                          <CheckCircle size={14} /> {state === 'global' ? 'Using Global Template' : 'Accept Global Template'}
+                          <CheckCircle size={14} /> {state === 'global' ? 'Using Global Template' : canAcceptGlobalTemplate ? 'Accept Global Template' : 'Needs Global Seed'}
                         </button>
                       )}
 
