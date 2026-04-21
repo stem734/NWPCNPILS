@@ -17,6 +17,7 @@ type ModalProps = {
   bodyClassName?: string;
   closeButtonLabel?: string;
   ariaLabelledBy?: string;
+  closeOnOverlayClick?: boolean;
 };
 
 const sizeClassName: Record<ModalSize, string> = {
@@ -40,6 +41,7 @@ const Modal: React.FC<ModalProps> = ({
   bodyClassName = '',
   closeButtonLabel = 'Close dialog',
   ariaLabelledBy,
+  closeOnOverlayClick = true,
 }) => {
   if (!isOpen) {
     return null;
@@ -48,7 +50,7 @@ const Modal: React.FC<ModalProps> = ({
   const hasHeader = Boolean(title || subtitle || icon || actions);
 
   return (
-    <div className="ui-modal__overlay" onClick={onClose}>
+    <div className="ui-modal__overlay" onClick={closeOnOverlayClick ? onClose : undefined}>
       <div
         className={`ui-modal__panel ${sizeClassName[size]} ${panelClassName}`.trim()}
         onClick={(event) => event.stopPropagation()}

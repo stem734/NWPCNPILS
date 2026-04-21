@@ -64,6 +64,13 @@ export const emptyLocalResourceDraft = (): LocalResourceDraft => ({
   is_active: true,
 });
 
+export const normaliseWebsiteUrl = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
 export async function fetchLocalResourceLinks(activeOnly = false): Promise<LocalResourceLink[]> {
   let query = supabase
     .from('local_resource_links')
@@ -90,7 +97,7 @@ export async function upsertLocalResourceLink(resource: Partial<LocalResourceLin
     show_title_on_card: resource.show_title_on_card,
     description: resource.description.trim(),
     category: resource.category.trim(),
-    website: resource.website.trim(),
+    website: normaliseWebsiteUrl(resource.website),
     website_label: resource.website_label.trim(),
     phone: resource.phone.trim(),
     phone_label: resource.phone_label.trim(),

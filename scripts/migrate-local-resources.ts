@@ -68,6 +68,13 @@ const firstString = (data: Record<string, unknown>, fields: string[]): string =>
   return '';
 };
 
+const normaliseWebsiteUrl = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
 const firstBoolean = (data: Record<string, unknown>, fields: string[], fallback: boolean): boolean => {
   for (const field of fields) {
     if (typeof data[field] === 'boolean') return Boolean(data[field]);
@@ -90,7 +97,7 @@ async function main() {
   for (const doc of snapshot.docs) {
     const data = doc.data();
     const title = firstString(data, ['title', 'name', 'label']);
-    const website = firstString(data, ['website', 'url', 'link', 'href']);
+    const website = normaliseWebsiteUrl(firstString(data, ['website', 'url', 'link', 'href']));
     const phone = firstString(data, ['phone', 'telephone', 'tel']);
     const email = firstString(data, ['email', 'mail']);
 

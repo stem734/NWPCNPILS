@@ -1051,6 +1051,7 @@ const AdminDashboard: React.FC = () => {
           size="md"
           title={editingLocalResource ? 'Edit Local Resource' : 'Add Local Resource'}
           bodyClassName="dashboard-modal__body"
+          closeOnOverlayClick={false}
           footer={(
             <>
               <button type="button" onClick={closeLocalResourceForm} className="action-button" style={{ backgroundColor: '#4c6272' }}>
@@ -1144,10 +1145,10 @@ const AdminDashboard: React.FC = () => {
               <div className="dashboard-field">
                 <label>Website</label>
                 <input
-                  type="url"
+                  type="text"
                   value={localResourceDraft.website}
                   onChange={(event) => updateLocalResourceDraft('website', event.target.value)}
-                  placeholder="https://..."
+                  placeholder="www.example.org.uk or https://..."
                 />
               </div>
               <div className="dashboard-field">
