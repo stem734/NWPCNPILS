@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/toastContext';
 import { practiceUrl, resolvePath } from '../subdomainUtils';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import Modal from '../components/Modal';

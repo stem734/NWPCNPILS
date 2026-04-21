@@ -1,32 +1,12 @@
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
-
-export type ToastKind = 'success' | 'error' | 'info';
-
-export type Toast = {
-  id: number;
-  kind: ToastKind;
-  message: string;
-  durationMs: number;
-};
-
-type ToastContextValue = {
-  showToast: (message: string, kind?: ToastKind, durationMs?: number) => void;
-  success: (message: string, durationMs?: number) => void;
-  error: (message: string, durationMs?: number) => void;
-  info: (message: string, durationMs?: number) => void;
-  dismiss: (id: number) => void;
-};
-
-const ToastContext = createContext<ToastContextValue | null>(null);
+import { ToastContext, type Toast, type ToastContextValue, type ToastKind } from './toastContext';
 
 const DEFAULT_DURATIONS: Record<ToastKind, number> = {
   success: 3500,
@@ -172,11 +152,3 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: number) => void }> = (
     </div>
   );
 };
-
-export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext);
-  if (!ctx) {
-    throw new Error('useToast must be used inside a <ToastProvider>');
-  }
-  return ctx;
-}

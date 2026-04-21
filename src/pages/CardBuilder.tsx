@@ -8,7 +8,7 @@ import HealthCheckCard from '../components/HealthCheckCard';
 import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Modal from '../components/Modal';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/toastContext';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { fetchLocalResourceLinks, type LocalResourceLink } from '../localResourceLibrary';
