@@ -59,6 +59,11 @@ type PracticeMembershipRow = {
   practice: PracticeSummary | PracticeSummary[] | null;
 };
 
+type QueryErrorLike = {
+  code?: string;
+  message?: string;
+};
+
 type CustomCardDraft = {
   code: string;
   title: string;
@@ -121,8 +126,75 @@ const DOMAIN_FEATURE_KEY: Record<PracticeTemplateBuilderType, keyof PracticeSumm
   ltc: 'ltc_enabled',
 };
 
+const PRACTICE_MEMBERSHIP_SELECT_BASE = `
+  id,
+  practice_id,
+  user_uid,
+  role,
+  is_default,
+  practice:practices(
+    id,
+    name,
+    ods_code,
+    contact_email,
+    is_active,
+    link_visit_count,
+    patient_rating_count,
+    patient_rating_total,
+    last_accessed,
+    selected_medications
+  )
+`;
+
+const PRACTICE_MEMBERSHIP_SELECT_WITH_FEATURES = `
+  id,
+  practice_id,
+  user_uid,
+  role,
+  is_default,
+  practice:practices(
+    id,
+    name,
+    ods_code,
+    contact_email,
+    is_active,
+    link_visit_count,
+    patient_rating_count,
+    patient_rating_total,
+    last_accessed,
+    selected_medications,
+    medication_enabled,
+    healthcheck_enabled,
+    screening_enabled,
+    immunisation_enabled,
+    ltc_enabled
+  )
+`;
+
 const domainFeatureEnabled = (practice: PracticeSummary, domain: DashboardDomain) =>
   domain === 'medication' ? practice.medication_enabled !== false : practice[DOMAIN_FEATURE_KEY[domain]] === true;
+
+const isMissingColumnError = (error: unknown) => {
+  const row = (error && typeof error === 'object' ? error : {}) as QueryErrorLike;
+  const message = typeof row.message === 'string' ? row.message.toLowerCase() : '';
+  return row.code === '42703' || (message.includes('column') && message.includes('does not exist'));
+};
+
+const safeSessionStorageGet = (key: string) => {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSessionStorageSet = (key: string, value: string) => {
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore unavailable sessionStorage (for example restrictive browser modes).
+  }
+};
 
 const isEditablePatientTemplate = (value: unknown): value is EditablePatientTemplate => {
   const row = value as Partial<EditablePatientTemplate> | null;
@@ -190,34 +262,24 @@ const PracticeDashboard: React.FC = () => {
         return;
       }
 
-      const { data, error: membershipError } = await supabase
+      const withFeaturesQuery = await supabase
         .from('practice_memberships')
-        .select(`
-          id,
-          practice_id,
-          user_uid,
-          role,
-          is_default,
-          practice:practices(
-            id,
-            name,
-            ods_code,
-            contact_email,
-            is_active,
-            link_visit_count,
-            patient_rating_count,
-            patient_rating_total,
-            last_accessed,
-            selected_medications,
-            medication_enabled,
-            healthcheck_enabled,
-            screening_enabled,
-            immunisation_enabled,
-            ltc_enabled
-          )
-        `)
+        .select(PRACTICE_MEMBERSHIP_SELECT_WITH_FEATURES)
         .eq('user_uid', user.id)
         .order('is_default', { ascending: false });
+
+      let data = withFeaturesQuery.data as unknown as PracticeMembershipRow[] | null;
+      let membershipError = withFeaturesQuery.error;
+      if (membershipError && isMissingColumnError(membershipError)) {
+        console.warn('Practice feature columns missing in this environment, falling back to legacy membership query.');
+        const fallbackQuery = await supabase
+          .from('practice_memberships')
+          .select(PRACTICE_MEMBERSHIP_SELECT_BASE)
+          .eq('user_uid', user.id)
+          .order('is_default', { ascending: false });
+        data = fallbackQuery.data as unknown as PracticeMembershipRow[] | null;
+        membershipError = fallbackQuery.error;
+      }
 
       if (membershipError) {
         throw membershipError;
@@ -249,7 +311,7 @@ const PracticeDashboard: React.FC = () => {
 
       setMemberships(mappedMemberships);
 
-      const savedPracticeId = window.sessionStorage.getItem(PRACTICE_SELECTION_STORAGE_KEY) || '';
+      const savedPracticeId = safeSessionStorageGet(PRACTICE_SELECTION_STORAGE_KEY) || '';
       const defaultPracticeId =
         mappedMemberships.find((membership) => membership.practice_id === savedPracticeId)?.practice_id ||
         mappedMemberships.find((membership) => membership.is_default)?.practice_id ||
@@ -350,7 +412,7 @@ const PracticeDashboard: React.FC = () => {
       return;
     }
 
-    window.sessionStorage.setItem(PRACTICE_SELECTION_STORAGE_KEY, selectedPracticeId);
+    safeSessionStorageSet(PRACTICE_SELECTION_STORAGE_KEY, selectedPracticeId);
     void loadPracticeCards(selectedPracticeId);
     void loadPracticeTemplates(selectedPracticeId);
   }, [loadPracticeCards, loadPracticeTemplates, selectedPracticeId]);

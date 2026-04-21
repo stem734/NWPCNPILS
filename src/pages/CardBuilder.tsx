@@ -8,6 +8,7 @@ import HealthCheckCard from '../components/HealthCheckCard';
 import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Modal from '../components/Modal';
+import { useToast } from '../components/Toast';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { HEALTH_CHECK_CARD_LABELS, type HealthCheckCodeFamily } from '../healthCheckCodes';
@@ -193,6 +194,7 @@ const createDefaultLongTermConditionState = (): Record<string, LongTermCondition
   Object.fromEntries(Object.entries(LONG_TERM_CONDITION_TEMPLATES).map(([key, template]) => [key, cloneLongTermConditionTemplate(template)]));
 
 const CardBuilder: React.FC = () => {
+  const toast = useToast();
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
   const [uiState, dispatchUi] = useReducer(builderUiReducer, initialBuilderUiState);
@@ -883,9 +885,11 @@ const CardBuilder: React.FC = () => {
       if (error) throw error;
       if (!data?.success) throw new Error('Template save did not complete');
       showBuilderNotice(builderType as OutputBuilderType, successMessage);
+      toast.success('Saved');
     } catch (err) {
       const message = await getFunctionErrorMessage(err, 'Failed to save card template.');
       showBuilderNotice(builderType as OutputBuilderType, message);
+      toast.error(message);
     } finally {
       setTemplateActionKey('');
     }
@@ -1823,8 +1827,7 @@ const CardBuilder: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      saveHealthCheckTemplate(selectedHealthCheckDomain);
-                      setHealthCheckEditorOpen(false);
+                      void saveHealthCheckTemplate(selectedHealthCheckDomain);
                     }}
                     style={{
                       padding: '0.75rem 1.5rem',
