@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
@@ -112,8 +112,18 @@ const PATHWAY_LIBRARY_AREAS: Array<{ id: string; label: string; description: str
   { id: 'medication', label: 'Medication cards', description: 'Medication information cards and shared library templates.' },
 ];
 
+type AdminTab = 'practices' | 'practiceUsers' | 'admins' | 'library' | 'setup' | 'audit';
+
+const parseAdminTabFromSearch = (search: string): AdminTab | null => {
+  const value = new URLSearchParams(search).get('tab');
+  return value === 'practices' || value === 'practiceUsers' || value === 'admins' || value === 'library' || value === 'setup' || value === 'audit'
+    ? value
+    : null;
+};
+
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'practices' | 'practiceUsers' | 'admins' | 'library' | 'setup' | 'audit'>('practices');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => parseAdminTabFromSearch(window.location.search) || 'practices');
   const [practices, setPractices] = useState<Practice[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [loginAudit, setLoginAudit] = useState<LoginAuditEntry[]>([]);
@@ -160,6 +170,12 @@ const AdminDashboard: React.FC = () => {
   } | null>(null);
   const toast = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const requestedTab = parseAdminTabFromSearch(location.search);
+    if (!requestedTab) return;
+    setActiveTab(requestedTab);
+  }, [location.search]);
 
   useEffect(() => {
     const hydrate = async () => {

@@ -451,6 +451,11 @@ const CardBuilder: React.FC = () => {
     await navigator.clipboard.writeText(value);
   };
 
+  const openPathwayLibraryManager = () => {
+    const target = `${window.location.origin}${resolvePath('/admin/dashboard?tab=library')}`;
+    window.open(target, '_blank', 'noopener,noreferrer');
+  };
+
   const buildHealthCheckFamilyPreviewUrl = (domainId: ClinicalDomainId) => {
     const params = new URLSearchParams({ type: 'healthcheck', previewOnly: '1', previewDomain: domainId });
     if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
@@ -1694,6 +1699,14 @@ const CardBuilder: React.FC = () => {
                         <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>Add national NHS links and local support contacts shown in the next-steps section.</p>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          onClick={openPathwayLibraryManager}
+                          className="action-button"
+                          style={{ backgroundColor: '#4c6272', flexShrink: 0, whiteSpace: 'nowrap' }}
+                        >
+                          <ExternalLink size={16} /> Manage Library
+                        </button>
                         <button
                           type="button"
                           onClick={openHealthCheckLibraryPicker}
