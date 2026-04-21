@@ -60,8 +60,37 @@ const ResetPassword: React.FC = () => {
       return () => { cancelled = true; };
     }
 
-    // Implicit flow: Supabase picks up recovery token from the URL hash
+    // Implicit flow: admin.generateLink() produces hash-based recovery tokens
+    // (e.g. #access_token=...&refresh_token=...&type=recovery).
+    // detectSessionInUrl is false so the Supabase client won't process these
+    // automatically — parse and set the session manually instead.
     let cancelled = false;
+    const hash = window.location.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const type = hashParams.get('type');
+
+      if (accessToken && type === 'recovery') {
+        void supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        }).then(({ error }) => {
+          if (cancelled) return;
+          if (error) {
+            setLinkExpired(true);
+          } else {
+            setSessionReady(true);
+          }
+        });
+        return () => { cancelled = true; };
+      }
+    }
+
+    // Fallback: listen for PASSWORD_RECOVERY in case the session was already
+    // established elsewhere (e.g. deep-link on mobile that sets the session
+    // before this component mounts).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
