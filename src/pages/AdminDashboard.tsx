@@ -11,6 +11,14 @@ import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import Modal from '../components/Modal';
 import PracticeForm from '../components/PracticeForm';
 import { validatePracticeContactEmail } from '../practiceValidation';
+import {
+  deleteLocalResourceLink,
+  emptyLocalResourceDraft,
+  fetchLocalResourceLinks,
+  upsertLocalResourceLink,
+  type LocalResourceDraft,
+  type LocalResourceLink,
+} from '../localResourceLibrary';
 
 interface Practice {
   id: string;
@@ -104,14 +112,6 @@ const PRACTICE_FUNCTIONS: Array<{
   { key: 'ltc_enabled', label: 'Long term conditions', isEnabled: (practice) => practice.ltc_enabled === true },
 ];
 
-const PATHWAY_LIBRARY_AREAS: Array<{ id: string; label: string; description: string }> = [
-  { id: 'healthcheck', label: 'Health checks', description: 'Result pathways, action messaging, and support links by result type.' },
-  { id: 'screening', label: 'Screening', description: 'Template content and resource links for screening pathways.' },
-  { id: 'immunisation', label: 'Immunisations', description: 'Aftercare guidance and local support resources by vaccine template.' },
-  { id: 'ltc', label: 'Long term conditions', description: 'Condition pathway content, escalation zones, and support links.' },
-  { id: 'medication', label: 'Medication cards', description: 'Medication information cards and shared library templates.' },
-];
-
 type AdminTab = 'practices' | 'practiceUsers' | 'admins' | 'library' | 'setup' | 'audit';
 
 const parseAdminTabFromSearch = (search: string): AdminTab | null => {
@@ -146,6 +146,13 @@ const AdminDashboard: React.FC = () => {
   const [addAdminError, setAddAdminError] = useState('');
   const [editingPractice, setEditingPractice] = useState<Practice | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const [localResources, setLocalResources] = useState<LocalResourceLink[]>([]);
+  const [loadingLocalResources, setLoadingLocalResources] = useState(false);
+  const [localResourceSearch, setLocalResourceSearch] = useState('');
+  const [showLocalResourceForm, setShowLocalResourceForm] = useState(false);
+  const [editingLocalResource, setEditingLocalResource] = useState<LocalResourceLink | null>(null);
+  const [localResourceDraft, setLocalResourceDraft] = useState<LocalResourceDraft>(() => emptyLocalResourceDraft());
+  const [localResourceError, setLocalResourceError] = useState('');
   const [editName, setEditName] = useState('');
   const [editOds, setEditOds] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -176,6 +183,11 @@ const AdminDashboard: React.FC = () => {
     if (!requestedTab) return;
     setActiveTab(requestedTab);
   }, [location.search]);
+
+  useEffect(() => {
+    if (!authenticated || activeTab !== 'library') return;
+    void loadLocalResources();
+  }, [activeTab, authenticated]);
 
   useEffect(() => {
     const hydrate = async () => {
@@ -261,6 +273,103 @@ const AdminDashboard: React.FC = () => {
   const loadLoginAudit = async () => {
     await loadDashboardData();
   };
+
+  const loadLocalResources = async () => {
+    setLoadingLocalResources(true);
+    setLocalResourceError('');
+    try {
+      setLocalResources(await fetchLocalResourceLinks(false));
+    } catch (error) {
+      console.error('Error loading local resource library:', error);
+      setLocalResourceError(await getFunctionErrorMessage(error, 'Unable to load local resource library. Has the local-resource-links migration been applied?'));
+      setLocalResources([]);
+    } finally {
+      setLoadingLocalResources(false);
+    }
+  };
+
+  const openLocalResourceForm = (resource?: LocalResourceLink) => {
+    setEditingLocalResource(resource || null);
+    setLocalResourceDraft(resource ? {
+      title: resource.title,
+      description: resource.description,
+      category: resource.category,
+      website: resource.website,
+      phone: resource.phone,
+      email: resource.email,
+      is_active: resource.is_active,
+    } : emptyLocalResourceDraft());
+    setShowLocalResourceForm(true);
+    setLocalResourceError('');
+  };
+
+  const closeLocalResourceForm = () => {
+    setShowLocalResourceForm(false);
+    setEditingLocalResource(null);
+    setLocalResourceDraft(emptyLocalResourceDraft());
+    setLocalResourceError('');
+  };
+
+  const updateLocalResourceDraft = <K extends keyof LocalResourceDraft>(field: K, value: LocalResourceDraft[K]) => {
+    setLocalResourceDraft((current) => ({ ...current, [field]: value }));
+  };
+
+  const saveLocalResource = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLocalResourceError('');
+
+    if (!localResourceDraft.title.trim()) {
+      setLocalResourceError('Resource title is required.');
+      return;
+    }
+
+    if (!localResourceDraft.website.trim() && !localResourceDraft.phone.trim() && !localResourceDraft.email.trim()) {
+      setLocalResourceError('Add at least one website, phone, or email contact.');
+      return;
+    }
+
+    try {
+      await upsertLocalResourceLink({
+        ...(editingLocalResource ? { id: editingLocalResource.id } : {}),
+        ...localResourceDraft,
+      });
+      await loadLocalResources();
+      toast.success(editingLocalResource ? 'Resource updated.' : 'Resource added.');
+      closeLocalResourceForm();
+    } catch (error) {
+      console.error('Error saving local resource:', error);
+      setLocalResourceError(await getFunctionErrorMessage(error, 'Unable to save local resource.'));
+    }
+  };
+
+  const removeLocalResource = (resource: LocalResourceLink) => {
+    setConfirmDialog({
+      title: 'Remove Resource',
+      message: `Remove "${resource.title}" from the local resource library? Existing cards that already imported this link will not be changed.`,
+      confirmLabel: 'Remove Resource',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          await deleteLocalResourceLink(resource.id);
+          await loadLocalResources();
+          toast.success(`Removed ${resource.title}.`);
+        } catch (error) {
+          console.error('Error deleting local resource:', error);
+          toast.error(await getFunctionErrorMessage(error, 'Unable to remove local resource.'));
+        }
+        setConfirmDialog(null);
+      },
+    });
+  };
+
+  const filteredLocalResources = useMemo(() => {
+    const query = localResourceSearch.trim().toLowerCase();
+    if (!query) return localResources;
+    return localResources.filter((resource) =>
+      [resource.title, resource.description, resource.category, resource.website, resource.phone, resource.email]
+        .some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [localResourceSearch, localResources]);
 
   const groupedLoginAudit = useMemo<LoginAuditGroup[]>(() => {
     const groups = new Map<string, LoginAuditGroup>();
@@ -928,6 +1037,95 @@ const AdminDashboard: React.FC = () => {
         </Modal>
       )}
 
+      {activeTab === 'library' && showLocalResourceForm && (
+        <Modal
+          isOpen
+          onClose={closeLocalResourceForm}
+          size="md"
+          title={editingLocalResource ? 'Edit Local Resource' : 'Add Local Resource'}
+          bodyClassName="dashboard-modal__body"
+          footer={(
+            <>
+              <button type="button" onClick={closeLocalResourceForm} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                Cancel
+              </button>
+              <button type="submit" form="local-resource-form" className="action-button" style={{ backgroundColor: 'var(--nhs-green)' }}>
+                Save Resource
+              </button>
+            </>
+          )}
+        >
+          {localResourceError && (
+            <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
+              {localResourceError}
+            </div>
+          )}
+          <form onSubmit={saveLocalResource} className="dashboard-modal__form" id="local-resource-form">
+            <div className="dashboard-field">
+              <label>Resource Title *</label>
+              <input
+                type="text"
+                value={localResourceDraft.title}
+                onChange={(event) => updateLocalResourceDraft('title', event.target.value)}
+                required
+              />
+            </div>
+            <div className="dashboard-field">
+              <label>Category</label>
+              <input
+                type="text"
+                value={localResourceDraft.category}
+                onChange={(event) => updateLocalResourceDraft('category', event.target.value)}
+                placeholder="e.g. Smoking, Weight management, Diabetes"
+              />
+            </div>
+            <div className="dashboard-field">
+              <label>Description</label>
+              <textarea
+                value={localResourceDraft.description}
+                onChange={(event) => updateLocalResourceDraft('description', event.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="dashboard-field">
+              <label>Website</label>
+              <input
+                type="url"
+                value={localResourceDraft.website}
+                onChange={(event) => updateLocalResourceDraft('website', event.target.value)}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="dashboard-form-grid">
+              <div className="dashboard-field">
+                <label>Phone</label>
+                <input
+                  type="text"
+                  value={localResourceDraft.phone}
+                  onChange={(event) => updateLocalResourceDraft('phone', event.target.value)}
+                />
+              </div>
+              <div className="dashboard-field">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={localResourceDraft.email}
+                  onChange={(event) => updateLocalResourceDraft('email', event.target.value)}
+                />
+              </div>
+            </div>
+            <label className="dashboard-setting-toggle">
+              <input
+                type="checkbox"
+                checked={localResourceDraft.is_active}
+                onChange={(event) => updateLocalResourceDraft('is_active', event.target.checked)}
+              />
+              Available to card editors
+            </label>
+          </form>
+        </Modal>
+      )}
+
       {activeTab === 'practiceUsers' && (
       <>
         <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
@@ -1177,34 +1375,68 @@ const AdminDashboard: React.FC = () => {
       <div className="dashboard-panel dashboard-section">
         <div className="dashboard-panel-header">
           <div>
-            <h2 className="dashboard-panel-title">Pathway Library Management</h2>
-            <p className="dashboard-panel-subtitle">Open the builder directly to the pathway domain you want to maintain.</p>
+            <h2 className="dashboard-panel-title">Local Resource Library</h2>
+            <p className="dashboard-panel-subtitle">Maintain reusable local support links that can be applied to cards across every service.</p>
           </div>
-          <button onClick={() => navigate(resolvePath('/admin/card-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-            <FlaskConical size={16} /> Open Full Card Builder
+          <button onClick={() => openLocalResourceForm()} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+            <Plus size={16} /> Add Resource
           </button>
         </div>
 
-        <div className="dashboard-list">
-          {PATHWAY_LIBRARY_AREAS.map((area) => (
-            <div key={area.id} className="dashboard-list-card">
+        {localResourceError && (
+          <div className="dashboard-banner dashboard-banner--error" style={{ marginBottom: '1rem' }}>
+            {localResourceError}
+          </div>
+        )}
+
+        <div className="dashboard-toolbar" style={{ marginBottom: '1rem' }}>
+          <div className="dashboard-search">
+            <input
+              type="text"
+              value={localResourceSearch}
+              onChange={(event) => setLocalResourceSearch(event.target.value)}
+              placeholder="Search resources by title, category, contact, or description"
+              style={{ width: '100%', padding: '0.75rem 0.9rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem' }}
+            />
+          </div>
+          <button onClick={loadLocalResources} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+            <RefreshCw size={16} /> Refresh
+          </button>
+        </div>
+
+        {loadingLocalResources ? (
+          <p style={{ color: '#4c6272' }}>Loading local resources...</p>
+        ) : filteredLocalResources.length === 0 ? (
+          <p style={{ color: '#4c6272' }}>No local resources found yet.</p>
+        ) : (
+          <div className="dashboard-list">
+            {filteredLocalResources.map((resource) => (
+            <div key={resource.id} className="dashboard-list-card">
               <div className="dashboard-list-main">
-                <div className="dashboard-list-title">{area.label}</div>
-                <div className="dashboard-meta" style={{ marginTop: '0.35rem' }}>
-                  <span>{area.description}</span>
+                <div className="dashboard-list-title">{resource.title}</div>
+                <div className="dashboard-meta">
+                  {resource.category && <span>{resource.category}</span>}
+                  <span className={`dashboard-badge ${resource.is_active ? 'dashboard-badge--green' : 'dashboard-badge--red'}`}>
+                    {resource.is_active ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                  {resource.website && <span>{resource.website}</span>}
+                  {resource.phone && <span>{resource.phone}</span>}
+                  {resource.email && <span>{resource.email}</span>}
                 </div>
+                {resource.description && <p style={{ margin: '0.45rem 0 0', color: '#4c6272' }}>{resource.description}</p>}
               </div>
               <div className="dashboard-list-actions">
-                <button
-                  onClick={() => navigate(resolvePath(`/admin/card-builder?builder=${area.id}`))}
-                  className="dashboard-pill-button dashboard-pill-button--primary"
-                >
-                  <Edit2 size={16} /> Manage
+                <button onClick={() => openLocalResourceForm(resource)} className="dashboard-pill-button dashboard-pill-button--primary">
+                  <Edit2 size={16} /> Edit
+                </button>
+                <button onClick={() => removeLocalResource(resource)} className="dashboard-pill-button dashboard-pill-button--danger">
+                  <Trash2 size={16} /> Remove
                 </button>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
       )}
 

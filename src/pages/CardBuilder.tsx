@@ -11,6 +11,7 @@ import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
+import { fetchLocalResourceLinks, type LocalResourceLink } from '../localResourceLibrary';
 import { HEALTH_CHECK_CARD_LABELS, type HealthCheckCodeFamily } from '../healthCheckCodes';
 import { METRIC_DEFINITIONS } from '../healthCheckData';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
@@ -196,8 +197,16 @@ const createDefaultLongTermConditionState = (): Record<string, LongTermCondition
 const isOutputBuilderType = (value: string | null): value is OutputBuilderType =>
   value === 'medication' || value === 'healthcheck' || value === 'screening' || value === 'immunisation' || value === 'ltc';
 
-const healthCheckLibraryLinkKey = (link: { title?: string; url?: string }) =>
-  `${(link.title || '').trim().toLowerCase()}|${(link.url || '').trim().toLowerCase()}`;
+const localResourceKey = (resource: LocalResourceLink) => resource.id;
+
+const localResourceHref = (resource: LocalResourceLink) => {
+  if (resource.website.trim()) return resource.website.trim();
+  if (resource.email.trim()) return `mailto:${resource.email.trim()}`;
+  if (resource.phone.trim()) return `tel:${resource.phone.trim().replace(/\s+/g, '')}`;
+  return '';
+};
+
+type ResourcePickerTarget = OutputBuilderType | null;
 
 const CardBuilder: React.FC = () => {
   const toast = useToast();
@@ -274,8 +283,9 @@ const CardBuilder: React.FC = () => {
   const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
   const [templateActionKey, setTemplateActionKey] = useState('');
-  const [showHealthCheckLibraryPicker, setShowHealthCheckLibraryPicker] = useState(false);
-  const [selectedHealthCheckLibraryKeys, setSelectedHealthCheckLibraryKeys] = useState<string[]>([]);
+  const [localResources, setLocalResources] = useState<LocalResourceLink[]>([]);
+  const [resourcePickerTarget, setResourcePickerTarget] = useState<ResourcePickerTarget>(null);
+  const [selectedLocalResourceIds, setSelectedLocalResourceIds] = useState<string[]>([]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
@@ -362,6 +372,21 @@ const CardBuilder: React.FC = () => {
     };
 
     loadTemplates();
+  }, [authenticated]);
+
+  useEffect(() => {
+    if (!authenticated) return;
+
+    const loadResources = async () => {
+      try {
+        setLocalResources(await fetchLocalResourceLinks(true));
+      } catch (error) {
+        console.warn('Local resource library unavailable:', error);
+        setLocalResources([]);
+      }
+    };
+
+    void loadResources();
   }, [authenticated]);
 
   const previewDraft = useMemo<MedicationRecord | null>(() => {
@@ -521,7 +546,6 @@ const CardBuilder: React.FC = () => {
   const healthCheckLibraryMetric = METRIC_DEFINITIONS[selectedHealthCheckDomain];
   const selectedHealthCheckLibraryStatus = resolveHealthCheckLibraryStatus(resolvedSelectedHealthCheckVariantCode);
   const selectedHealthCheckLibraryEntry = healthCheckLibraryMetric?.statuses[selectedHealthCheckLibraryStatus];
-  const selectedHealthCheckLibraryLinks = selectedHealthCheckLibraryEntry?.helpLinks || [];
   const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
     (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
       ? {
@@ -600,50 +624,132 @@ const CardBuilder: React.FC = () => {
     });
   };
 
-  const openHealthCheckLibraryPicker = () => {
-    if (selectedHealthCheckLibraryLinks.length === 0) return;
-    setSelectedHealthCheckLibraryKeys(selectedHealthCheckLibraryLinks.map((link) => healthCheckLibraryLinkKey(link)));
-    setShowHealthCheckLibraryPicker(true);
+  const openResourcePicker = (target: OutputBuilderType) => {
+    if (localResources.length === 0) {
+      toast.info('No local resources are available yet.');
+      return;
+    }
+    setResourcePickerTarget(target);
+    setSelectedLocalResourceIds(localResources.map((resource) => resource.id));
   };
 
-  const applySelectedHealthCheckLibraryLinks = () => {
-    if (selectedHealthCheckLibraryLinks.length === 0 || selectedHealthCheckLibraryKeys.length === 0) {
-      setShowHealthCheckLibraryPicker(false);
+  const closeResourcePicker = () => {
+    setResourcePickerTarget(null);
+    setSelectedLocalResourceIds([]);
+  };
+
+  const applySelectedLocalResources = () => {
+    if (!resourcePickerTarget) return;
+
+    const selectedResources = localResources.filter((resource) => selectedLocalResourceIds.includes(resource.id));
+    if (selectedResources.length === 0) {
+      closeResourcePicker();
       return;
     }
 
-    const existingKeys = new Set(
-      selectedHealthCheckVariantSafe.links.map((link) => `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}`),
-    );
+    if (resourcePickerTarget === 'medication') {
+      const existingKeys = new Set(trendLinks.map((link) => `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`));
+      const nextLinks = selectedResources
+        .map((resource) => ({ title: resource.title, url: localResourceHref(resource) }))
+        .filter((link) => link.title && link.url)
+        .filter((link) => {
+          const key = `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`;
+          if (existingKeys.has(key)) return false;
+          existingKeys.add(key);
+          return true;
+        });
+      setTrendLinks((current) => [...current, ...nextLinks]);
+      closeResourcePicker();
+      return;
+    }
 
-    const importedLinks: HealthCheckBuilderLink[] = selectedHealthCheckLibraryLinks
-      .filter((link) => selectedHealthCheckLibraryKeys.includes(healthCheckLibraryLinkKey(link)))
-      .map((link) => ({
-        title: link.title,
-        showTitleOnCard: true,
-        website: link.url,
-        websiteLabel: 'Website',
-        phone: '',
-        phoneLabel: '',
-        email: '',
-        emailLabel: '',
-      }))
-      .filter((link) => {
-        const key = `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}`;
-        if (!link.title || !link.website || existingKeys.has(key)) return false;
-        existingKeys.add(key);
-        return true;
+    if (resourcePickerTarget === 'healthcheck') {
+      const existingKeys = new Set(
+        selectedHealthCheckVariantSafe.links.map((link) => `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}|${(link.phone || '').trim().toLowerCase()}|${(link.email || '').trim().toLowerCase()}`),
+      );
+      const importedLinks: HealthCheckBuilderLink[] = selectedResources
+        .map((resource) => ({
+          title: resource.title,
+          showTitleOnCard: true,
+          website: resource.website,
+          websiteLabel: resource.website ? 'Website' : '',
+          phone: resource.phone,
+          phoneLabel: resource.phone ? 'Call' : '',
+          email: resource.email,
+          emailLabel: resource.email ? 'Email' : '',
+        }))
+        .filter((link) => link.title && (link.website || link.phone || link.email))
+        .filter((link) => {
+          const key = `${link.title.trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}|${(link.phone || '').trim().toLowerCase()}|${(link.email || '').trim().toLowerCase()}`;
+          if (existingKeys.has(key)) return false;
+          existingKeys.add(key);
+          return true;
+        });
+
+      updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
+        links: [...selectedHealthCheckVariantSafe.links, ...importedLinks],
       });
-
-    if (importedLinks.length === 0) {
-      setShowHealthCheckLibraryPicker(false);
+      closeResourcePicker();
       return;
     }
 
-    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
-      links: [...selectedHealthCheckVariantSafe.links, ...importedLinks],
-    });
-    setShowHealthCheckLibraryPicker(false);
+    const resourceLinks: PatientResourceLink[] = selectedResources
+      .map((resource) => ({
+        title: resource.title,
+        url: localResourceHref(resource),
+        description: resource.description || [resource.phone, resource.email].filter(Boolean).join(' | '),
+      }))
+      .filter((link) => link.title && link.url);
+
+    if (resourcePickerTarget === 'screening') {
+      const template = selectedScreeningTemplate;
+      const existingKeys = new Set(template.nhsLinks.map((link) => `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`));
+      updateScreeningTemplate(screeningType, {
+        nhsLinks: [
+          ...template.nhsLinks,
+          ...resourceLinks.filter((link) => {
+            const key = `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`;
+            if (existingKeys.has(key)) return false;
+            existingKeys.add(key);
+            return true;
+          }),
+        ],
+      });
+    }
+
+    if (resourcePickerTarget === 'immunisation') {
+      const template = selectedImmunisationTemplate;
+      const existingKeys = new Set(template.nhsLinks.map((link) => `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`));
+      updateImmunisationTemplate(selectedImmunisationTemplate.id, {
+        nhsLinks: [
+          ...template.nhsLinks,
+          ...resourceLinks.filter((link) => {
+            const key = `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`;
+            if (existingKeys.has(key)) return false;
+            existingKeys.add(key);
+            return true;
+          }),
+        ],
+      });
+    }
+
+    if (resourcePickerTarget === 'ltc') {
+      const template = selectedLongTermConditionTemplate;
+      const existingKeys = new Set(template.nhsLinks.map((link) => `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`));
+      updateLongTermConditionTemplate(selectedLongTermCondition, {
+        nhsLinks: [
+          ...template.nhsLinks,
+          ...resourceLinks.filter((link) => {
+            const key = `${link.title.trim().toLowerCase()}|${link.url.trim().toLowerCase()}`;
+            if (existingKeys.has(key)) return false;
+            existingKeys.add(key);
+            return true;
+          }),
+        ],
+      });
+    }
+
+    closeResourcePicker();
   };
 
   const updateScreeningTemplate = (templateId: string, patch: Partial<ScreeningTemplate>) => {
@@ -1276,9 +1382,14 @@ const CardBuilder: React.FC = () => {
                 <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <Link size={14} /> Resource Links (leaflets, PDFs)
                 </label>
-                <button onClick={addTrendLink} style={{ background: 'none', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Plus size={14} /> Add Link
-                </button>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => openResourcePicker('medication')} style={{ background: 'none', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Plus size={14} /> Add From Library
+                  </button>
+                  <button onClick={addTrendLink} style={{ background: 'none', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Plus size={14} /> Add Link
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {trendLinks.map((link, i) => (
@@ -1709,8 +1820,8 @@ const CardBuilder: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={openHealthCheckLibraryPicker}
-                          disabled={selectedHealthCheckLibraryLinks.length === 0}
+                          onClick={() => openResourcePicker('healthcheck')}
+                          disabled={localResources.length === 0}
                           className="action-button"
                           style={{ backgroundColor: '#003a73', flexShrink: 0, whiteSpace: 'nowrap' }}
                         >
@@ -2074,7 +2185,12 @@ const CardBuilder: React.FC = () => {
                 ))}
               </div>
               <div>
-                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <h4 style={{ margin: 0 }}>Resource links</h4>
+                  <button type="button" onClick={() => openResourcePicker('screening')} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.45rem 0.65rem' }}>
+                    <Plus size={14} /> Add From Library
+                  </button>
+                </div>
                 {selectedScreeningTemplate.nhsLinks.map((link, index) => (
                   <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
                     <input type="text" value={link.title} onChange={(e) => updateScreeningLink(screeningType, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
@@ -2116,7 +2232,12 @@ const CardBuilder: React.FC = () => {
                 ))}
               </div>
               <div>
-                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <h4 style={{ margin: 0 }}>Resource links</h4>
+                  <button type="button" onClick={() => openResourcePicker('immunisation')} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.45rem 0.65rem' }}>
+                    <Plus size={14} /> Add From Library
+                  </button>
+                </div>
                 {selectedImmunisationTemplate.nhsLinks.map((link, index) => (
                   <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
                     <input type="text" value={link.title} onChange={(e) => updateImmunisationLink(selectedImmunisationTemplate.id, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
@@ -2172,7 +2293,12 @@ const CardBuilder: React.FC = () => {
                 </div>
               ))}
               <div>
-                <h4 style={{ margin: '0 0 0.5rem' }}>Resource links</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <h4 style={{ margin: 0 }}>Resource links</h4>
+                  <button type="button" onClick={() => openResourcePicker('ltc')} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.45rem 0.65rem' }}>
+                    <Plus size={14} /> Add From Library
+                  </button>
+                </div>
                 {selectedLongTermConditionTemplate.nhsLinks.map((link, index) => (
                   <div key={index} style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr', marginBottom: '0.75rem' }}>
                     <input type="text" value={link.title} onChange={(e) => updateLongTermLink(selectedLongTermCondition, index, 'title', e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
@@ -2186,22 +2312,22 @@ const CardBuilder: React.FC = () => {
         </Modal>
       )}
 
-      {showHealthCheckLibraryPicker && (
-        <Modal isOpen={showHealthCheckLibraryPicker} onClose={() => setShowHealthCheckLibraryPicker(false)} size="md" title="Add Links From Library">
+      {resourcePickerTarget && (
+        <Modal isOpen={Boolean(resourcePickerTarget)} onClose={closeResourcePicker} size="md" title="Add Resources From Library">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <p style={{ margin: 0, color: '#4c6272' }}>Choose which library links to add to this result card.</p>
+            <p style={{ margin: 0, color: '#4c6272' }}>Choose which local resources to add to this card.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '48vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
-              {selectedHealthCheckLibraryLinks.map((link, index) => {
-                const key = healthCheckLibraryLinkKey(link);
-                const checked = selectedHealthCheckLibraryKeys.includes(key);
+              {localResources.map((resource) => {
+                const key = localResourceKey(resource);
+                const checked = selectedLocalResourceIds.includes(key);
 
                 return (
-                  <label key={`${key}-${index}`} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', padding: '0.6rem 0.7rem', border: '1px solid #d8dde0', borderRadius: '8px', background: '#f8fbfd', cursor: 'pointer' }}>
+                  <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', padding: '0.6rem 0.7rem', border: '1px solid #d8dde0', borderRadius: '8px', background: '#f8fbfd', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={(e) => {
-                        setSelectedHealthCheckLibraryKeys((current) => {
+                        setSelectedLocalResourceIds((current) => {
                           if (e.target.checked) {
                             return current.includes(key) ? current : [...current, key];
                           }
@@ -2210,19 +2336,22 @@ const CardBuilder: React.FC = () => {
                       }}
                     />
                     <span>
-                      <strong style={{ display: 'block' }}>{link.title}</strong>
-                      <span style={{ color: '#4c6272', fontSize: '0.86rem' }}>{link.url}</span>
+                      <strong style={{ display: 'block' }}>{resource.title}</strong>
+                      <span style={{ color: '#4c6272', fontSize: '0.86rem' }}>
+                        {[resource.category, resource.website, resource.phone, resource.email].filter(Boolean).join(' | ')}
+                      </span>
+                      {resource.description && <span style={{ display: 'block', color: '#4c6272', fontSize: '0.86rem', marginTop: '0.2rem' }}>{resource.description}</span>}
                     </span>
                   </label>
                 );
               })}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
-              <button type="button" onClick={() => setShowHealthCheckLibraryPicker(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+              <button type="button" onClick={closeResourcePicker} className="action-button" style={{ backgroundColor: '#4c6272' }}>
                 Cancel
               </button>
-              <button type="button" onClick={applySelectedHealthCheckLibraryLinks} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                Add Selected Links
+              <button type="button" onClick={applySelectedLocalResources} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                Add Selected Resources
               </button>
             </div>
           </div>
