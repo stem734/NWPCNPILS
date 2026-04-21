@@ -1471,13 +1471,9 @@ const CardBuilder: React.FC = () => {
           {healthCheckEditorOpen && (
             <Modal isOpen={healthCheckEditorOpen} onClose={() => setHealthCheckEditorOpen(false)} size="xl">
               <div style={{
-                width: 'min(1120px, 90vw)',
-                maxHeight: '90vh',
+                width: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                background: '#ffffff',
-                borderRadius: '16px',
-                boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)',
               }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
@@ -1495,7 +1491,7 @@ const CardBuilder: React.FC = () => {
                   </button>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+                <div style={{ padding: '1.5rem' }}>
                   <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
