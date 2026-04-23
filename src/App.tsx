@@ -503,13 +503,6 @@ export const ResourceView: React.FC = () => {
         </div>
       )}
 
-      <div className="patient-controls no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div className="data-indicator" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#005eb8', fontSize: '0.9rem', backgroundColor: '#eef7ff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #005eb8', lineHeight: '1.4' }}>
-          <ShieldCheck size={20} style={{ flexShrink: 0 }} />
-          <span>This information has been sent to you directly from your GP practice. All information is stored on this device only. If you clear your browser this information will be removed.</span>
-        </div>
-      </div>
-
       <div className="patient-print-bar no-print">
         <button onClick={() => window.print()} className="action-button patient-print-button" style={{ backgroundColor: '#4c6272', color: 'white', padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}>
           <Printer size={16} /> Print to PDF
@@ -674,6 +667,11 @@ export const ResourceView: React.FC = () => {
           )}
         </div>
       )}
+
+      <div className="data-indicator no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#005eb8', fontSize: '0.9rem', backgroundColor: '#eef7ff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #005eb8', lineHeight: '1.4', marginTop: '2rem' }}>
+        <ShieldCheck size={20} style={{ flexShrink: 0 }} />
+        <span>This information has been sent to you directly from your GP practice. All information is stored on this device only. If you clear your browser this information will be removed.</span>
+      </div>
     </div>
   );
 };
