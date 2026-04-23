@@ -58,9 +58,10 @@ CREATE OR REPLACE FUNCTION resolve_practice_card_templates(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
-  practice_record practices%ROWTYPE;
+  practice_record public.practices%ROWTYPE;
 BEGIN
   IF org_name IS NULL OR trim(org_name) = '' THEN
     RETURN '[]'::jsonb;
@@ -72,7 +73,7 @@ BEGIN
 
   SELECT *
   INTO practice_record
-  FROM practices
+  FROM public.practices
   WHERE name_lowercase = lower(trim(org_name))
     AND is_active = true
   LIMIT 1;
@@ -96,7 +97,7 @@ BEGIN
         accepted_by,
         updated_at,
         updated_by
-      FROM practice_card_templates
+      FROM public.practice_card_templates
       WHERE practice_id = practice_record.id
         AND builder_type = requested_builder_type
         AND template_id = ANY(requested_template_ids)

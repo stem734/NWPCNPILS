@@ -11,7 +11,7 @@ import { usePracticeContentAccess } from '../usePracticeContentAccess';
  *
  * Expected params:
  *   ?type=screening&org=PracticeName&screen=cervical
- *   ?type=screening&org=PracticeName&screen=bowel&forename=Jane
+ *   ?type=screening&org=PracticeName&screen=bowel
  *
  * Supported screening types (extend as needed):
  *   cervical | bowel | breast | aaa | diabetic_eye
@@ -19,14 +19,20 @@ import { usePracticeContentAccess } from '../usePracticeContentAccess';
 const ScreeningView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
+  const isDemoMode = searchParams.get('demo') === '1';
   const screenType = (searchParams.get('screen') || searchParams.get('screening') || '').trim().toLowerCase();
   const fallbackTemplate = SCREENING_TEMPLATES[screenType] || SCREENING_TEMPLATES.cervical;
   const [loadedTemplate, setLoadedTemplate] = useState<ScreeningTemplate | null>(null);
-  const access = usePracticeContentAccess(org, 'screening_enabled');
+  const access = usePracticeContentAccess(org, 'screening_enabled', { skip: isDemoMode });
   const selectedTemplate = loadedTemplate?.id === fallbackTemplate.id ? loadedTemplate : fallbackTemplate;
 
   useEffect(() => {
     const loadTemplate = async () => {
+      if (isDemoMode) {
+        setLoadedTemplate(null);
+        return;
+      }
+
       try {
         const [practiceRow] = await fetchPatientPracticeCardTemplates<ScreeningTemplate>(org, 'screening', [fallbackTemplate.id]);
         if (practiceRow?.payload) {
@@ -42,7 +48,7 @@ const ScreeningView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [fallbackTemplate, org]);
+  }, [fallbackTemplate, isDemoMode, org]);
 
   if (access.loading) {
     return (

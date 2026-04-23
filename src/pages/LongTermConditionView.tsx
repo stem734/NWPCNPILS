@@ -9,14 +9,20 @@ import { usePracticeContentAccess } from '../usePracticeContentAccess';
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
+  const isDemoMode = searchParams.get('demo') === '1';
   const conditionType = (searchParams.get('ltc') || searchParams.get('condition') || '').trim().toLowerCase();
   const fallbackTemplate = LONG_TERM_CONDITION_TEMPLATES[conditionType] || LONG_TERM_CONDITION_TEMPLATES.asthma;
   const [loadedTemplate, setLoadedTemplate] = useState<LongTermConditionTemplate | null>(null);
-  const access = usePracticeContentAccess(org, 'ltc_enabled');
+  const access = usePracticeContentAccess(org, 'ltc_enabled', { skip: isDemoMode });
   const selectedTemplate = loadedTemplate?.id === fallbackTemplate.id ? loadedTemplate : fallbackTemplate;
 
   useEffect(() => {
     const loadTemplate = async () => {
+      if (isDemoMode) {
+        setLoadedTemplate(null);
+        return;
+      }
+
       try {
         const [practiceRow] = await fetchPatientPracticeCardTemplates<LongTermConditionTemplate>(org, 'ltc', [fallbackTemplate.id]);
         if (practiceRow?.payload) {
@@ -32,7 +38,7 @@ const LongTermConditionView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [fallbackTemplate, org]);
+  }, [fallbackTemplate, isDemoMode, org]);
 
   if (access.loading) {
     return (

@@ -105,6 +105,7 @@ const buildPreviewMetrics = (domainId: ClinicalDomainId): ParsedMetric[] => {
 const HealthCheckView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
+  const isDemoMode = searchParams.get('demo') === '1';
   const previewOnly = searchParams.get('previewOnly') === '1';
   const previewDomain = (searchParams.get('previewDomain') || '').trim() as ClinicalDomainId | '';
   const localSupportName = searchParams.get('localName') || `${org || 'Your practice'} support team`;
@@ -120,18 +121,18 @@ const HealthCheckView: React.FC = () => {
   }, [previewDomain, previewOnly, searchParams]);
   const hasData = metrics.length > 0;
   const [templateOverrides, setTemplateOverrides] = useState<Record<string, HealthCheckTemplatePayload>>({});
-  const access = usePracticeContentAccess(org, 'healthcheck_enabled', { skip: previewOnly });
+  const access = usePracticeContentAccess(org, 'healthcheck_enabled', { skip: previewOnly || isDemoMode });
   const templateIds = useMemo(
     () => Array.from(new Set(metrics.map((metric) => metricIdToTemplateId(metric.id)))),
     [metrics],
   );
   const effectiveTemplateOverrides = useMemo(
-    () => (templateIds.length === 0 ? {} : templateOverrides),
-    [templateIds, templateOverrides],
+    () => (isDemoMode || templateIds.length === 0 ? {} : templateOverrides),
+    [isDemoMode, templateIds, templateOverrides],
   );
 
   useEffect(() => {
-    if (templateIds.length === 0) {
+    if (isDemoMode || templateIds.length === 0) {
       return;
     }
     const loadOverrides = async () => {
@@ -149,7 +150,7 @@ const HealthCheckView: React.FC = () => {
       }
     };
     loadOverrides();
-  }, [org, templateIds]);
+  }, [isDemoMode, org, templateIds]);
 
   const displayMetrics = useMemo(() => {
     const baseMetrics = previewOnly && previewDomain ? metrics : getDisplayMetrics(metrics);

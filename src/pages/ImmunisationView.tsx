@@ -10,7 +10,7 @@ import { usePracticeContentAccess } from '../usePracticeContentAccess';
  * ImmunisationView — renders post-immunisation information.
  *
  * Expected params:
- *   ?type=imms&org=PracticeName&vaccine=flu&forename=Steve
+ *   ?type=imms&org=PracticeName&vaccine=flu
  *   ?type=imms&org=PracticeName&vaccine=covid,shingles
  *
  * Supported vaccine types (extend as needed):
@@ -19,6 +19,7 @@ import { usePracticeContentAccess } from '../usePracticeContentAccess';
 const ImmunisationView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
+  const isDemoMode = searchParams.get('demo') === '1';
   const vaccines = (searchParams.get('vaccine') || searchParams.get('jab') || searchParams.get('imms') || '')
     .split(',')
     .map(v => v.trim().toLowerCase())
@@ -30,13 +31,18 @@ const ImmunisationView: React.FC = () => {
   const requestedVaccines = useMemo(() => (vaccines.length > 0 ? vaccines : ['flu']), [vaccines]);
   const requestedVaccinesKey = requestedVaccines.join(',');
   const [loadedTemplateMap, setLoadedTemplateMap] = useState<Record<string, ImmunisationTemplate>>({});
-  const access = usePracticeContentAccess(org, 'immunisation_enabled');
+  const access = usePracticeContentAccess(org, 'immunisation_enabled', { skip: isDemoMode });
   const selectedVaccines = requestedVaccines
     .map((vaccineCode) => loadedTemplateMap[vaccineCode] || IMMUNISATION_TEMPLATES[vaccineCode])
     .filter(Boolean);
 
   useEffect(() => {
     const loadTemplates = async () => {
+      if (isDemoMode) {
+        setLoadedTemplateMap({});
+        return;
+      }
+
       try {
         const practiceRows = await fetchPatientPracticeCardTemplates<ImmunisationTemplate>(org, 'immunisation', requestedVaccines);
         const practiceMap = Object.fromEntries(practiceRows.map((row) => [row.template_id, row.payload]));
@@ -51,7 +57,7 @@ const ImmunisationView: React.FC = () => {
       }
     };
     void loadTemplates();
-  }, [org, requestedVaccines, requestedVaccinesKey]);
+  }, [isDemoMode, org, requestedVaccines, requestedVaccinesKey]);
 
   if (access.loading) {
     return (

@@ -1,14 +1,61 @@
 -- =============================================================================
--- MyMedInfo: PostgreSQL RPC functions for public/patient-facing operations
--- These replace Firebase Cloud Functions that need atomic writes or anon access.
--- Run this AFTER schema.sql and rls.sql in the Supabase SQL Editor.
+-- Resolve Supabase Security Advisor warnings:
+-- - function_search_path_mutable
+-- - rls_policy_always_true on practices_insert_anyone
+--
+-- Safe to re-run in the Supabase SQL Editor.
 -- =============================================================================
 
--- ===================
--- validate_practice(org_name text)
--- Called by anonymous patients to check if a practice is registered and active.
--- ===================
-CREATE OR REPLACE FUNCTION validate_practice(org_name text)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.users
+    WHERE uid = auth.uid()
+      AND is_active = true
+      AND global_role IN ('owner', 'admin')
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_practice_user()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.users
+    WHERE uid = auth.uid()
+      AND is_active = true
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_practice_member(target_practice uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.practice_memberships memberships
+    JOIN public.users
+      ON users.uid = memberships.user_uid
+    WHERE memberships.practice_id = target_practice
+      AND memberships.user_uid = auth.uid()
+      AND users.is_active = true
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.validate_practice(org_name text)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -46,14 +93,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION validate_practice TO anon;
-GRANT EXECUTE ON FUNCTION validate_practice TO authenticated;
-
--- ===================
--- record_patient_access(org_name text)
--- Atomically increments link_visit_count and updates last_accessed.
--- ===================
-CREATE OR REPLACE FUNCTION record_patient_access(org_name text)
+CREATE OR REPLACE FUNCTION public.record_patient_access(org_name text)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -78,39 +118,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION record_patient_access TO anon;
-GRANT EXECUTE ON FUNCTION record_patient_access TO authenticated;
-
--- ===================
--- patient_rating_submissions: rolling-window rate-limit log for ratings.
--- The RPC caps submissions per practice per minute to prevent abuse of
--- the anon-callable submit_patient_rating RPC.
--- ===================
-CREATE TABLE IF NOT EXISTS patient_rating_submissions (
-  id bigserial PRIMARY KEY,
-  practice_id uuid NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
-  submitted_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_patient_rating_submissions_practice_time
-  ON patient_rating_submissions (practice_id, submitted_at DESC);
-
-ALTER TABLE patient_rating_submissions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "patient_rating_submissions_no_client_access" ON patient_rating_submissions;
-
-CREATE POLICY "patient_rating_submissions_no_client_access"
-  ON patient_rating_submissions FOR ALL
-  TO anon, authenticated
-  USING (false)
-  WITH CHECK (false);
-
--- ===================
--- submit_patient_rating(org_name text, rating_value integer)
--- Atomically increments patient_rating_count and patient_rating_total,
--- with a rolling-window rate-limit of 10 submissions per practice per
--- minute to discourage brute-force skewing of scores.
--- ===================
-CREATE OR REPLACE FUNCTION submit_patient_rating(org_name text, rating_value integer)
+CREATE OR REPLACE FUNCTION public.submit_patient_rating(org_name text, rating_value integer)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -139,8 +147,6 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Practice not found');
   END IF;
 
-  -- Opportunistically garbage-collect log entries older than 1 hour to
-  -- keep the table small; this runs inside the RPC transaction.
   DELETE FROM public.patient_rating_submissions
   WHERE submitted_at < now() - interval '1 hour';
 
@@ -169,15 +175,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION submit_patient_rating TO anon;
-GRANT EXECUTE ON FUNCTION submit_patient_rating TO authenticated;
-
--- ===================
--- resolve_patient_medication_cards(org_name text, requested_codes text[])
--- Resolves a patient request to the practice-specific card, accepted global card,
--- or placeholder state for each requested medication code.
--- ===================
-CREATE OR REPLACE FUNCTION resolve_patient_medication_cards(org_name text, requested_codes text[])
+CREATE OR REPLACE FUNCTION public.resolve_patient_medication_cards(org_name text, requested_codes text[])
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -203,11 +201,7 @@ BEGIN
     AND is_active = true
   LIMIT 1;
 
-  IF NOT FOUND THEN
-    RETURN '[]'::jsonb;
-  END IF;
-
-  IF NOT practice_record.medication_enabled THEN
+  IF NOT FOUND OR NOT practice_record.medication_enabled THEN
     RETURN '[]'::jsonb;
   END IF;
 
@@ -304,5 +298,112 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION resolve_patient_medication_cards TO anon;
-GRANT EXECUTE ON FUNCTION resolve_patient_medication_cards TO authenticated;
+CREATE OR REPLACE FUNCTION public.resolve_practice_card_templates(
+  org_name text,
+  requested_builder_type text,
+  requested_template_ids text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  practice_record public.practices%ROWTYPE;
+BEGIN
+  IF org_name IS NULL OR trim(org_name) = '' THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  IF requested_builder_type NOT IN ('healthcheck', 'screening', 'immunisation', 'ltc') THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  SELECT *
+  INTO practice_record
+  FROM public.practices
+  WHERE name_lowercase = lower(trim(org_name))
+    AND is_active = true
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  RETURN COALESCE((
+    SELECT jsonb_agg(to_jsonb(rows.*))
+    FROM (
+      SELECT
+        practice_id,
+        builder_type,
+        template_id,
+        source_type,
+        label,
+        payload,
+        disclaimer_version,
+        accepted_at,
+        accepted_by,
+        updated_at,
+        updated_by
+      FROM public.practice_card_templates
+      WHERE practice_id = practice_record.id
+        AND builder_type = requested_builder_type
+        AND template_id = ANY(requested_template_ids)
+      ORDER BY template_id
+    ) rows
+  ), '[]'::jsonb);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.set_local_resource_link_audit_fields()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  NEW.updated_by = auth.uid();
+  IF TG_OP = 'INSERT' THEN
+    NEW.created_by = auth.uid();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.validate_practice(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_patient_access(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_patient_rating(text, integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_patient_medication_cards(text, text[]) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_practice_card_templates(text, text, text[]) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_practice_user() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_practice_member(uuid) TO authenticated;
+
+DROP POLICY IF EXISTS "practices_insert_anyone" ON public.practices;
+DROP POLICY IF EXISTS "practices_insert_admin" ON public.practices;
+DROP POLICY IF EXISTS "practices_insert_authenticated" ON public.practices;
+
+CREATE POLICY "practices_insert_admin"
+  ON public.practices FOR INSERT
+  TO authenticated
+  WITH CHECK (public.is_admin());
+
+CREATE POLICY "practices_insert_authenticated"
+  ON public.practices FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    NOT public.is_admin()
+    AND name IS NOT NULL
+    AND trim(name) <> ''
+    AND is_active = false
+    AND auth_uid IS NULL
+    AND selected_medications = '{}'::text[]
+    AND medication_review_dates = '{}'::jsonb
+    AND link_visit_count = 0
+    AND patient_rating_count = 0
+    AND patient_rating_total = 0
+    AND last_accessed IS NULL
+  );
+
+NOTIFY pgrst, 'reload schema';

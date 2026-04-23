@@ -14,6 +14,7 @@ ALTER TABLE practice_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE practice_medication_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE login_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS firebase_uid_map ENABLE ROW LEVEL SECURITY;
 
 -- ===================
 -- Helper function: is the current user an active admin?
@@ -23,11 +24,11 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path = public, pg_catalog
+SET search_path = ''
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM users
+    FROM public.users
     WHERE uid = auth.uid()
       AND is_active = true
       AND global_role IN ('owner', 'admin')
@@ -42,11 +43,11 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path = public, pg_catalog
+SET search_path = ''
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM users
+    FROM public.users
     WHERE uid = auth.uid()
       AND is_active = true
   );
@@ -60,12 +61,12 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path = public, pg_catalog
+SET search_path = ''
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM practice_memberships memberships
-    JOIN users
+    FROM public.practice_memberships memberships
+    JOIN public.users
       ON users.uid = memberships.user_uid
     WHERE memberships.practice_id = target_practice
       AND memberships.user_uid = auth.uid()
@@ -364,3 +365,16 @@ CREATE POLICY "audit_log_insert_admin"
   ON audit_log FOR INSERT
   TO authenticated
   WITH CHECK (is_admin());
+
+-- =============================================================================
+-- FIREBASE_UID_MAP policies
+-- =============================================================================
+-- Internal migration mapping only. Service-role/admin SQL can still use it, but
+-- browser clients should never read or mutate Firebase-to-Supabase UID mappings.
+DROP POLICY IF EXISTS "firebase_uid_map_no_client_access" ON firebase_uid_map;
+
+CREATE POLICY "firebase_uid_map_no_client_access"
+  ON firebase_uid_map FOR ALL
+  TO anon, authenticated
+  USING (false)
+  WITH CHECK (false);

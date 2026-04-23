@@ -32,6 +32,7 @@ CREATE OR REPLACE FUNCTION set_local_resource_link_audit_fields()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 BEGIN
   NEW.updated_at = now();

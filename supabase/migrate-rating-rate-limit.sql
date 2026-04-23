@@ -14,12 +14,19 @@ CREATE INDEX IF NOT EXISTS idx_patient_rating_submissions_practice_time
   ON patient_rating_submissions (practice_id, submitted_at DESC);
 
 ALTER TABLE patient_rating_submissions ENABLE ROW LEVEL SECURITY;
--- No policies: only the SECURITY DEFINER RPC below reads/writes this table.
+DROP POLICY IF EXISTS "patient_rating_submissions_no_client_access" ON patient_rating_submissions;
+
+CREATE POLICY "patient_rating_submissions_no_client_access"
+  ON patient_rating_submissions FOR ALL
+  TO anon, authenticated
+  USING (false)
+  WITH CHECK (false);
 
 CREATE OR REPLACE FUNCTION submit_patient_rating(org_name text, rating_value integer)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
   target_practice_id uuid;
@@ -35,7 +42,7 @@ BEGIN
   END IF;
 
   SELECT id INTO target_practice_id
-  FROM practices
+  FROM public.practices
   WHERE name_lowercase = lower(trim(org_name))
     AND is_active = true
   LIMIT 1;
@@ -44,11 +51,11 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Practice not found');
   END IF;
 
-  DELETE FROM patient_rating_submissions
+  DELETE FROM public.patient_rating_submissions
   WHERE submitted_at < now() - interval '1 hour';
 
   SELECT count(*) INTO recent_submissions
-  FROM patient_rating_submissions
+  FROM public.patient_rating_submissions
   WHERE practice_id = target_practice_id
     AND submitted_at > now() - interval '1 minute';
 
@@ -60,10 +67,10 @@ BEGIN
     );
   END IF;
 
-  INSERT INTO patient_rating_submissions (practice_id)
+  INSERT INTO public.patient_rating_submissions (practice_id)
   VALUES (target_practice_id);
 
-  UPDATE practices
+  UPDATE public.practices
   SET patient_rating_count = patient_rating_count + 1,
       patient_rating_total = patient_rating_total + rating_value
   WHERE id = target_practice_id;
