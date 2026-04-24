@@ -2879,6 +2879,16 @@ p {
   flex-wrap: wrap;
 }
 
+.hc-card__contact-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 7px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  background: #f8fafc;
+  border: 1px solid #dbe7ef;
+}
+
 .hc-card__contact-subtitle {
   font-size: 0.8rem;
   font-weight: 700;
@@ -2901,32 +2911,7 @@ p {
 .hc-card__contact--nhs {
   border-color: #d8e8f9;
   background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 0.95rem;
   padding: 1.05rem 1.1rem;
-}
-
-.hc-card__contact--nhs::before {
-  content: 'NHS';
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 4rem;
-  height: 3.25rem;
-  border-radius: 12px;
-  background: #005eb8;
-  color: #fff;
-  font-size: 1.05rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.08);
-}
-
-.hc-card__contact--nhs .hc-card__contact-title,
-.hc-card__contact--nhs .hc-card__contact-links {
-  grid-column: 2;
 }
 
 .hc-card__contact--nhs .hc-chip {

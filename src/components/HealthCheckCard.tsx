@@ -50,6 +50,16 @@ const resolveLinkHref = (value: string) => {
   return `https://${trimmed}`;
 };
 
+const faviconUrlForLink = (value: string) => {
+  const href = resolveLinkHref(value);
+  try {
+    const url = new URL(href);
+    return `${url.origin}/favicon.ico`;
+  } catch {
+    return '';
+  }
+};
+
 const hasContactValue = (link: HealthCheckCardLink) => Boolean(link.phone || link.email || link.website);
 
 const isNhsDomain = (value: string) => {
@@ -213,10 +223,19 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                     const supportLinks = renderedLinks.filter((link) => !link.website || !isNhsDomain(link.website));
 
                     const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => {
+                      const iconUrl = link.website ? faviconUrlForLink(link.website) : '';
                       const titleContent = (
                         <>
-                          {variant === 'nhs' ? (
-                            <span className="hc-chip" aria-hidden="true">NHS</span>
+                          {iconUrl ? (
+                            <img
+                              className="hc-card__contact-icon"
+                              src={iconUrl}
+                              alt=""
+                              aria-hidden="true"
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                              }}
+                            />
                           ) : isBhfDomain(link.website || '') ? (
                             <Heart size={16} aria-hidden="true" />
                           ) : link.website ? (
@@ -275,13 +294,13 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
 
                     return (
                       <>
+                        {supportLinks.map((link, index) => renderLinkCard(link, index, 'support'))}
                         {nhsLinks.length > 0 ? (
                           <>
-                            {nhsLinks.map((link, index) => renderLinkCard(link, index, 'nhs'))}
                             {supportLinks.length > 0 ? <div className="hc-card__links-divider" aria-hidden="true" /> : null}
+                            {nhsLinks.map((link, index) => renderLinkCard(link, index, 'nhs'))}
                           </>
                         ) : null}
-                        {supportLinks.map((link, index) => renderLinkCard(link, index, 'support'))}
                       </>
                     );
                   })()}
