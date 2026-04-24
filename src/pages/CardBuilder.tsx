@@ -1927,7 +1927,7 @@ const CardBuilder: React.FC = () => {
                         badgeClass: selectedHealthCheckMetric.badgeClass,
                         whatTitle: selectedHealthCheckVariantSafe.whatIsTitle,
                         what: selectedHealthCheckVariantSafe.whatIsText,
-                        pathway: selectedHealthCheckMetric.pathway,
+                        pathway: selectedHealthCheckVariantSafe.resultsMessage || selectedHealthCheckMetric.pathway,
                         breakdown: selectedHealthCheckMetric.breakdown,
                         oneLiner: selectedHealthCheckMetric.oneLiner,
                       }}

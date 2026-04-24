@@ -385,7 +385,7 @@ const HealthCheckView: React.FC = () => {
             </div>
             <div className="hc-grid">
               {group.items.map((metric) => {
-                const templatePayload = templateOverrides[metricIdToTemplateId(metric.id)];
+                const templatePayload = mergedTemplateOverrides[metricIdToTemplateId(metric.id)];
                 const variant = getHealthCheckVariant(templatePayload, metric.resultCode || '');
                 const cholBreakdown = metric.id === 'ldl' && metric.components ? [
                   { label: 'HDL',     value: metric.components.hdl || '', unit: 'mmol/L' },
