@@ -2959,6 +2959,15 @@ p {
   margin-bottom: 0.45rem;
 }
 
+.hc-card__contact-title-link {
+  text-decoration: none;
+}
+
+.hc-card__contact-title-link:hover {
+  color: #005eb8;
+  text-decoration: underline;
+}
+
 .hc-card__contact-links {
   display: grid;
   gap: 0.4rem;

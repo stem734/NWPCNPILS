@@ -40,16 +40,6 @@ const MARKDOWN_LINK_PATTERN = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 const PHONE_PATTERN = /^\+?[0-9()\-\s]{7,}$/;
 
-const formatWebsiteLabel = (value: string) => {
-  const href = resolveLinkHref(value);
-  try {
-    const url = new URL(href);
-    return url.hostname.replace(/^www\./i, '');
-  } catch {
-    return 'Website';
-  }
-};
-
 const resolveLinkHref = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return '';
@@ -81,16 +71,6 @@ const isBhfDomain = (value: string) => {
     return host === 'bhf.org.uk' || host.endsWith('.bhf.org.uk');
   } catch {
     return false;
-  }
-};
-
-const orgNameFromUrl = (value: string) => {
-  const href = resolveLinkHref(value);
-  try {
-    const url = new URL(href);
-    return url.hostname.replace(/^www\./i, '');
-  } catch {
-    return '';
   }
 };
 
@@ -232,24 +212,36 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                     const nhsLinks = renderedLinks.filter((link) => link.website && isNhsDomain(link.website));
                     const supportLinks = renderedLinks.filter((link) => !link.website || !isNhsDomain(link.website));
 
-                    const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => (
+                    const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => {
+                      const titleContent = (
+                        <>
+                          {variant === 'nhs' ? (
+                            <span className="hc-chip" aria-hidden="true">NHS</span>
+                          ) : isBhfDomain(link.website || '') ? (
+                            <Heart size={16} aria-hidden="true" />
+                          ) : link.website ? (
+                            <Globe size={16} aria-hidden="true" />
+                          ) : (
+                            <Building2 size={16} aria-hidden="true" />
+                          )}
+                          <span>{link.title || 'More information'}</span>
+                        </>
+                      );
+
+                      return (
                       <div key={`${variant}-${link.title}-${index}`} className={`hc-card__contact${variant === 'nhs' ? ' hc-card__contact--nhs' : ''}`}>
-                        {link.title ? (
-                          <div className="hc-card__contact-title">
-                            {variant === 'nhs' ? (
-                              <span className="hc-chip" aria-hidden="true">NHS</span>
-                            ) : isBhfDomain(link.website || '') ? (
-                              <Heart size={16} aria-hidden="true" />
-                            ) : link.website ? (
-                              <Globe size={16} aria-hidden="true" />
-                            ) : (
-                              <Building2 size={16} aria-hidden="true" />
-                            )}
-                            {link.title}
-                            {variant === 'support' && link.website ? (
-                              <span className="hc-card__contact-subtitle">{orgNameFromUrl(link.website)}</span>
-                            ) : null}
-                          </div>
+                        {link.website ? (
+                          <a
+                            className="hc-card__contact-title hc-card__contact-title-link"
+                            href={resolveLinkHref(link.website)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={link.website}
+                          >
+                            {titleContent}
+                          </a>
+                        ) : link.title ? (
+                          <div className="hc-card__contact-title">{titleContent}</div>
                         ) : null}
                         <div className="hc-card__contact-links">
                           {link.phone ? (
@@ -276,22 +268,10 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                               <span>{link.emailLabel?.trim() || 'Email'}</span>
                             </a>
                           ) : null}
-                          {link.website ? (
-                            <a
-                              className="hc-card__link"
-                              href={resolveLinkHref(link.website)}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={`${link.title || 'Service'} website`}
-                              title={link.website}
-                            >
-                              {variant === 'nhs' ? <span className="hc-chip" aria-hidden="true">NHS</span> : isBhfDomain(link.website) ? <Heart size={14} aria-hidden="true" /> : <Globe size={14} aria-hidden="true" />}
-                              <span>{formatWebsiteLabel(link.website)}</span>
-                            </a>
-                          ) : null}
                         </div>
                       </div>
-                    );
+                      );
+                    };
 
                     return (
                       <>
