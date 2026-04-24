@@ -9,6 +9,8 @@ export type HealthCheckBuilderLink = {
   emailLabel?: string;
   website?: string;
   websiteLabel?: string;
+  city?: string;
+  county_area?: string;
 };
 
 export type HealthCheckBuilderVariant = {

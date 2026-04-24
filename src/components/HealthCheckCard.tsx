@@ -8,6 +8,8 @@ interface HealthCheckCardLink {
   email?: string;
   emailLabel?: string;
   website?: string;
+  city?: string;
+  county_area?: string;
 }
 
 interface HealthCheckCardMetric {
@@ -170,11 +172,12 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
 }) => {
   const [internalExpanded, setInternalExpanded] = useState(true);
   const renderedLinks = links.filter((link) => hasContactValue(link));
+  const hasLocalServices = renderedLinks.some((link) => link.city || link.county_area);
   // If a custom title is provided but cleared, treat that as "hide this whole section"
   // (mirrors the behaviour of the "what is" section, which requires a title).
   const nextStepsExplicitlyHidden = nextStepsTitle !== undefined && nextStepsTitle.trim() === '';
   const showNextSteps = !nextStepsExplicitlyHidden && Boolean((nextStepsText || '').trim() || renderedLinks.length > 0);
-  const resolvedNextStepsTitle = (nextStepsTitle || '').trim() || 'What to do next';
+  const resolvedNextStepsTitle = (nextStepsTitle || '').trim() || (hasLocalServices ? 'Local services available' : 'Services available nationally');
   const resolvedExpanded = expanded ?? internalExpanded;
   const setExpanded = onExpandedChange ?? setInternalExpanded;
   const collapsedSummary = firstSentence(metric.oneLiner || resultsMessage || metric.pathway || '');

@@ -660,6 +660,8 @@ const CardBuilder: React.FC = () => {
       email: '',
       emailLabel: '',
       website: '',
+      city: '',
+      county_area: '',
     };
     links[index] = {
       ...existing,
@@ -679,6 +681,8 @@ const CardBuilder: React.FC = () => {
           email: '',
           emailLabel: '',
           website: '',
+          city: '',
+          county_area: '',
         },
       ],
     });
@@ -726,6 +730,8 @@ const CardBuilder: React.FC = () => {
         phoneLabel: resource.phone_label || (resource.phone ? 'Call' : ''),
         email: resource.email,
         emailLabel: resource.email_label || (resource.email ? 'Email' : ''),
+        city: resource.city,
+        county_area: resource.county_area,
       }))
       .filter((link) => link.title && (link.website || link.phone || link.email))
       .filter((link) => {
