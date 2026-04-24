@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { Check, AlertTriangle, X } from 'lucide-react';
+import { Building2, Check, AlertTriangle, Globe, Heart, Mail, Phone, X } from 'lucide-react';
 
 interface HealthCheckCardLink {
   title: string;
-  showTitleOnCard?: boolean;
   phone?: string;
   phoneLabel?: string;
   email?: string;
   emailLabel?: string;
   website?: string;
-  websiteLabel?: string;
 }
 
 interface HealthCheckCardMetric {
@@ -70,6 +68,17 @@ const isNhsDomain = (value: string) => {
     const url = new URL(href);
     const host = url.hostname.toLowerCase();
     return host === 'nhs.uk' || host.endsWith('.nhs.uk');
+  } catch {
+    return false;
+  }
+};
+
+const isBhfDomain = (value: string) => {
+  const href = resolveLinkHref(value);
+  try {
+    const url = new URL(href);
+    const host = url.hostname.toLowerCase();
+    return host === 'bhf.org.uk' || host.endsWith('.bhf.org.uk');
   } catch {
     return false;
   }
@@ -225,9 +234,17 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
 
                     const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => (
                       <div key={`${variant}-${link.title}-${index}`} className={`hc-card__contact${variant === 'nhs' ? ' hc-card__contact--nhs' : ''}`}>
-                        {link.showTitleOnCard !== false && link.title ? (
+                        {link.title ? (
                           <div className="hc-card__contact-title">
-                            {variant === 'nhs' ? <span className="hc-chip" aria-hidden="true">NHS</span> : null}
+                            {variant === 'nhs' ? (
+                              <span className="hc-chip" aria-hidden="true">NHS</span>
+                            ) : isBhfDomain(link.website || '') ? (
+                              <Heart size={16} aria-hidden="true" />
+                            ) : link.website ? (
+                              <Globe size={16} aria-hidden="true" />
+                            ) : (
+                              <Building2 size={16} aria-hidden="true" />
+                            )}
                             {link.title}
                             {variant === 'support' && link.website ? (
                               <span className="hc-card__contact-subtitle">{orgNameFromUrl(link.website)}</span>
@@ -242,7 +259,8 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                               aria-label={`${link.title || 'Service'} phone`}
                               title={link.phone}
                             >
-                              {link.phoneLabel?.trim() || 'Call'}
+                              <Phone size={14} aria-hidden="true" />
+                              <span>{link.phoneLabel?.trim() || 'Call'}</span>
                             </a>
                           ) : null}
                           {link.email ? (
@@ -254,7 +272,8 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                               aria-label={`${link.title || 'Service'} email`}
                               title={link.email}
                             >
-                              {link.emailLabel?.trim() || 'Email'}
+                              <Mail size={14} aria-hidden="true" />
+                              <span>{link.emailLabel?.trim() || 'Email'}</span>
                             </a>
                           ) : null}
                           {link.website ? (
@@ -266,7 +285,8 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                               aria-label={`${link.title || 'Service'} website`}
                               title={link.website}
                             >
-                              {link.websiteLabel?.trim() || formatWebsiteLabel(link.website)}
+                              {variant === 'nhs' ? <span className="hc-chip" aria-hidden="true">NHS</span> : isBhfDomain(link.website) ? <Heart size={14} aria-hidden="true" /> : <Globe size={14} aria-hidden="true" />}
+                              <span>{formatWebsiteLabel(link.website)}</span>
                             </a>
                           ) : null}
                         </div>

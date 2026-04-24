@@ -592,13 +592,11 @@ const CardBuilder: React.FC = () => {
     const links = [...selectedHealthCheckVariantSafe.links];
     const existing = links[index] || {
       title: '',
-      showTitleOnCard: true,
       phone: '',
       phoneLabel: '',
       email: '',
       emailLabel: '',
       website: '',
-      websiteLabel: '',
     };
     links[index] = {
       ...existing,
@@ -613,13 +611,11 @@ const CardBuilder: React.FC = () => {
         ...selectedHealthCheckVariantSafe.links,
         {
           title: '',
-          showTitleOnCard: true,
           phone: '',
           phoneLabel: '',
           email: '',
           emailLabel: '',
           website: '',
-          websiteLabel: '',
         },
       ],
     });
@@ -662,9 +658,7 @@ const CardBuilder: React.FC = () => {
     const importedLinks: HealthCheckBuilderLink[] = selectedResources
       .map((resource) => ({
         title: resource.title,
-        showTitleOnCard: resource.show_title_on_card,
         website: resource.website,
-        websiteLabel: resource.website_label || (resource.website ? 'Website' : ''),
         phone: resource.phone,
         phoneLabel: resource.phone_label || (resource.phone ? 'Call' : ''),
         email: resource.email,
@@ -1849,16 +1843,6 @@ const CardBuilder: React.FC = () => {
                                   style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
                                 />
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'end' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={link.showTitleOnCard !== false}
-                                    onChange={(e) => updateHealthCheckLink(index, 'showTitleOnCard', e.target.checked)}
-                                  />
-                                  Show title on card
-                                </label>
-                              </div>
                             </div>
 
                             <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: '0.75rem' }}>
@@ -1906,16 +1890,6 @@ const CardBuilder: React.FC = () => {
                                   type="text"
                                   value={link.website || ''}
                                   onChange={(e) => updateHealthCheckLink(index, 'website', e.target.value)}
-                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Website label</label>
-                                <input
-                                  type="text"
-                                  value={link.websiteLabel || ''}
-                                  onChange={(e) => updateHealthCheckLink(index, 'websiteLabel', e.target.value)}
-                                  placeholder="Website"
                                   style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
                                 />
                               </div>

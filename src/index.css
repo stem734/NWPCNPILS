@@ -2874,7 +2874,7 @@ p {
   color: #0f172a;
   margin-bottom: 0.45rem;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
@@ -2967,6 +2967,7 @@ p {
 .hc-card__link {
   display: inline-flex;
   align-items: center;
+  gap: 0.35rem;
   width: fit-content;
   max-width: 100%;
   color: #005eb8;
