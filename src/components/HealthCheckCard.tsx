@@ -172,12 +172,12 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
 }) => {
   const [internalExpanded, setInternalExpanded] = useState(true);
   const renderedLinks = links.filter((link) => hasContactValue(link));
-  const hasLocalServices = renderedLinks.some((link) => link.city || link.county_area);
+  const localLinks = renderedLinks.filter((link) => link.city || link.county_area);
+  const nationalLinks = renderedLinks.filter((link) => !link.city && !link.county_area);
   // If a custom title is provided but cleared, treat that as "hide this whole section"
   // (mirrors the behaviour of the "what is" section, which requires a title).
   const nextStepsExplicitlyHidden = nextStepsTitle !== undefined && nextStepsTitle.trim() === '';
   const showNextSteps = !nextStepsExplicitlyHidden && Boolean((nextStepsText || '').trim() || renderedLinks.length > 0);
-  const resolvedNextStepsTitle = (nextStepsTitle?.trim() && nextStepsTitle !== 'What to do next') ? nextStepsTitle.trim() : (hasLocalServices ? 'Local services available' : 'Services available nationally');
   const resolvedExpanded = expanded ?? internalExpanded;
   const setExpanded = onExpandedChange ?? setInternalExpanded;
   const collapsedSummary = firstSentence(metric.oneLiner || resultsMessage || metric.pathway || '');
@@ -226,95 +226,189 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
           <div className="hc-card__left">
           {showNextSteps ? (
             <div className="hc-card__next-steps" aria-label="What to do next">
-              <div className="hc-card__next-steps-title">{resolvedNextStepsTitle}</div>
               {nextStepsText ? <div className="hc-card__next-steps-body">{renderLinkedText(nextStepsText)}</div> : null}
-              {renderedLinks.length > 0 ? (
-                <div className="hc-card__links">
-                  {(() => {
-                    const nhsLinks = renderedLinks.filter((link) => link.website && isNhsDomain(link.website));
-                    const supportLinks = renderedLinks.filter((link) => !link.website || !isNhsDomain(link.website));
+              {localLinks.length > 0 ? (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div className="hc-card__next-steps-title" style={{ marginBottom: '0.75rem' }}>Local services available</div>
+                  <div className="hc-card__links">
+                    {(() => {
+                      const nhsLinks = localLinks.filter((link) => link.website && isNhsDomain(link.website));
+                      const supportLinks = localLinks.filter((link) => !link.website || !isNhsDomain(link.website));
 
-                    const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => {
-                      const iconUrl = link.website ? faviconUrlForLink(link.website) : '';
-                      const iconContent = (
-                        <>
-                          {iconUrl ? (
-                            <img
-                              className="hc-card__contact-icon"
-                              src={iconUrl}
-                              alt=""
-                              aria-hidden="true"
-                              onError={(event) => {
-                                event.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : isBhfDomain(link.website || '') ? (
-                            <Heart size={16} aria-hidden="true" />
-                          ) : link.website ? (
-                            <Globe size={16} aria-hidden="true" />
-                          ) : (
-                            <Building2 size={16} aria-hidden="true" />
-                          )}
-                        </>
-                      );
+                      const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => {
+                        const iconUrl = link.website ? faviconUrlForLink(link.website) : '';
+                        const iconContent = (
+                          <>
+                            {iconUrl ? (
+                              <img
+                                className="hc-card__contact-icon"
+                                src={iconUrl}
+                                alt=""
+                                aria-hidden="true"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : isBhfDomain(link.website || '') ? (
+                              <Heart size={16} aria-hidden="true" />
+                            ) : link.website ? (
+                              <Globe size={16} aria-hidden="true" />
+                            ) : (
+                              <Building2 size={16} aria-hidden="true" />
+                            )}
+                          </>
+                        );
+
+                        return (
+                        <div key={`local-${variant}-${link.title}-${index}`} className={`hc-card__contact${variant === 'nhs' ? ' hc-card__contact--nhs' : ''}`}>
+                          <div className="hc-card__contact-icon-wrap">{iconContent}</div>
+                          {link.website ? (
+                            <a
+                              className="hc-card__contact-title hc-card__contact-title-link"
+                              href={resolveLinkHref(link.website)}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={link.website}
+                            >
+                              <span>{link.title || 'More information'}</span>
+                              <ExternalLink size={14} aria-hidden="true" />
+                            </a>
+                          ) : link.title ? (
+                            <div className="hc-card__contact-title"><span>{link.title}</span></div>
+                          ) : null}
+                          <div className="hc-card__contact-links">
+                            {link.phone ? (
+                              <a
+                                className="hc-card__link"
+                                href={resolveLinkHref(link.phone)}
+                                aria-label={`${link.title || 'Service'} phone`}
+                                title={link.phone}
+                              >
+                                <Phone size={14} aria-hidden="true" />
+                                <span>{link.phoneLabel?.trim() || 'Call'}</span>
+                              </a>
+                            ) : null}
+                            {link.email ? (
+                              <a
+                                className="hc-card__link"
+                                href={resolveEmailHref(link.email)}
+                                aria-label={`${link.title || 'Service'} email`}
+                                title={link.email}
+                              >
+                                <Mail size={14} aria-hidden="true" />
+                                <span>{link.emailLabel?.trim() || 'Email'}</span>
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                        );
+                      };
 
                       return (
-                      <div key={`${variant}-${link.title}-${index}`} className={`hc-card__contact${variant === 'nhs' ? ' hc-card__contact--nhs' : ''}`}>
-                        <div className="hc-card__contact-icon-wrap">{iconContent}</div>
-                        {link.website ? (
-                          <a
-                            className="hc-card__contact-title hc-card__contact-title-link"
-                            href={resolveLinkHref(link.website)}
-                            target="_blank"
-                            rel="noreferrer"
-                            title={link.website}
-                          >
-                            <span>{link.title || 'More information'}</span>
-                            <ExternalLink size={14} aria-hidden="true" />
-                          </a>
-                        ) : link.title ? (
-                          <div className="hc-card__contact-title"><span>{link.title}</span></div>
-                        ) : null}
-                        <div className="hc-card__contact-links">
-                          {link.phone ? (
-                            <a
-                              className="hc-card__link"
-                              href={resolveLinkHref(link.phone)}
-                              aria-label={`${link.title || 'Service'} phone`}
-                              title={link.phone}
-                            >
-                              <Phone size={14} aria-hidden="true" />
-                              <span>{link.phoneLabel?.trim() || 'Call'}</span>
-                            </a>
+                        <>
+                          {supportLinks.map((link, index) => renderLinkCard(link, index, 'support'))}
+                          {nhsLinks.length > 0 ? (
+                            <>
+                              {supportLinks.length > 0 ? <div className="hc-card__links-divider" aria-hidden="true" /> : null}
+                              {nhsLinks.map((link, index) => renderLinkCard(link, index, 'nhs'))}
+                            </>
                           ) : null}
-                          {link.email ? (
-                            <a
-                              className="hc-card__link"
-                              href={resolveEmailHref(link.email)}
-                              aria-label={`${link.title || 'Service'} email`}
-                              title={link.email}
-                            >
-                              <Mail size={14} aria-hidden="true" />
-                              <span>{link.emailLabel?.trim() || 'Email'}</span>
-                            </a>
-                          ) : null}
-                        </div>
-                      </div>
+                        </>
                       );
-                    };
+                    })()}
+                  </div>
+                </div>
+              ) : null}
+              {nationalLinks.length > 0 ? (
+                <div>
+                  <div className="hc-card__next-steps-title" style={{ marginBottom: '0.75rem' }}>Services available nationally</div>
+                  <div className="hc-card__links">
+                    {(() => {
+                      const nhsLinks = nationalLinks.filter((link) => link.website && isNhsDomain(link.website));
+                      const supportLinks = nationalLinks.filter((link) => !link.website || !isNhsDomain(link.website));
 
-                    return (
-                      <>
-                        {supportLinks.map((link, index) => renderLinkCard(link, index, 'support'))}
-                        {nhsLinks.length > 0 ? (
+                      const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => {
+                        const iconUrl = link.website ? faviconUrlForLink(link.website) : '';
+                        const iconContent = (
                           <>
-                            {supportLinks.length > 0 ? <div className="hc-card__links-divider" aria-hidden="true" /> : null}
-                            {nhsLinks.map((link, index) => renderLinkCard(link, index, 'nhs'))}
+                            {iconUrl ? (
+                              <img
+                                className="hc-card__contact-icon"
+                                src={iconUrl}
+                                alt=""
+                                aria-hidden="true"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : isBhfDomain(link.website || '') ? (
+                              <Heart size={16} aria-hidden="true" />
+                            ) : link.website ? (
+                              <Globe size={16} aria-hidden="true" />
+                            ) : (
+                              <Building2 size={16} aria-hidden="true" />
+                            )}
                           </>
-                        ) : null}
-                      </>
-                    );
-                  })()}
+                        );
+
+                        return (
+                        <div key={`national-${variant}-${link.title}-${index}`} className={`hc-card__contact${variant === 'nhs' ? ' hc-card__contact--nhs' : ''}`}>
+                          <div className="hc-card__contact-icon-wrap">{iconContent}</div>
+                          {link.website ? (
+                            <a
+                              className="hc-card__contact-title hc-card__contact-title-link"
+                              href={resolveLinkHref(link.website)}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={link.website}
+                            >
+                              <span>{link.title || 'More information'}</span>
+                              <ExternalLink size={14} aria-hidden="true" />
+                            </a>
+                          ) : link.title ? (
+                            <div className="hc-card__contact-title"><span>{link.title}</span></div>
+                          ) : null}
+                          <div className="hc-card__contact-links">
+                            {link.phone ? (
+                              <a
+                                className="hc-card__link"
+                                href={resolveLinkHref(link.phone)}
+                                aria-label={`${link.title || 'Service'} phone`}
+                                title={link.phone}
+                              >
+                                <Phone size={14} aria-hidden="true" />
+                                <span>{link.phoneLabel?.trim() || 'Call'}</span>
+                              </a>
+                            ) : null}
+                            {link.email ? (
+                              <a
+                                className="hc-card__link"
+                                href={resolveEmailHref(link.email)}
+                                aria-label={`${link.title || 'Service'} email`}
+                                title={link.email}
+                              >
+                                <Mail size={14} aria-hidden="true" />
+                                <span>{link.emailLabel?.trim() || 'Email'}</span>
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                        );
+                      };
+
+                      return (
+                        <>
+                          {supportLinks.map((link, index) => renderLinkCard(link, index, 'support'))}
+                          {nhsLinks.length > 0 ? (
+                            <>
+                              {supportLinks.length > 0 ? <div className="hc-card__links-divider" aria-hidden="true" /> : null}
+                              {nhsLinks.map((link, index) => renderLinkCard(link, index, 'nhs'))}
+                            </>
+                          ) : null}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               ) : null}
             </div>
