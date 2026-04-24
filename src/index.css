@@ -2880,13 +2880,12 @@ p {
 }
 
 .hc-card__contact-icon {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 7px;
+  width: 2.5rem;
+  height: 1.25rem;
+  border-radius: 3px;
   object-fit: contain;
   flex: 0 0 auto;
-  background: #f8fafc;
-  border: 1px solid #dbe7ef;
+  background: transparent;
 }
 
 .hc-card__contact-subtitle {
