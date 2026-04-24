@@ -390,6 +390,30 @@ const CardBuilder: React.FC = () => {
     void loadResources();
   }, [authenticated]);
 
+  const reloadLocalResources = async () => {
+    try {
+      setLocalResources(await fetchLocalResourceLinks(true));
+    } catch (error) {
+      console.warn('Local resource library unavailable:', error);
+      setLocalResources([]);
+    }
+  };
+
+  useEffect(() => {
+    if (!authenticated || !healthCheckLibraryModalOpen) return;
+
+    void reloadLocalResources();
+
+    const handleFocus = () => {
+      void reloadLocalResources();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [authenticated, healthCheckLibraryModalOpen]);
+
   const previewDraft = useMemo<MedicationRecord | null>(() => {
     if (!hasContent) {
       return null;
@@ -627,6 +651,7 @@ const CardBuilder: React.FC = () => {
 
   const openHealthCheckLibraryModal = () => {
     setSelectedLocalResourceIds([]);
+    void reloadLocalResources();
     setHealthCheckLibraryModalOpen(true);
   };
 

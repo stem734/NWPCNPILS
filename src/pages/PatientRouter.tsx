@@ -2,11 +2,8 @@ import React, { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { detectContentType, CONTENT_TYPES } from '../contentRouter';
 
-// All content views are lazy-loaded to avoid circular deps
-// (App.tsx imports PatientRouter, ResourceView lives in App.tsx)
-const ResourceView = React.lazy(() =>
-  import('../App').then(m => ({ default: m.ResourceView }))
-);
+// All content views are lazy-loaded to keep patient routes split by content type.
+const ResourceView = React.lazy(() => import('./ResourceView'));
 const HealthCheckView = React.lazy(() => import('./HealthCheckView'));
 const ScreeningView = React.lazy(() => import('./ScreeningView'));
 const ImmunisationView = React.lazy(() => import('./ImmunisationView'));
