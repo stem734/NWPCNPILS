@@ -576,16 +576,33 @@ const CardBuilder: React.FC = () => {
 
   const updateHealthCheckVariant = (domainId: ClinicalDomainId, resultCode: string, patch: Partial<HealthCheckBuilderVariant>) => {
     const fallbackVariant = defaultHealthCheckConfigs[domainId][resultCode];
-    setHealthCheckBuilderConfigs((current) => ({
-      ...current,
-      [domainId]: {
-        ...current[domainId],
+    setHealthCheckBuilderConfigs((current) => {
+      const currentDomain = current[domainId] || {};
+      let nextDomain = {
+        ...currentDomain,
         [resultCode]: {
-          ...(current[domainId]?.[resultCode] || fallbackVariant),
+          ...(currentDomain[resultCode] || fallbackVariant),
           ...patch,
         },
-      },
-    }));
+      };
+
+      if (patch.whatIsTitle !== undefined || patch.whatIsText !== undefined) {
+        nextDomain = Object.keys(defaultHealthCheckConfigs[domainId]).reduce((acc, domainResultCode) => {
+          const domainFallbackVariant = defaultHealthCheckConfigs[domainId][domainResultCode];
+          acc[domainResultCode] = {
+            ...(nextDomain[domainResultCode] || domainFallbackVariant),
+            ...(patch.whatIsTitle !== undefined ? { whatIsTitle: patch.whatIsTitle } : {}),
+            ...(patch.whatIsText !== undefined ? { whatIsText: patch.whatIsText } : {}),
+          };
+          return acc;
+        }, {} as Record<string, HealthCheckBuilderVariant>);
+      }
+
+      return {
+        ...current,
+        [domainId]: nextDomain,
+      };
+    });
   };
 
   const updateHealthCheckLink = (index: number, field: keyof HealthCheckBuilderLink, value: string | boolean) => {
