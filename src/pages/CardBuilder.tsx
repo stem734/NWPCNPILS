@@ -1845,6 +1845,37 @@ const CardBuilder: React.FC = () => {
                         <Link size={16} /> Open Pathway Library
                       </button>
                     </div>
+
+                    {selectedHealthCheckVariantSafe.links.length > 0 && (
+                      <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8fbfd', border: '1px solid #d8dde0', borderRadius: '8px' }}>
+                        <h5 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem' }}>Current Links ({selectedHealthCheckVariantSafe.links.length})</h5>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {selectedHealthCheckVariantSafe.links.map((link, index) => (
+                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem', backgroundColor: '#ffffff', border: '1px solid #e0e0e0', borderRadius: '6px' }}>
+                              <span style={{ fontSize: '0.9rem', color: '#212b32' }}>
+                                <strong>{link.title || 'Untitled'}</strong>
+                                {(link.city || link.county_area) && (
+                                  <span style={{ display: 'block', fontSize: '0.8rem', color: '#4c6272' }}>
+                                    {[link.city, link.county_area].filter(Boolean).join(', ')}
+                                  </span>
+                                )}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
+                                    links: selectedHealthCheckVariantSafe.links.filter((_, i) => i !== index),
+                                  });
+                                }}
+                                style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '4px', padding: '0.4rem 0.6rem', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                              >
+                                <Trash2 size={14} style={{ display: 'inline', marginRight: '0.3rem' }} /> Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ position: 'sticky', top: 0, alignSelf: 'start' }}>
