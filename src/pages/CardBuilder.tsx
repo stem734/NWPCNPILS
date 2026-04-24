@@ -166,6 +166,42 @@ const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record
     return domainAcc;
   }, {} as Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>);
 
+const resolveHealthCheckDomainWhatFields = (
+  domainId: ClinicalDomainId,
+  variants: Record<string, HealthCheckBuilderVariant> | undefined,
+) => {
+  const domainConfig = PREVIEW_DOMAIN_CONFIGS[domainId];
+  const domainVariants = Object.keys(domainConfig.metricByCode)
+    .map((resultCode) => variants?.[resultCode])
+    .filter((variant): variant is HealthCheckBuilderVariant => Boolean(variant));
+  const titleVariant =
+    domainVariants.find((variant) => variant.whatIsTitle.trim() && variant.whatIsTitle !== domainConfig.whatIsTitle) ||
+    domainVariants.find((variant) => variant.whatIsTitle.trim());
+  const textVariant =
+    domainVariants.find((variant) => variant.whatIsText.trim() && variant.whatIsText !== domainConfig.whatIsText) ||
+    domainVariants.find((variant) => variant.whatIsText.trim());
+
+  return {
+    whatIsTitle: titleVariant?.whatIsTitle || domainConfig.whatIsTitle,
+    whatIsText: textVariant?.whatIsText || domainConfig.whatIsText,
+  };
+};
+
+const withHealthCheckDomainWhatFields = (
+  domainId: ClinicalDomainId,
+  variants: Record<string, HealthCheckBuilderVariant>,
+) => {
+  const domainWhatFields = resolveHealthCheckDomainWhatFields(domainId, variants);
+  return Object.keys(PREVIEW_DOMAIN_CONFIGS[domainId].metricByCode).reduce((acc, resultCode) => {
+    const fallbackVariant = createDefaultHealthCheckBuilderState()[domainId][resultCode];
+    acc[resultCode] = {
+      ...(variants[resultCode] || fallbackVariant),
+      ...domainWhatFields,
+    };
+    return acc;
+  }, {} as Record<string, HealthCheckBuilderVariant>);
+};
+
 const cloneResourceLinks = (links: PatientResourceLink[]) => links.map((link) => ({ ...link }));
 const cloneScreeningTemplate = (template: ScreeningTemplate): ScreeningTemplate => ({
   ...template,
@@ -325,10 +361,10 @@ const CardBuilder: React.FC = () => {
           healthcheckRows.forEach((row) => {
             const domainId = row.template_id as ClinicalDomainId;
             if (next[domainId]) {
-              next[domainId] = {
+              next[domainId] = withHealthCheckDomainWhatFields(domainId, {
                 ...next[domainId],
                 ...((row.payload as HealthCheckTemplatePayload)?.variants || {}),
-              };
+              });
             }
           });
           setHealthCheckBuilderConfigs(next);
@@ -505,7 +541,10 @@ const CardBuilder: React.FC = () => {
   const buildHealthCheckFamilyPreviewUrl = (domainId: ClinicalDomainId) => {
     const params = new URLSearchParams({ type: 'healthcheck', previewOnly: '1', previewDomain: domainId });
     const previewPayload = {
-      variants: healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId],
+      variants: withHealthCheckDomainWhatFields(
+        domainId,
+        healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId],
+      ),
     };
     try {
       const previewToken = `healthcheck-preview:${domainId}:${Date.now()}`;
@@ -547,18 +586,25 @@ const CardBuilder: React.FC = () => {
   const selectedHealthCheckVariant =
     healthCheckBuilderConfigs[selectedHealthCheckDomain]?.[resolvedSelectedHealthCheckVariantCode] ||
     defaultHealthCheckConfigs[selectedHealthCheckDomain][resolvedSelectedHealthCheckVariantCode];
+  const selectedHealthCheckDomainWhatFields = resolveHealthCheckDomainWhatFields(
+    selectedHealthCheckDomain,
+    healthCheckBuilderConfigs[selectedHealthCheckDomain] || defaultHealthCheckConfigs[selectedHealthCheckDomain],
+  );
   const selectedHealthCheckMetric =
     selectedHealthCheckDomainConfig.metricByCode[resolvedSelectedHealthCheckVariantCode] || selectedHealthCheckDomainConfig.defaultMetric;
   const selectedHealthCheckVariantSafe: HealthCheckBuilderVariant =
-    selectedHealthCheckVariant || {
-      resultCode: resolvedSelectedHealthCheckVariantCode,
-      resultsMessage: selectedHealthCheckMetric.pathway || '',
-      importantText: '',
-      whatIsTitle: selectedHealthCheckDomainConfig.whatIsTitle,
-      whatIsText: selectedHealthCheckDomainConfig.whatIsText,
-      nextStepsTitle: selectedHealthCheckDomainConfig.defaultNextStepsTitle,
-      nextStepsText: selectedHealthCheckDomainConfig.defaultNextStepsText,
-      links: [],
+    {
+      ...(selectedHealthCheckVariant || {
+        resultCode: resolvedSelectedHealthCheckVariantCode,
+        resultsMessage: selectedHealthCheckMetric.pathway || '',
+        importantText: '',
+        whatIsTitle: selectedHealthCheckDomainConfig.whatIsTitle,
+        whatIsText: selectedHealthCheckDomainConfig.whatIsText,
+        nextStepsTitle: selectedHealthCheckDomainConfig.defaultNextStepsTitle,
+        nextStepsText: selectedHealthCheckDomainConfig.defaultNextStepsText,
+        links: [],
+      }),
+      ...selectedHealthCheckDomainWhatFields,
     };
   const resolveHealthCheckLibraryStatus = (resultCode: string): 'ok' | 'amber' | 'red' => {
     const code = resultCode.toUpperCase().trim();
@@ -1102,10 +1148,10 @@ const CardBuilder: React.FC = () => {
     if (builderType === 'healthcheck') {
       const next = createDefaultHealthCheckBuilderState();
       const domainId = templateId as ClinicalDomainId;
-      next[domainId] = {
+      next[domainId] = withHealthCheckDomainWhatFields(domainId, {
         ...next[domainId],
         ...((payload as HealthCheckTemplatePayload)?.variants || {}),
-      };
+      });
       setHealthCheckBuilderConfigs((current) => ({ ...current, [domainId]: next[domainId] }));
       return;
     }
@@ -1162,7 +1208,12 @@ const CardBuilder: React.FC = () => {
       'healthcheck',
       domainId,
       familyLabel,
-      { variants: healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId] },
+      {
+        variants: withHealthCheckDomainWhatFields(
+          domainId,
+          healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId],
+        ),
+      },
       `${familyLabel} template saved.`,
     );
   };
