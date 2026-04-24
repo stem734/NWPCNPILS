@@ -177,7 +177,7 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
   // (mirrors the behaviour of the "what is" section, which requires a title).
   const nextStepsExplicitlyHidden = nextStepsTitle !== undefined && nextStepsTitle.trim() === '';
   const showNextSteps = !nextStepsExplicitlyHidden && Boolean((nextStepsText || '').trim() || renderedLinks.length > 0);
-  const resolvedNextStepsTitle = (nextStepsTitle || '').trim() || (hasLocalServices ? 'Local services available' : 'Services available nationally');
+  const resolvedNextStepsTitle = (nextStepsTitle?.trim() && nextStepsTitle !== 'What to do next') ? nextStepsTitle.trim() : (hasLocalServices ? 'Local services available' : 'Services available nationally');
   const resolvedExpanded = expanded ?? internalExpanded;
   const setExpanded = onExpandedChange ?? setInternalExpanded;
   const collapsedSummary = firstSentence(metric.oneLiner || resultsMessage || metric.pathway || '');
