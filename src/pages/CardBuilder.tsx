@@ -284,6 +284,7 @@ const CardBuilder: React.FC = () => {
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
   const [templateActionKey, setTemplateActionKey] = useState('');
   const [localResources, setLocalResources] = useState<LocalResourceLink[]>([]);
+  const [healthCheckLibraryModalOpen, setHealthCheckLibraryModalOpen] = useState(false);
   const [resourcePickerTarget, setResourcePickerTarget] = useState<ResourcePickerTarget>(null);
   const [selectedLocalResourceIds, setSelectedLocalResourceIds] = useState<string[]>([]);
 
@@ -624,6 +625,51 @@ const CardBuilder: React.FC = () => {
     });
   };
 
+  const openHealthCheckLibraryModal = () => {
+    setSelectedLocalResourceIds([]);
+    setHealthCheckLibraryModalOpen(true);
+  };
+
+  const closeHealthCheckLibraryModal = () => {
+    setHealthCheckLibraryModalOpen(false);
+    setSelectedLocalResourceIds([]);
+  };
+
+  const applySelectedHealthCheckLibraryResources = () => {
+    const selectedResources = localResources.filter((resource) => selectedLocalResourceIds.includes(resource.id));
+    if (selectedResources.length === 0) {
+      closeHealthCheckLibraryModal();
+      return;
+    }
+
+    const existingKeys = new Set(
+      selectedHealthCheckVariantSafe.links.map((link) => `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}|${(link.phone || '').trim().toLowerCase()}|${(link.email || '').trim().toLowerCase()}`),
+    );
+    const importedLinks: HealthCheckBuilderLink[] = selectedResources
+      .map((resource) => ({
+        title: resource.title,
+        showTitleOnCard: resource.show_title_on_card,
+        website: resource.website,
+        websiteLabel: resource.website_label || (resource.website ? 'Website' : ''),
+        phone: resource.phone,
+        phoneLabel: resource.phone_label || (resource.phone ? 'Call' : ''),
+        email: resource.email,
+        emailLabel: resource.email_label || (resource.email ? 'Email' : ''),
+      }))
+      .filter((link) => link.title && (link.website || link.phone || link.email))
+      .filter((link) => {
+        const key = `${link.title.trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}|${(link.phone || '').trim().toLowerCase()}|${(link.email || '').trim().toLowerCase()}`;
+        if (existingKeys.has(key)) return false;
+        existingKeys.add(key);
+        return true;
+      });
+
+    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
+      links: [...selectedHealthCheckVariantSafe.links, ...importedLinks],
+    });
+    closeHealthCheckLibraryModal();
+  };
+
   const openResourcePicker = (target: OutputBuilderType) => {
     if (localResources.length === 0) {
       toast.info('No local resources are available yet.');
@@ -664,31 +710,7 @@ const CardBuilder: React.FC = () => {
     }
 
     if (resourcePickerTarget === 'healthcheck') {
-      const existingKeys = new Set(
-        selectedHealthCheckVariantSafe.links.map((link) => `${(link.title || '').trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}|${(link.phone || '').trim().toLowerCase()}|${(link.email || '').trim().toLowerCase()}`),
-      );
-      const importedLinks: HealthCheckBuilderLink[] = selectedResources
-        .map((resource) => ({
-          title: resource.title,
-          showTitleOnCard: resource.show_title_on_card,
-          website: resource.website,
-          websiteLabel: resource.website_label || (resource.website ? 'Website' : ''),
-          phone: resource.phone,
-          phoneLabel: resource.phone_label || (resource.phone ? 'Call' : ''),
-          email: resource.email,
-          emailLabel: resource.email_label || (resource.email ? 'Email' : ''),
-        }))
-        .filter((link) => link.title && (link.website || link.phone || link.email))
-        .filter((link) => {
-          const key = `${link.title.trim().toLowerCase()}|${(link.website || '').trim().toLowerCase()}|${(link.phone || '').trim().toLowerCase()}|${(link.email || '').trim().toLowerCase()}`;
-          if (existingKeys.has(key)) return false;
-          existingKeys.add(key);
-          return true;
-        });
-
-      updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
-        links: [...selectedHealthCheckVariantSafe.links, ...importedLinks],
-      });
+      applySelectedHealthCheckLibraryResources();
       closeResourcePicker();
       return;
     }
@@ -1736,12 +1758,11 @@ const CardBuilder: React.FC = () => {
                         <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 0 }}>What does this result mean?</label>
                         <button
                           type="button"
-                          onClick={applyHealthCheckPathwayFromLibrary}
-                          disabled={!selectedHealthCheckLibraryEntry}
+                          onClick={openHealthCheckLibraryModal}
                           className="action-button-sm"
                           style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.35rem 0.55rem' }}
                         >
-                          Use Library Pathway
+                          <Link size={14} /> Pathway Library
                         </button>
                       </div>
                       <textarea
@@ -1812,20 +1833,11 @@ const CardBuilder: React.FC = () => {
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <button
                           type="button"
-                          onClick={openPathwayLibraryManager}
-                          className="action-button"
-                          style={{ backgroundColor: '#4c6272', flexShrink: 0, whiteSpace: 'nowrap' }}
-                        >
-                          <ExternalLink size={16} /> Manage Library
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openResourcePicker('healthcheck')}
-                          disabled={localResources.length === 0}
+                          onClick={openHealthCheckLibraryModal}
                           className="action-button"
                           style={{ backgroundColor: '#003a73', flexShrink: 0, whiteSpace: 'nowrap' }}
                         >
-                          <Plus size={16} /> Add From Library
+                          <Link size={16} /> Open Pathway Library
                         </button>
                         <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8', flexShrink: 0, whiteSpace: 'nowrap' }}>
                           <Plus size={16} /> Add Link
@@ -2351,6 +2363,110 @@ const CardBuilder: React.FC = () => {
                 Cancel
               </button>
               <button type="button" onClick={applySelectedLocalResources} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                Add Selected Resources
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {healthCheckLibraryModalOpen && (
+        <Modal
+          isOpen={healthCheckLibraryModalOpen}
+          onClose={closeHealthCheckLibraryModal}
+          size="lg"
+          title="Pathway Library"
+          subtitle={`${selectedHealthCheckMetric.label} - ${resolvedSelectedHealthCheckVariantCode}`}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', color: '#003087' }}>Recommended pathway text</h3>
+                  <p style={{ margin: '0.25rem 0 0', color: '#4c6272', fontSize: '0.88rem' }}>
+                    Suggested wording for the {selectedHealthCheckLibraryStatus.toUpperCase()} pathway.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={applyHealthCheckPathwayFromLibrary}
+                  disabled={!selectedHealthCheckLibraryEntry}
+                  className="action-button-sm"
+                  style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.45rem 0.65rem', whiteSpace: 'nowrap' }}
+                >
+                  Apply Pathway
+                </button>
+              </div>
+              <div style={{ color: '#212b32', fontSize: '0.95rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                {selectedHealthCheckLibraryEntry?.pathway || 'No library pathway is available for this result type yet.'}
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#ffffff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', color: '#003087' }}>Local pathway resources</h3>
+                  <p style={{ margin: '0.25rem 0 0', color: '#4c6272', fontSize: '0.88rem' }}>
+                    Pick local contacts and services to add to this health check card.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openPathwayLibraryManager}
+                  className="action-button-sm"
+                  style={{ background: '#4c6272', borderRadius: '6px', padding: '0.45rem 0.65rem', whiteSpace: 'nowrap' }}
+                >
+                  <ExternalLink size={14} /> Manage Library
+                </button>
+              </div>
+
+              {localResources.length === 0 ? (
+                <p style={{ margin: 0, color: '#4c6272' }}>No local resources are available yet. Use Manage Library to add pathway contacts and links.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '40vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {localResources.map((resource) => {
+                    const key = localResourceKey(resource);
+                    const checked = selectedLocalResourceIds.includes(key);
+
+                    return (
+                      <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', padding: '0.6rem 0.7rem', border: '1px solid #d8dde0', borderRadius: '8px', background: '#f8fbfd', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setSelectedLocalResourceIds((current) => {
+                              if (e.target.checked) {
+                                return current.includes(key) ? current : [...current, key];
+                              }
+                              return current.filter((item) => item !== key);
+                            });
+                          }}
+                        />
+                        <span>
+                          <strong style={{ display: 'block' }}>{resource.title}</strong>
+                          <span style={{ color: '#4c6272', fontSize: '0.86rem' }}>
+                            {[resource.category, resource.city, resource.county_area, resource.website, resource.phone, resource.email].filter(Boolean).join(' | ')}
+                          </span>
+                          {resource.description && <span style={{ display: 'block', color: '#4c6272', fontSize: '0.86rem', marginTop: '0.2rem' }}>{resource.description}</span>}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+              <button type="button" onClick={closeHealthCheckLibraryModal} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={applySelectedHealthCheckLibraryResources}
+                disabled={selectedLocalResourceIds.length === 0}
+                className="action-button"
+                style={{ backgroundColor: '#007f3b' }}
+              >
                 Add Selected Resources
               </button>
             </div>
