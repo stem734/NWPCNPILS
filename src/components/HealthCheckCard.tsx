@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Check, AlertTriangle, Globe, Heart, Mail, Phone, X } from 'lucide-react';
+import { Building2, Check, AlertTriangle, ExternalLink, Globe, Heart, Mail, Phone, X } from 'lucide-react';
 
 interface HealthCheckCardLink {
   title: string;
@@ -49,6 +49,13 @@ const resolveLinkHref = (value: string) => {
   if (EMAIL_PATTERN.test(trimmed)) return `mailto:${trimmed}`;
   if (PHONE_PATTERN.test(trimmed)) return `tel:${trimmed.replace(/\s+/g, '')}`;
   return `https://${trimmed}`;
+};
+
+const resolveEmailHref = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^mailto:/i.test(trimmed)) return trimmed;
+  return `mailto:${trimmed}`;
 };
 
 const faviconUrlForLink = (value: string) => {
@@ -226,7 +233,7 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
 
                     const renderLinkCard = (link: HealthCheckCardLink, index: number, variant: 'nhs' | 'support') => {
                       const iconUrl = link.website ? faviconUrlForLink(link.website) : '';
-                      const titleContent = (
+                      const iconContent = (
                         <>
                           {iconUrl ? (
                             <img
@@ -245,12 +252,12 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                           ) : (
                             <Building2 size={16} aria-hidden="true" />
                           )}
-                          <span>{link.title || 'More information'}</span>
                         </>
                       );
 
                       return (
                       <div key={`${variant}-${link.title}-${index}`} className={`hc-card__contact${variant === 'nhs' ? ' hc-card__contact--nhs' : ''}`}>
+                        <div className="hc-card__contact-icon-wrap">{iconContent}</div>
                         {link.website ? (
                           <a
                             className="hc-card__contact-title hc-card__contact-title-link"
@@ -259,10 +266,11 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                             rel="noreferrer"
                             title={link.website}
                           >
-                            {titleContent}
+                            <span>{link.title || 'More information'}</span>
+                            <ExternalLink size={14} aria-hidden="true" />
                           </a>
                         ) : link.title ? (
-                          <div className="hc-card__contact-title">{titleContent}</div>
+                          <div className="hc-card__contact-title"><span>{link.title}</span></div>
                         ) : null}
                         <div className="hc-card__contact-links">
                           {link.phone ? (
@@ -279,9 +287,7 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                           {link.email ? (
                             <a
                               className="hc-card__link"
-                              href={resolveLinkHref(link.email)}
-                              target="_blank"
-                              rel="noreferrer"
+                              href={resolveEmailHref(link.email)}
                               aria-label={`${link.title || 'Service'} email`}
                               title={link.email}
                             >
