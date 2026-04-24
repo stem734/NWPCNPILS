@@ -108,6 +108,7 @@ const HealthCheckView: React.FC = () => {
   const isDemoMode = searchParams.get('demo') === '1';
   const previewOnly = searchParams.get('previewOnly') === '1';
   const previewDomain = (searchParams.get('previewDomain') || '').trim() as ClinicalDomainId | '';
+  const previewToken = (searchParams.get('previewToken') || '').trim();
   const localSupportName = searchParams.get('localName') || `${org || 'Your practice'} support team`;
   const localSupportPhone = searchParams.get('localPhone') || '';
   const localSupportEmail = searchParams.get('localEmail') || '';
@@ -129,6 +130,24 @@ const HealthCheckView: React.FC = () => {
   const effectiveTemplateOverrides = useMemo(
     () => (isDemoMode || templateIds.length === 0 ? {} : templateOverrides),
     [isDemoMode, templateIds, templateOverrides],
+  );
+  const previewTemplateOverrides = useMemo<Record<string, HealthCheckTemplatePayload>>(() => {
+    if (!previewOnly || !previewDomain || !previewToken || typeof window === 'undefined') {
+      return {};
+    }
+
+    try {
+      const raw = window.sessionStorage.getItem(previewToken);
+      if (!raw) return {};
+      const payload = JSON.parse(raw) as HealthCheckTemplatePayload;
+      return payload?.variants ? { [previewDomain]: payload } : {};
+    } catch {
+      return {};
+    }
+  }, [previewDomain, previewOnly, previewToken]);
+  const mergedTemplateOverrides = useMemo(
+    () => ({ ...effectiveTemplateOverrides, ...previewTemplateOverrides }),
+    [effectiveTemplateOverrides, previewTemplateOverrides],
   );
 
   useEffect(() => {
@@ -155,7 +174,7 @@ const HealthCheckView: React.FC = () => {
   const displayMetrics = useMemo(() => {
     const baseMetrics = previewOnly && previewDomain ? metrics : getDisplayMetrics(metrics);
     return baseMetrics.map((metric) => {
-      const templatePayload = effectiveTemplateOverrides[metricIdToTemplateId(metric.id)];
+      const templatePayload = mergedTemplateOverrides[metricIdToTemplateId(metric.id)];
       const variant = getHealthCheckVariant(templatePayload, metric.resultCode || '');
       if (!variant) return metric;
       return {
@@ -168,7 +187,7 @@ const HealthCheckView: React.FC = () => {
           .map((link) => ({ title: link.title, url: link.website || '' })),
       };
     });
-  }, [effectiveTemplateOverrides, metrics, previewDomain, previewOnly]);
+  }, [mergedTemplateOverrides, metrics, previewDomain, previewOnly]);
 
   const groupedMetrics = useMemo(() => {
     const withIndex = displayMetrics.map((metric, index) => ({ metric, index }));

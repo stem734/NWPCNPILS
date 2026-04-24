@@ -271,10 +271,6 @@ const CardBuilder: React.FC = () => {
   const [saveError, setSaveError] = useState('');
 
   const [deletingCode, setDeletingCode] = useState('');
-  const [healthCheckLocalSupportName, setHealthCheckLocalSupportName] = useState('');
-  const [healthCheckLocalSupportPhone, setHealthCheckLocalSupportPhone] = useState('');
-  const [healthCheckLocalSupportEmail, setHealthCheckLocalSupportEmail] = useState('');
-  const [healthCheckLocalSupportWebsite, setHealthCheckLocalSupportWebsite] = useState('');
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
   const [screeningTemplates, setScreeningTemplates] = useState<Record<string, ScreeningTemplate>>(() => createDefaultScreeningState());
   const [screeningType, setScreeningType] = useState('cervical');
@@ -508,10 +504,16 @@ const CardBuilder: React.FC = () => {
 
   const buildHealthCheckFamilyPreviewUrl = (domainId: ClinicalDomainId) => {
     const params = new URLSearchParams({ type: 'healthcheck', previewOnly: '1', previewDomain: domainId });
-    if (healthCheckLocalSupportName.trim()) params.set('localName', healthCheckLocalSupportName.trim());
-    if (healthCheckLocalSupportPhone.trim()) params.set('localPhone', healthCheckLocalSupportPhone.trim());
-    if (healthCheckLocalSupportEmail.trim()) params.set('localEmail', healthCheckLocalSupportEmail.trim());
-    if (healthCheckLocalSupportWebsite.trim()) params.set('localWebsite', healthCheckLocalSupportWebsite.trim());
+    const previewPayload = {
+      variants: healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId],
+    };
+    try {
+      const previewToken = `healthcheck-preview:${domainId}:${Date.now()}`;
+      window.sessionStorage.setItem(previewToken, JSON.stringify(previewPayload));
+      params.set('previewToken', previewToken);
+    } catch {
+      // sessionStorage may be unavailable; fall back to saved templates only.
+    }
     return buildPatientUrl(params);
   };
 
@@ -571,19 +573,6 @@ const CardBuilder: React.FC = () => {
   const healthCheckLibraryMetric = METRIC_DEFINITIONS[selectedHealthCheckDomain];
   const selectedHealthCheckLibraryStatus = resolveHealthCheckLibraryStatus(resolvedSelectedHealthCheckVariantCode);
   const selectedHealthCheckLibraryEntry = healthCheckLibraryMetric?.statuses[selectedHealthCheckLibraryStatus];
-  const healthCheckLocalSupportLink: HealthCheckBuilderLink | null =
-    (healthCheckLocalSupportPhone.trim() || healthCheckLocalSupportEmail.trim() || healthCheckLocalSupportWebsite.trim())
-      ? {
-          title: healthCheckLocalSupportName.trim() || 'Local support',
-          showTitleOnCard: true,
-          phone: healthCheckLocalSupportPhone.trim(),
-          phoneLabel: 'Call',
-          email: healthCheckLocalSupportEmail.trim(),
-          emailLabel: 'Email',
-          website: healthCheckLocalSupportWebsite.trim(),
-          websiteLabel: 'Website',
-        }
-      : null;
 
   const updateHealthCheckVariant = (domainId: ClinicalDomainId, resultCode: string, patch: Partial<HealthCheckBuilderVariant>) => {
     const fallbackVariant = defaultHealthCheckConfigs[domainId][resultCode];
@@ -1622,39 +1611,6 @@ const CardBuilder: React.FC = () => {
             <p style={{ margin: '0 0 1rem', color: '#4c6272', fontSize: '0.95rem' }}>
               Use the row list below to preview, edit, and copy each health check card variation.
             </p>
-            <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '10px', border: '1px solid #d8dde0', background: '#f8fbfd' }}>
-              <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#005eb8' }}>Local support details (optional)</div>
-              <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                <input
-                  type="text"
-                  value={healthCheckLocalSupportName}
-                  onChange={(e) => setHealthCheckLocalSupportName(e.target.value)}
-                  placeholder="Service name (e.g. Practice health coach)"
-                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-                <input
-                  type="text"
-                  value={healthCheckLocalSupportPhone}
-                  onChange={(e) => setHealthCheckLocalSupportPhone(e.target.value)}
-                  placeholder="Phone number"
-                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-                <input
-                  type="email"
-                  value={healthCheckLocalSupportEmail}
-                  onChange={(e) => setHealthCheckLocalSupportEmail(e.target.value)}
-                  placeholder="Email address"
-                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-                <input
-                  type="url"
-                  value={healthCheckLocalSupportWebsite}
-                  onChange={(e) => setHealthCheckLocalSupportWebsite(e.target.value)}
-                  placeholder="Website URL"
-                  style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-              </div>
-            </div>
             {builderNotice?.type === 'healthcheck' && (
               <div style={{ padding: '0.5rem 0.75rem', background: '#eef7ff', color: '#005eb8', borderRadius: '6px', marginBottom: '0.9rem', fontSize: '0.88rem', fontWeight: 600 }}>
                 {builderNotice.message}
@@ -1990,7 +1946,6 @@ const CardBuilder: React.FC = () => {
                       nextStepsText={selectedHealthCheckVariantSafe.nextStepsText}
                       links={[
                         ...selectedHealthCheckVariantSafe.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim())),
-                        ...(healthCheckLocalSupportLink ? [healthCheckLocalSupportLink] : []),
                       ]}
                       expanded
                     />
