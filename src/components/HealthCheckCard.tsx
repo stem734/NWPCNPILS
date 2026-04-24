@@ -39,6 +39,7 @@ const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
 const MARKDOWN_LINK_PATTERN = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 const PHONE_PATTERN = /^\+?[0-9()\-\s]{7,}$/;
+const NHS_FAVICON_URL = 'https://www.sath.nhs.uk/favicon-16x16/';
 
 const resolveLinkHref = (value: string) => {
   const trimmed = value.trim();
@@ -51,6 +52,7 @@ const resolveLinkHref = (value: string) => {
 };
 
 const faviconUrlForLink = (value: string) => {
+  if (isNhsDomain(value)) return NHS_FAVICON_URL;
   const href = resolveLinkHref(value);
   try {
     const url = new URL(href);
