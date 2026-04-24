@@ -2,7 +2,7 @@ import React, { useMemo, useReducer, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, Phone, Mail, Globe, X } from 'lucide-react';
+import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, X } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import HealthCheckCard from '../components/HealthCheckCard';
 import { resolvePath } from '../subdomainUtils';
@@ -648,49 +648,6 @@ const CardBuilder: React.FC = () => {
         ...current,
         [domainId]: nextDomain,
       };
-    });
-  };
-
-  const updateHealthCheckLink = (index: number, field: keyof HealthCheckBuilderLink, value: string | boolean) => {
-    const links = [...selectedHealthCheckVariantSafe.links];
-    const existing = links[index] || {
-      title: '',
-      phone: '',
-      phoneLabel: '',
-      email: '',
-      emailLabel: '',
-      website: '',
-      city: '',
-      county_area: '',
-    };
-    links[index] = {
-      ...existing,
-      [field]: value,
-    };
-    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, { links });
-  };
-
-  const addHealthCheckLink = () => {
-    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
-      links: [
-        ...selectedHealthCheckVariantSafe.links,
-        {
-          title: '',
-          phone: '',
-          phoneLabel: '',
-          email: '',
-          emailLabel: '',
-          website: '',
-          city: '',
-          county_area: '',
-        },
-      ],
-    });
-  };
-
-  const removeHealthCheckLink = (index: number) => {
-    updateHealthCheckVariant(selectedHealthCheckDomain, resolvedSelectedHealthCheckVariantCode, {
-      links: selectedHealthCheckVariantSafe.links.filter((_, linkIndex) => linkIndex !== index),
     });
   };
 
@@ -1877,101 +1834,17 @@ const CardBuilder: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                       <div style={{ flex: 1 }}>
                         <h4 style={{ margin: 0 }}>Resource and Support Links</h4>
-                        <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>Add national NHS links and local support contacts shown in the next-steps section.</p>
+                        <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>Select resources from the Pathway Library to display as local and national services.</p>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          onClick={openHealthCheckLibraryModal}
-                          className="action-button"
-                          style={{ backgroundColor: '#003a73', flexShrink: 0, whiteSpace: 'nowrap' }}
-                        >
-                          <Link size={16} /> Open Pathway Library
-                        </button>
-                        <button onClick={addHealthCheckLink} className="action-button" style={{ backgroundColor: '#005eb8', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                          <Plus size={16} /> Add Link
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={openHealthCheckLibraryModal}
+                        className="action-button"
+                        style={{ backgroundColor: '#003a73', whiteSpace: 'nowrap' }}
+                      >
+                        <Link size={16} /> Open Pathway Library
+                      </button>
                     </div>
-
-                    {selectedHealthCheckVariantSafe.links.length === 0 ? (
-                      <p style={{ color: '#4c6272', margin: 0 }}>No links added yet for this result type.</p>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {selectedHealthCheckVariantSafe.links.map((link, index) => (
-                          <div key={index} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                              <strong>Link {index + 1}</strong>
-                              <button onClick={() => removeHealthCheckLink(index)} style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '6px', padding: '0.45rem', cursor: 'pointer' }}>
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-
-                            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                              <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Card title</label>
-                                <input
-                                  type="text"
-                                  value={link.title || ''}
-                                  onChange={(e) => updateHealthCheckLink(index, 'title', e.target.value)}
-                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                                />
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: '0.75rem' }}>
-                              <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Phone size={14} /> Phone</span></label>
-                                <input
-                                  type="text"
-                                  value={link.phone || ''}
-                                  onChange={(e) => updateHealthCheckLink(index, 'phone', e.target.value)}
-                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Phone label</label>
-                                <input
-                                  type="text"
-                                  value={link.phoneLabel || ''}
-                                  onChange={(e) => updateHealthCheckLink(index, 'phoneLabel', e.target.value)}
-                                  placeholder="Call"
-                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Mail size={14} /> Email</span></label>
-                                <input
-                                  type="text"
-                                  value={link.email || ''}
-                                  onChange={(e) => updateHealthCheckLink(index, 'email', e.target.value)}
-                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}>Email label</label>
-                                <input
-                                  type="text"
-                                  value={link.emailLabel || ''}
-                                  onChange={(e) => updateHealthCheckLink(index, 'emailLabel', e.target.value)}
-                                  placeholder="Email"
-                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Globe size={14} /> Website</span></label>
-                                <input
-                                  type="text"
-                                  value={link.website || ''}
-                                  onChange={(e) => updateHealthCheckLink(index, 'website', e.target.value)}
-                                  style={{ width: '100%', padding: '0.65rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.92rem', boxSizing: 'border-box' }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   <div style={{ position: 'sticky', top: 0, alignSelf: 'start' }}>
