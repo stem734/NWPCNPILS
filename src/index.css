@@ -848,6 +848,69 @@ p {
   border-radius: 8px;
 }
 
+.warning-callout {
+  position: relative;
+  margin-top: 1rem;
+  padding: 3rem 1.25rem 1.25rem;
+  border-radius: 5px;
+  background: #fff9c4;
+  border: 1px solid #ffeb3b;
+  box-sizing: border-box;
+}
+
+.warning-callout__title {
+  position: absolute;
+  left: 0;
+  top: -16px;
+  background: #ffeb3b;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0;
+  min-width: 11rem;
+}
+
+.warning-callout__title-text {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #212b32;
+}
+
+.warning-callout__content {
+  color: #212b32;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.inset-text {
+  display: flex;
+  align-items: stretch;
+  margin-top: 1rem;
+  border-radius: 5px;
+  background: #ffffff;
+  border: 1px solid #d8dde0;
+  overflow: hidden;
+}
+
+.inset-text__border {
+  width: 8px;
+  background: #005eb8;
+  flex: 0 0 8px;
+}
+
+.inset-text__content {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  padding: 1rem 1.25rem;
+}
+
+.inset-text__body {
+  color: #212b32;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
 .hc-page {
   max-width: 68rem;
   box-shadow: none;
@@ -1150,20 +1213,6 @@ p {
   box-shadow: none;
 }
 
-.sick-days-callout {
-  margin-top: 1rem;
-  padding: 1rem;
-  border: 1px solid #f5b7b1;
-  border-left: 4px solid var(--nhs-red);
-  background: #fff1f0;
-  border-radius: 8px;
-}
-
-.sick-days-header h2 {
-  font-size: 1rem;
-  margin: 0;
-}
-
 .badge {
   display: inline-block;
   padding: 0.2rem 0.65rem;
@@ -1186,12 +1235,9 @@ p {
 }
 
 .footer {
-  padding: 2rem;
-  text-align: center;
-  color: var(--nhs-text);
-  font-size: 0.95rem;
   background: #f0f4f5;
-  border-top: 1px solid var(--nhs-border);
+  padding: 4rem 5rem;
+  position: relative;
 }
 
 .main-guidance-banner {
@@ -1209,24 +1255,77 @@ p {
   color: var(--nhs-blue);
 }
 
-.footer-copyright {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--nhs-secondary-text);
-  margin-bottom: 0.4rem;
+.footer__border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--nhs-blue);
 }
 
-.footer-version {
+.footer__container {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.footer__logo {
+  width: 104px;
+  height: auto;
+  display: block;
+}
+
+.footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.footer__links a,
+.footer__copyright a {
+  color: var(--nhs-text);
+  text-decoration: none;
+}
+
+.footer__links a:hover,
+.footer__copyright a:hover {
+  text-decoration: underline;
+}
+
+.footer__divider {
+  width: 100%;
+  border-top: 1px solid var(--nhs-border);
+}
+
+.footer__meta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.footer__copyright,
+.footer__version {
+  color: var(--nhs-secondary-text);
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  margin: 0;
+}
+
+.footer__version {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--nhs-secondary-text);
 }
 
-.footer-beta {
+.footer__beta {
   display: inline-flex;
   align-items: center;
   padding: 0.12rem 0.45rem;
@@ -1851,26 +1950,6 @@ p {
   font-size: 0.95rem;
   box-sizing: border-box;
   background: white;
-}
-
-.sick-days-callout {
-  background-color: #fce4e4;
-  border-left: 4px solid #d5281b;
-  padding: 0.875rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-}
-
-.sick-days-header {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.sick-days-header h2 {
-  color: #d5281b;
-  margin: 0;
 }
 
 /* Clinician Demo Mode Styles */

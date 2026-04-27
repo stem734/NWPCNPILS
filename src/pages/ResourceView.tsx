@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, ExternalLink, FlaskConical, Info, Printer, ShieldAlert, Star } from 'lucide-react';
+import { AlertCircle, ExternalLink, FlaskConical, Info, Printer, Star } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from '../protocolService';
 import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from '../practiceFeatures';
 import { useMedicationCatalog } from '../medicationCatalog';
@@ -8,6 +8,7 @@ import { getMedicationIcon } from '../medicationIcons';
 import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
 import { isIssuedDateStale } from '../dateHelpers';
+import InsetText from '../components/InsetText';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const VALIDATION_CACHE_VERSION = 'v2';
@@ -518,19 +519,15 @@ const ResourceView: React.FC = () => {
                   )}
 
                   {content.state !== 'placeholder' && content.sickDaysNeeded && (
-                    <div className="sick-days-callout">
-                      <div className="sick-days-header">
-                        <ShieldAlert size={28} color="#d5281b" />
-                        <h3>Sick Day Rules Apply</h3>
-                      </div>
-                      <p style={{ marginBottom: '1rem', color: '#212b32' }}>
+                    <InsetText>
+                      <p style={{ marginBottom: '0.75rem', color: '#212b32' }}>
                         If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
                         Click the resources below to learn about "Sick Day Rules".
                       </p>
                       <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
                         View Sick Day Guide <ExternalLink size={18} />
                       </a>
-                    </div>
+                    </InsetText>
                   )}
 
                   {content.state !== 'placeholder' && (content.nhsLink || content.trendLinks.length > 0) && (

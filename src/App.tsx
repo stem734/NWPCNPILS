@@ -115,13 +115,24 @@ const AppContent: React.FC = () => {
       </main>
 
       <footer className="footer">
-        <p className="footer-copyright">
-          © {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo
-        </p>
-        <p className="footer-version" title={`Commit ${__APP_COMMIT_HASH__}`}>
-          <span className="footer-beta">Beta</span>
-          <span>Version {versionLabel}</span>
-        </p>
+        <span className="footer__border" aria-hidden="true" />
+        <div className="footer__container">
+          <img className="footer__logo" src="/nhs-wordmark-blue.jpg" alt="NHS" />
+          <nav className="footer__links" aria-label="Footer links">
+            <a href="https://service-manual.nhs.uk/" target="_blank" rel="noopener noreferrer">Service Manual</a>
+            <a href="https://design-system.nhs.uk/" target="_blank" rel="noopener noreferrer">Figma How To's</a>
+          </nav>
+          <div className="footer__divider" aria-hidden="true" />
+          <div className="footer__meta">
+            <p className="footer__copyright">
+              © {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo
+            </p>
+            <p className="footer__version" title={`Commit ${__APP_COMMIT_HASH__}`}>
+              <span className="footer__beta">Beta</span>
+              <span>Version {versionLabel}</span>
+            </p>
+          </div>
+        </div>
       </footer>
 
       <ClinicianDemo show={showClinicianDemo} />
