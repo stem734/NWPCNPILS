@@ -292,8 +292,8 @@ const CardBuilder: React.FC = () => {
   const [description, setDescription] = useState('');
   const [badge, setBadge] = useState<'NEW' | 'REAUTH'>('NEW');
   const [category, setCategory] = useState('');
-  const [keyInfoMode, setKeyInfoMode] = useState<'do' | 'dont'>('do');
-  const [keyInfo, setKeyInfo] = useState<string[]>(['']);
+  const [doKeyInfo, setDoKeyInfo] = useState<string[]>(['']);
+  const [dontKeyInfo, setDontKeyInfo] = useState<string[]>(['']);
   const [nhsLink, setNhsLink] = useState('');
   const [trendLinks, setTrendLinks] = useState<TrendLink[]>([]);
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
@@ -458,8 +458,10 @@ const CardBuilder: React.FC = () => {
       description: description.trim(),
       badge,
       category: category.trim(),
-      keyInfoMode,
-      keyInfo: keyInfo.filter((item) => item.trim()),
+      keyInfoMode: doKeyInfo.filter((item) => item.trim()).length > 0 ? 'do' : 'dont',
+      doKeyInfo: doKeyInfo.filter((item) => item.trim()),
+      dontKeyInfo: dontKeyInfo.filter((item) => item.trim()),
+      keyInfo: [...doKeyInfo, ...dontKeyInfo].filter((item) => item.trim()),
       nhsLink: nhsLink.trim(),
       trendLinks: trendLinks.filter((item) => item.title.trim() && item.url.trim()),
       sickDaysNeeded,
@@ -468,7 +470,7 @@ const CardBuilder: React.FC = () => {
       source: editingCode ? 'override' : 'custom',
       isBuiltIn: false,
     };
-  }, [badge, category, description, editingCode, hasContent, keyInfo, keyInfoMode, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
+  }, [badge, category, description, editingCode, hasContent, doKeyInfo, dontKeyInfo, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
 
   const getFriendlyMedicationName = (medication: MedicationRecord) => {
     const [baseTitle] = medication.title.split(' - ');
@@ -482,8 +484,8 @@ const CardBuilder: React.FC = () => {
     setDescription(medication.description);
     setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
     setCategory(medication.category);
-    setKeyInfoMode(medication.keyInfoMode === 'dont' ? 'dont' : 'do');
-    setKeyInfo(medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
+    setDoKeyInfo(medication.doKeyInfo?.length ? medication.doKeyInfo : medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
+    setDontKeyInfo(medication.dontKeyInfo?.length ? medication.dontKeyInfo : ['']);
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
@@ -509,8 +511,8 @@ const CardBuilder: React.FC = () => {
     setDescription(medication.description);
     setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
     setCategory(medication.category);
-    setKeyInfoMode(medication.keyInfoMode === 'dont' ? 'dont' : 'do');
-    setKeyInfo(medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
+    setDoKeyInfo(medication.doKeyInfo?.length ? medication.doKeyInfo : medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
+    setDontKeyInfo(medication.dontKeyInfo?.length ? medication.dontKeyInfo : ['']);
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
@@ -919,7 +921,8 @@ const CardBuilder: React.FC = () => {
         setDescription((c.description as string) || '');
         setBadge(medType);
         setCategory((c.category as string) || '');
-        setKeyInfo((c.keyInfo as string[]) || ['']);
+        setDoKeyInfo((c.doKeyInfo as string[]) || (c.keyInfo as string[]) || ['']);
+        setDontKeyInfo((c.dontKeyInfo as string[]) || ['']);
         setNhsLink((c.nhsLink as string) || '');
         setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
         setReviewMonths((c.reviewMonths as number) || 12);
@@ -939,7 +942,8 @@ const CardBuilder: React.FC = () => {
       // Still show the editor so they can fill manually
       setTitle(medName);
       setBadge(medType);
-      setKeyInfo(['']);
+      setDoKeyInfo(['']);
+      setDontKeyInfo(['']);
       setHasContent(true);
       setRequestedCode('');
     }
@@ -964,7 +968,9 @@ const CardBuilder: React.FC = () => {
           description: description.trim(),
           badge,
           category: category.trim(),
-          keyInfo: keyInfo.filter(k => k.trim()),
+          keyInfo: [...doKeyInfo, ...dontKeyInfo].filter(k => k.trim()),
+          doKeyInfo: doKeyInfo.filter(k => k.trim()),
+          dontKeyInfo: dontKeyInfo.filter(k => k.trim()),
           nhsLink: nhsLink.trim(),
           trendLinks: trendLinks.filter(l => l.title.trim() && l.url.trim()),
           sickDaysNeeded,
@@ -1017,14 +1023,22 @@ const CardBuilder: React.FC = () => {
     });
   };
 
-  const updateKeyInfo = (index: number, value: string) => {
-    const updated = [...keyInfo];
+  const updateDoKeyInfo = (index: number, value: string) => {
+    const updated = [...doKeyInfo];
     updated[index] = value;
-    setKeyInfo(updated);
+    setDoKeyInfo(updated);
   };
 
-  const addKeyInfo = () => setKeyInfo([...keyInfo, '']);
-  const removeKeyInfo = (index: number) => setKeyInfo(keyInfo.filter((_, i) => i !== index));
+  const updateDontKeyInfo = (index: number, value: string) => {
+    const updated = [...dontKeyInfo];
+    updated[index] = value;
+    setDontKeyInfo(updated);
+  };
+
+  const addDoKeyInfo = () => setDoKeyInfo([...doKeyInfo, '']);
+  const addDontKeyInfo = () => setDontKeyInfo([...dontKeyInfo, '']);
+  const removeDoKeyInfo = (index: number) => setDoKeyInfo(doKeyInfo.filter((_, i) => i !== index).length ? doKeyInfo.filter((_, i) => i !== index) : ['']);
+  const removeDontKeyInfo = (index: number) => setDontKeyInfo(dontKeyInfo.filter((_, i) => i !== index).length ? dontKeyInfo.filter((_, i) => i !== index) : ['']);
 
   const updateTrendLink = (index: number, field: 'title' | 'url', value: string) => {
     const updated = [...trendLinks];
@@ -1042,7 +1056,8 @@ const CardBuilder: React.FC = () => {
     setDescription('');
     setBadge('NEW');
     setCategory('');
-    setKeyInfo(['']);
+    setDoKeyInfo(['']);
+    setDontKeyInfo(['']);
     setNhsLink('');
     setTrendLinks([]);
     setSickDaysNeeded(false);
@@ -1404,62 +1419,46 @@ const CardBuilder: React.FC = () => {
             </p>
 
             {/* Key Information */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Key Information Points</label>
-                <div style={{ display: 'inline-flex', border: '1px solid #d8dde0', borderRadius: '6px', overflow: 'hidden' }}>
-                  <button
-                    type="button"
-                    onClick={() => setKeyInfoMode('do')}
-                    style={{
-                      background: keyInfoMode === 'do' ? '#005eb8' : '#fff',
-                      color: keyInfoMode === 'do' ? '#fff' : '#4c6272',
-                      border: 'none',
-                      padding: '0.35rem 0.75rem',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Do
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setKeyInfoMode('dont')}
-                    style={{
-                      background: keyInfoMode === 'dont' ? '#005eb8' : '#fff',
-                      color: keyInfoMode === 'dont' ? '#fff' : '#4c6272',
-                      border: 'none',
-                      borderLeft: '1px solid #d8dde0',
-                      padding: '0.35rem 0.75rem',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Don&apos;t
-                  </button>
-                </div>
-                <button onClick={addKeyInfo} style={{ background: 'none', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Plus size={14} /> Add Point
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {keyInfo.map((info, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input
-                      type="text" value={info} onChange={e => updateKeyInfo(i, e.target.value)}
-                      placeholder={`Key point ${i + 1}`}
-                      style={{ flex: 1, padding: '0.5rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box' }}
-                    />
-                    {keyInfo.length > 1 && (
-                      <button onClick={() => removeKeyInfo(i)} style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '6px', padding: '0.5rem', cursor: 'pointer' }}>
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {[
+                { label: 'Do', values: doKeyInfo, add: addDoKeyInfo, update: updateDoKeyInfo, remove: removeDoKeyInfo },
+                { label: "Don't", values: dontKeyInfo, add: addDontKeyInfo, update: updateDontKeyInfo, remove: removeDontKeyInfo },
+              ].map((section) => (
+                <div key={section.label} style={{ border: '1px solid #d8dde0', borderRadius: '8px', padding: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ fontWeight: 700, fontSize: '0.85rem' }}>{section.label}</label>
+                    <button
+                      type="button"
+                      onClick={section.add}
+                      style={{ background: 'none', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      <Plus size={14} /> Add Point
+                    </button>
                   </div>
-                ))}
-              </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {section.values.map((info, i) => (
+                      <div key={`${section.label}-${i}`} style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                          type="text"
+                          value={info}
+                          onChange={(e) => section.update(i, e.target.value)}
+                          placeholder={`${section.label} point ${i + 1}`}
+                          style={{ flex: 1, padding: '0.5rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                        />
+                        {section.values.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => section.remove(i)}
+                            style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '6px', padding: '0.5rem', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* NHS Link */}
