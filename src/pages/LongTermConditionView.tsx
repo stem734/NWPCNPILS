@@ -5,6 +5,7 @@ import { LONG_TERM_CONDITION_TEMPLATES, type LongTermConditionTemplate } from '.
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
+import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -73,15 +74,7 @@ const LongTermConditionView: React.FC = () => {
         </p>
       </div>
 
-      <div className="data-indicator no-print" style={{
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        color: '#005eb8', fontSize: '0.9rem', backgroundColor: '#eef7ff',
-        padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #005eb8',
-        lineHeight: '1.4', marginBottom: '1.5rem',
-      }}>
-        <ShieldCheck size={20} style={{ flexShrink: 0 }} />
-        <span>This information has been sent directly from your GP practice.</span>
-      </div>
+      <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
 
       <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #005eb8', marginBottom: '1rem' }}>
         <h2 style={{ marginBottom: '0.4rem' }}>{selectedTemplate.label}</h2>

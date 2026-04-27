@@ -14,6 +14,7 @@ import PatientRouter from './pages/PatientRouter';
 import LegalPage from './pages/LegalPage';
 import { supabase } from './supabase';
 import { getSubdomain } from './subdomainUtils';
+import PatientGuidanceNotice from './components/PatientGuidanceNotice';
 
 declare const __APP_COMMIT_COUNT__: string;
 declare const __APP_COMMIT_HASH__: string;
@@ -109,9 +110,7 @@ const AppContent: React.FC = () => {
       <main id="main-content">
         <SubdomainRoutes />
         {showPatientGuidance && (
-          <div className="main-guidance-banner" role="note" aria-label="Guidance">
-            <p>For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser.</p>
-          </div>
+          <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
         )}
       </main>
 

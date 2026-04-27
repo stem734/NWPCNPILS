@@ -5,6 +5,7 @@ import { parseHealthCheckParams } from '../healthCheckParser';
 import { METRIC_ORDER, METRIC_DEFINITIONS, type ParsedMetric } from '../healthCheckData';
 import { PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
 import HealthCheckCard from '../components/HealthCheckCard';
+import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
@@ -324,15 +325,7 @@ const HealthCheckView: React.FC = () => {
       </div>
 
       {/* Privacy bar */}
-      <div className="data-indicator no-print" style={{
-        display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#005eb8',
-        fontSize: '0.88rem', backgroundColor: '#eef7ff', padding: '0.65rem 1rem',
-        borderRadius: '8px', border: '1px solid #005eb8', lineHeight: 1.4,
-        margin: '0 1rem 0.75rem',
-      }}>
-        <ShieldCheck size={18} style={{ flexShrink: 0 }} />
-        <span>Your results are shown here directly from your GP practice. No data is stored on our servers.</span>
-      </div>
+      <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
 
       {/* Triage summary */}
       <section className={`hc-triage hc-triage--${hasRedResults ? 'red' : severityCounts.amber > 0 ? 'amber' : 'ok'}`} aria-label="Results summary">
