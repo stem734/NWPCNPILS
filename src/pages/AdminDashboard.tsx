@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShieldAlert, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ShieldAlert, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, Edit2, ChevronDown, ChevronRight, FlaskConical } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
 import { useToast } from '../components/toastContext';
@@ -779,6 +779,33 @@ const AdminDashboard: React.FC = () => {
         <button className={`dashboard-tab${activeTab === 'audit' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('audit')}>
           User Audit
         </button>
+      </div>
+
+      <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
+        <div className="dashboard-panel-header">
+          <div>
+            <h2 className="dashboard-panel-title">Demo Access</h2>
+            <p className="dashboard-panel-subtitle">
+              Jump straight into the patient or clinician demo without leaving the admin area.
+            </p>
+          </div>
+        </div>
+        <div className="dashboard-inline-actions">
+          <button
+            onClick={() => navigate('/demo')}
+            className="action-button"
+            style={{ backgroundColor: '#005eb8' }}
+          >
+            <FlaskConical size={16} /> Clinician Demo
+          </button>
+          <button
+            onClick={() => navigate('/patient?demo=1')}
+            className="action-button"
+            style={{ backgroundColor: '#4c6272' }}
+          >
+            <ShieldAlert size={16} /> Patient Demo
+          </button>
+        </div>
       </div>
 
       {loadError && (
