@@ -8,7 +8,7 @@ import { getMedicationIcon } from '../medicationIcons';
 import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
 import { isIssuedDateStale } from '../dateHelpers';
-import InsetText from '../components/InsetText';
+import WarningCallout from '../components/WarningCallout';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -555,7 +555,7 @@ const ResourceView: React.FC = () => {
                   )}
 
                   {content.state !== 'placeholder' && content.sickDaysNeeded && (
-                    <InsetText>
+                    <WarningCallout title="Important: Sick day rules apply">
                       <p style={{ marginBottom: '0.75rem', color: '#212b32' }}>
                         If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
                         Click the resources below to learn about "Sick Day Rules".
@@ -563,7 +563,7 @@ const ResourceView: React.FC = () => {
                       <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
                         View Sick Day Guide <ExternalLink size={18} />
                       </a>
-                    </InsetText>
+                    </WarningCallout>
                   )}
 
                   {content.state !== 'placeholder' && (content.nhsLink || content.trendLinks.length > 0) && (

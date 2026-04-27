@@ -1,9 +1,10 @@
 import React from 'react';
-import { CircleHelp, ExternalLink, Eye, FlaskConical, ShieldAlert } from 'lucide-react';
+import { CircleHelp, ExternalLink, Eye, FlaskConical } from 'lucide-react';
 import type { MedContent } from '../medicationData';
 import { getMedicationIcon } from '../medicationIcons';
 import Modal from './Modal';
 import { NhsCross, NhsTick } from './NhsIcons';
+import WarningCallout from './WarningCallout';
 
 type MedicationPreviewModalProps = {
   med: MedContent;
@@ -96,13 +97,9 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
         ) : null}
 
         {med.sickDaysNeeded && (
-          <div className="medication-preview__alert" role="alert">
-            <div className="medication-preview__alert-row">
-              <ShieldAlert size={20} color="var(--nhs-red)" aria-hidden="true" />
-              <strong>Sick Day Rules Apply</strong>
-            </div>
+          <WarningCallout title="Important: Sick day rules apply">
             <p>If you become unwell and are unable to eat or drink normally, you may need to pause this medication.</p>
-          </div>
+          </WarningCallout>
         )}
 
         <div className="medication-preview__section">

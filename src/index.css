@@ -510,27 +510,6 @@ main {
   align-items: flex-start;
 }
 
-.medication-preview__alert {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #fde8e8;
-  border-radius: 8px;
-  border-left: 4px solid var(--nhs-red);
-}
-
-.medication-preview__alert-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.25rem;
-}
-
-.medication-preview__alert p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--nhs-text);
-}
-
 .medication-preview__links {
   display: flex;
   flex-direction: column;
@@ -1354,19 +1333,11 @@ p {
   display: block;
 }
 
-.footer__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.footer__links a,
 .footer__copyright a {
   color: var(--nhs-text);
   text-decoration: none;
 }
 
-.footer__links a:hover,
 .footer__copyright a:hover {
   text-decoration: underline;
 }
