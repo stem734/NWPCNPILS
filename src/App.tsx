@@ -18,6 +18,7 @@ import HeaderNav from './components/HeaderNav';
 
 declare const __APP_COMMIT_COUNT__: string;
 declare const __APP_COMMIT_HASH__: string;
+declare const __APP_BUILD_STAMP__: string;
 
 const ClinicianDemo: React.FC<{ show?: boolean }> = ({ show = true }) => {
   if (!show) return null;
@@ -74,6 +75,10 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
+  const buildLabel = new Date(__APP_BUILD_STAMP__).toLocaleString('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
   const versionLabel = `0.0.1+${__APP_COMMIT_COUNT__}`;
 
   // Detect implicit-flow Supabase auth recovery tokens in the URL hash
@@ -131,6 +136,7 @@ const AppContent: React.FC = () => {
             <p className="footer__version" title={`Commit ${__APP_COMMIT_HASH__}`}>
               <span className="footer__beta">Beta</span>
               <span>Version {versionLabel}</span>
+              <span className="footer__build-stamp">{buildLabel}</span>
             </p>
           </div>
         </div>

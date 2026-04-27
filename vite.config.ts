@@ -14,11 +14,13 @@ const getGitMetadata = () => {
 };
 
 const { commitCount, commitHash } = getGitMetadata();
+const buildStamp = new Date().toISOString();
 
 export default defineConfig({
   plugins: [react()],
   define: {
     __APP_COMMIT_COUNT__: JSON.stringify(commitCount),
     __APP_COMMIT_HASH__: JSON.stringify(commitHash),
+    __APP_BUILD_STAMP__: JSON.stringify(buildStamp),
   },
 });

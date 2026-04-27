@@ -371,6 +371,16 @@ const ResourceView: React.FC = () => {
     ? `Hi, ${orgName} has shared the information below about your medication.`
     : 'Hi, your practice has shared the information below about your medication.';
 
+  const guidanceOrganisationName = useMemo(() => {
+    if (resolvedContents.some((content) => content.state === 'custom') && orgName) {
+      return orgName;
+    }
+
+    return 'Nottingham West Primary Care Network';
+  }, [orgName, resolvedContents]);
+
+  const guidanceNoticeText = `This information has been prepared and checked by the clinical pharmacists at ${guidanceOrganisationName}.`;
+
   if ((isValidating || isResolvingContents) && orgName) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
@@ -607,7 +617,7 @@ const ResourceView: React.FC = () => {
       ))}
 
       {orgName && isAuthorised && contents.length > 0 && (
-        <div className="card" style={{ marginTop: '2rem', textAlign: 'center', padding: '2rem 1rem' }}>
+        <div className="card hc-rating" style={{ marginTop: '2rem', textAlign: 'center', padding: '2rem 1rem' }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#212b32' }}>Did you find this information useful?</h2>
           {hasRated ? (
             <div style={{ color: '#007f3b', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '1rem' }}>Thank you for your feedback!</div>
@@ -673,7 +683,9 @@ const ResourceView: React.FC = () => {
       )}
 
       {orgName && isAuthorised && contents.length > 0 && (
-        <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
+        <div className="hc-rating__notice">
+          <PatientGuidanceNotice text={guidanceNoticeText} />
+        </div>
       )}
 
     </div>

@@ -1395,6 +1395,10 @@ p {
   font-weight: 600;
 }
 
+.footer__build-stamp {
+  font-weight: 400;
+}
+
 .footer__beta {
   display: inline-flex;
   align-items: center;
@@ -3449,6 +3453,10 @@ p {
   font-size: 1.1rem;
   margin-bottom: 1rem;
   color: var(--nhs-text);
+}
+
+.hc-rating__notice {
+  margin-top: 1rem;
 }
 
 .hc-rating__thanks {
