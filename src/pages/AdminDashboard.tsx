@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShieldAlert, LogOut, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, FlaskConical, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ShieldAlert, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
 import { useToast } from '../components/toastContext';
@@ -630,11 +630,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate(resolvePath('/admin'));
-  };
-
   const addAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddAdminError('');
@@ -762,17 +757,6 @@ const AdminDashboard: React.FC = () => {
             <ShieldAlert size={22} color="#005eb8" /> Admin Dashboard
           </h1>
           <p>Manage practices, users, administrators, and patient-facing outputs from one place.</p>
-        </div>
-        <div className="dashboard-actions">
-          <button onClick={() => navigate(resolvePath('/admin/card-builder'))} className="action-button" style={{ backgroundColor: '#005eb8' }}>
-            <FlaskConical size={16} /> Card Builder
-          </button>
-          <button onClick={loadDashboardData} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-            <RefreshCw size={16} /> Refresh
-          </button>
-          <button onClick={handleSignOut} className="action-button" style={{ backgroundColor: '#d5281b' }}>
-            <LogOut size={16} /> Sign Out
-          </button>
         </div>
       </div>
 
