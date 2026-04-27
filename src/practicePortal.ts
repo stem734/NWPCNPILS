@@ -57,6 +57,7 @@ export type PracticeMedicationCardRow = {
   description?: string | null;
   badge?: 'NEW' | 'REAUTH' | 'GENERAL' | null;
   category?: string | null;
+  key_info_mode?: 'do' | 'dont' | null;
   key_info?: string[] | null;
   nhs_link?: string | null;
   trend_links?: Array<{ title: string; url: string }> | null;
@@ -106,6 +107,7 @@ export const coerceResolvedMedicationCard = (value: unknown): ResolvedMedication
       ? row.description
       : 'No drug information available at your practice for this particular medication.',
     category: typeof row.category === 'string' ? row.category : 'Medication Information',
+    keyInfoMode: row.key_info_mode === 'dont' ? 'dont' : 'do',
     keyInfo: toStringArray(row.keyInfo),
     nhsLink: typeof row.nhsLink === 'string' ? row.nhsLink : '',
     trendLinks: toTrendLinks(row.trendLinks),

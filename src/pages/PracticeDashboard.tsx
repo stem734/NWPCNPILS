@@ -70,6 +70,7 @@ type CustomCardDraft = {
   description: string;
   badge: 'NEW' | 'REAUTH' | 'GENERAL';
   category: string;
+  keyInfoMode: 'do' | 'dont';
   keyInfo: string[];
   nhsLink: string;
   trendLinks: Array<{ title: string; url: string }>;
@@ -580,6 +581,7 @@ const PracticeDashboard: React.FC = () => {
         description: practiceCard.description || medication.description,
         badge: practiceCard.badge || medication.badge,
         category: practiceCard.category || medication.category,
+        keyInfoMode: practiceCard.key_info_mode === 'dont' ? 'dont' : medication.keyInfoMode || 'do',
         keyInfo: Array.isArray(practiceCard.key_info) ? practiceCard.key_info : medication.keyInfo,
         nhsLink: typeof practiceCard.nhs_link === 'string' ? practiceCard.nhs_link : medication.nhsLink,
         trendLinks: Array.isArray(practiceCard.trend_links) ? practiceCard.trend_links : medication.trendLinks,
@@ -604,6 +606,7 @@ const PracticeDashboard: React.FC = () => {
       description: medication.description,
       badge: medication.badge,
       category: medication.category,
+      keyInfoMode: medication.keyInfoMode || 'do',
       keyInfo: medication.keyInfo,
       nhsLink: medication.nhsLink,
       trendLinks: medication.trendLinks,
@@ -624,6 +627,7 @@ const PracticeDashboard: React.FC = () => {
       description: preview.description,
       badge: preview.badge,
       category: preview.category,
+      keyInfoMode: preview.keyInfoMode || 'do',
       keyInfo: preview.keyInfo.length > 0 ? preview.keyInfo : [''],
       nhsLink: preview.nhsLink || '',
       trendLinks: preview.trendLinks.length > 0 ? preview.trendLinks : [{ ...EMPTY_TREND_LINK }],
@@ -898,16 +902,17 @@ const PracticeDashboard: React.FC = () => {
       confirmLabel: 'Save Practice Version',
       onConfirm: async () => {
         await invokeAndReload(async () => {
-          const { error: invokeError } = await supabase.functions.invoke('save-practice-medication-card', {
-            body: {
-              practiceId: selectedPracticeId,
-              code: draft.code,
-              title: draft.title,
-              description: draft.description,
-              badge: draft.badge,
-              category: draft.category,
-              keyInfo: draft.keyInfo,
-              nhsLink: draft.nhsLink,
+              const { error: invokeError } = await supabase.functions.invoke('save-practice-medication-card', {
+                body: {
+                  practiceId: selectedPracticeId,
+                  code: draft.code,
+                  title: draft.title,
+                  description: draft.description,
+                  badge: draft.badge,
+                  category: draft.category,
+                  keyInfoMode: draft.keyInfoMode,
+                  keyInfo: draft.keyInfo,
+                  nhsLink: draft.nhsLink,
               trendLinks: draft.trendLinks,
               sickDaysNeeded: draft.sickDaysNeeded,
               reviewMonths: draft.reviewMonths,
@@ -1363,6 +1368,10 @@ const PracticeDashboard: React.FC = () => {
               <div>
                 <div className="dashboard-panel-header" style={{ marginBottom: '0.5rem' }}>
                   <h3 className="dashboard-panel-title" style={{ fontSize: '1rem' }}>Key Information</h3>
+                  <div className="dashboard-segmented-control" aria-label="Key information mode">
+                    <button type="button" onClick={() => setDraft((current) => current ? { ...current, keyInfoMode: 'do' } : current)} className={`dashboard-segmented-control__item ${draft.keyInfoMode === 'do' ? 'dashboard-segmented-control__item--active' : ''}`}>Do</button>
+                    <button type="button" onClick={() => setDraft((current) => current ? { ...current, keyInfoMode: 'dont' } : current)} className={`dashboard-segmented-control__item ${draft.keyInfoMode === 'dont' ? 'dashboard-segmented-control__item--active' : ''}`}>Don't</button>
+                  </div>
                   <button onClick={addKeyInfo} className="dashboard-pill-button dashboard-pill-button--primary">
                     <Plus size={14} /> Add Point
                   </button>
@@ -1434,6 +1443,7 @@ const PracticeDashboard: React.FC = () => {
                     description: draft.description,
                     badge: draft.badge,
                     category: draft.category,
+                    key_info_mode: draft.keyInfoMode,
                     key_info: draft.keyInfo,
                     nhs_link: draft.nhsLink,
                     trend_links: draft.trendLinks,

@@ -292,6 +292,7 @@ const CardBuilder: React.FC = () => {
   const [description, setDescription] = useState('');
   const [badge, setBadge] = useState<'NEW' | 'REAUTH'>('NEW');
   const [category, setCategory] = useState('');
+  const [keyInfoMode, setKeyInfoMode] = useState<'do' | 'dont'>('do');
   const [keyInfo, setKeyInfo] = useState<string[]>(['']);
   const [nhsLink, setNhsLink] = useState('');
   const [trendLinks, setTrendLinks] = useState<TrendLink[]>([]);
@@ -457,6 +458,7 @@ const CardBuilder: React.FC = () => {
       description: description.trim(),
       badge,
       category: category.trim(),
+      keyInfoMode,
       keyInfo: keyInfo.filter((item) => item.trim()),
       nhsLink: nhsLink.trim(),
       trendLinks: trendLinks.filter((item) => item.title.trim() && item.url.trim()),
@@ -466,7 +468,7 @@ const CardBuilder: React.FC = () => {
       source: editingCode ? 'override' : 'custom',
       isBuiltIn: false,
     };
-  }, [badge, category, description, editingCode, hasContent, keyInfo, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
+  }, [badge, category, description, editingCode, hasContent, keyInfo, keyInfoMode, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
 
   const getFriendlyMedicationName = (medication: MedicationRecord) => {
     const [baseTitle] = medication.title.split(' - ');
@@ -480,6 +482,7 @@ const CardBuilder: React.FC = () => {
     setDescription(medication.description);
     setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
     setCategory(medication.category);
+    setKeyInfoMode(medication.keyInfoMode === 'dont' ? 'dont' : 'do');
     setKeyInfo(medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
@@ -506,6 +509,7 @@ const CardBuilder: React.FC = () => {
     setDescription(medication.description);
     setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
     setCategory(medication.category);
+    setKeyInfoMode(medication.keyInfoMode === 'dont' ? 'dont' : 'do');
     setKeyInfo(medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
@@ -1403,6 +1407,39 @@ const CardBuilder: React.FC = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Key Information Points</label>
+                <div style={{ display: 'inline-flex', border: '1px solid #d8dde0', borderRadius: '6px', overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    onClick={() => setKeyInfoMode('do')}
+                    style={{
+                      background: keyInfoMode === 'do' ? '#005eb8' : '#fff',
+                      color: keyInfoMode === 'do' ? '#fff' : '#4c6272',
+                      border: 'none',
+                      padding: '0.35rem 0.75rem',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Do
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setKeyInfoMode('dont')}
+                    style={{
+                      background: keyInfoMode === 'dont' ? '#005eb8' : '#fff',
+                      color: keyInfoMode === 'dont' ? '#fff' : '#4c6272',
+                      border: 'none',
+                      borderLeft: '1px solid #d8dde0',
+                      padding: '0.35rem 0.75rem',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Don&apos;t
+                  </button>
+                </div>
                 <button onClick={addKeyInfo} style={{ background: 'none', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.25rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <Plus size={14} /> Add Point
                 </button>

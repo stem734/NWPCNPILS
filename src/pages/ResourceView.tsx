@@ -89,6 +89,7 @@ const ResourceView: React.FC = () => {
     title: string;
     description: string;
     category: string;
+    keyInfoMode?: 'do' | 'dont';
     keyInfo: string[];
     nhsLink?: string;
     trendLinks: { title: string; url: string }[];
@@ -504,12 +505,16 @@ const ResourceView: React.FC = () => {
 
                   {content.state !== 'placeholder' && content.keyInfo.length > 0 && (
                     <div className="patient-info-section">
-                      <h2 className="patient-section-title patient-section-title--small">Key information</h2>
+                      <h2 className="patient-section-title patient-section-title--small">{content.keyInfoMode === 'dont' ? "Don't" : 'Do'}</h2>
                       <ul className="patient-info-list">
-                        {content.keyInfo.map((info, i) => (
+                        {[...(content.keyInfoMode === 'dont' ? [...content.keyInfo].reverse() : content.keyInfo)].map((info, i) => (
                           <li key={i} className="patient-info-item">
                             <div className="patient-info-icon">
-                              <Check size={22} color="#377c42" style={{ flexShrink: 0 }} aria-hidden="true" />
+                              {content.keyInfoMode === 'dont' ? (
+                                <span style={{ color: '#c43a2a', fontSize: '1.2rem', fontWeight: 700 }} aria-hidden="true">×</span>
+                              ) : (
+                                <Check size={22} color="#377c42" style={{ flexShrink: 0 }} aria-hidden="true" />
+                              )}
                             </div>
                             <span className="patient-info-text">{info}</span>
                           </li>

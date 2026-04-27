@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Eye, FlaskConical, Info, ShieldAlert } from 'lucide-react';
+import { Check, ExternalLink, Eye, FlaskConical, ShieldAlert, X } from 'lucide-react';
 import type { MedContent } from '../medicationData';
 import { getMedicationIcon } from '../medicationIcons';
 import Modal from './Modal';
@@ -53,11 +53,15 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
         <p className="medication-preview__description">{med.description}</p>
 
         <div className="medication-preview__section">
-          <h3>Key Information</h3>
+          <h3>{med.keyInfoMode === 'dont' ? "Don't" : 'Do'}</h3>
           <ul className="medication-preview__key-list">
-            {med.keyInfo.map((info, index) => (
+            {[...(med.keyInfoMode === 'dont' ? [...med.keyInfo].reverse() : med.keyInfo)].map((info, index) => (
               <li key={`${med.code}-info-${index}`} className="medication-preview__key-item">
-                <Info size={20} color="var(--nhs-blue)" aria-hidden="true" />
+                {med.keyInfoMode === 'dont' ? (
+                  <X size={20} color="var(--nhs-red)" aria-hidden="true" />
+                ) : (
+                  <Check size={20} color="#377c42" aria-hidden="true" />
+                )}
                 <span>{info}</span>
               </li>
             ))}

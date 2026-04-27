@@ -4,6 +4,7 @@ export interface MedContent {
   description: string;
   badge: 'NEW' | 'REAUTH' | 'GENERAL';
   category: string;
+  keyInfoMode?: 'do' | 'dont';
   reviewMonths?: number;
   contentReviewDate?: string;
   nhsLink?: string;
@@ -19,6 +20,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting a sulfonylurea medicine. Examples include gliclazide and glimepiride. This medicine helps your body make more insulin to lower your blood sugar.',
     badge: 'NEW',
     category: 'Sulfonylureas',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
     trendLinks: [
@@ -36,6 +38,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your sulfonylurea medicine has been reviewed and renewed for another year. Examples include gliclazide and glimepiride. It remains an important part of your blood sugar treatment.',
     badge: 'REAUTH',
     category: 'Sulfonylureas',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
     trendLinks: [
@@ -52,6 +55,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting an SGLT2 inhibitor medicine. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This medicine helps your body pass extra sugar in your urine.',
     badge: 'NEW',
     category: 'SGLT2 Inhibitors',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
     trendLinks: [
@@ -71,6 +75,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your SGLT2 inhibitor medicine has been reviewed and renewed. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This treatment can also help protect your heart and kidneys.',
     badge: 'REAUTH',
     category: 'SGLT2 Inhibitors',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-2-diabetes/medicine/',
     trendLinks: [
@@ -89,6 +94,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting an emollient and skin care treatment. Examples include Cetraben, Diprobase and E45. These products moisturise your skin and help soothe dryness and irritation.',
     badge: 'NEW',
     category: 'Dermatology',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/emollients/',
     trendLinks: [],
@@ -104,6 +110,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your emollient and skin care treatment has been reviewed and renewed. Examples include Cetraben, Diprobase and E45. Keep using it often to protect and soothe your skin.',
     badge: 'REAUTH',
     category: 'Dermatology',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/emollients/',
     trendLinks: [],
@@ -119,6 +126,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting insulin therapy. Examples include Levemir, Tresiba and Humulin. Insulin helps control your blood sugar and this guide will help you start treatment safely.',
     badge: 'NEW',
     category: 'Insulin',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
     trendLinks: [
@@ -138,6 +146,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your insulin therapy has been reviewed and renewed. Examples include Levemir, Tresiba and Humulin. Keep following your insulin plan and checking your blood sugar as advised.',
     badge: 'REAUTH',
     category: 'Insulin',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/conditions/type-1-diabetes/insulin/',
     trendLinks: [
@@ -157,6 +166,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'You are starting Mounjaro for type 2 diabetes. This medicine is also called tirzepatide. It helps improve blood sugar control and may also help with weight management.',
     badge: 'NEW',
     category: 'GLP-1 / GIP',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
     trendLinks: [
@@ -174,6 +184,7 @@ export const MEDICATIONS: MedContent[] = [
     description: 'Your Mounjaro treatment has been reviewed and renewed. This medicine is also called tirzepatide. Keep taking it as advised and watch for side effects or dose changes.',
     badge: 'REAUTH',
     category: 'GLP-1 / GIP',
+    keyInfoMode: 'do',
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/tirzepatide-mounjaro/',
     trendLinks: [

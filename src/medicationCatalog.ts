@@ -18,6 +18,7 @@ type MedicationDbRow = {
   description: string;
   badge: MedContent['badge'];
   category: string;
+  key_info_mode?: 'do' | 'dont';
   key_info?: string[];
   nhs_link?: string;
   trend_links?: { title: string; url: string }[];
@@ -67,6 +68,7 @@ export const mergeMedicationCatalog = (overrides: MedicationOverride[]): Medicat
       description: override.description,
       badge: override.badge,
       category: override.category,
+      keyInfoMode: override.keyInfoMode,
       keyInfo: Array.isArray(override.keyInfo) ? override.keyInfo : base?.keyInfo ?? [],
       reviewMonths:
         typeof override.reviewMonths === 'number' && override.reviewMonths > 0
@@ -101,6 +103,7 @@ export const loadMedicationCatalog = async (): Promise<MedicationRecord[]> => {
     description: row.description,
     badge: row.badge,
     category: row.category,
+    keyInfoMode: row.key_info_mode,
     keyInfo: row.key_info,
     nhsLink: row.nhs_link,
     trendLinks: row.trend_links,
