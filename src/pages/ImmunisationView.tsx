@@ -97,13 +97,13 @@ const ImmunisationView: React.FC = () => {
       <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
 
       {selectedVaccines.map((template) => (
-        <div key={template.id} className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #005eb8', marginBottom: '1rem' }}>
-          <h2 style={{ marginBottom: '0.4rem' }}>{template.label}</h2>
-          <p style={{ color: '#1d2a33', marginBottom: '0.65rem' }}>{template.headline}</p>
-          <p style={{ color: '#4c6272', marginBottom: '1rem' }}>{template.explanation}</p>
+        <div key={template.id} className="card patient-section-card">
+          <h2 className="patient-section-title">{template.label}</h2>
+          <p className="patient-section-copy">{template.headline}</p>
+          <p className="patient-section-copy">{template.explanation}</p>
 
           <div className="patient-info-section">
-            <h3 style={{ marginBottom: '0.5rem' }}>Aftercare and guidance</h3>
+            <h3 className="patient-section-title patient-section-title--small">Aftercare and guidance</h3>
             <ul className="patient-info-list">
               {template.guidance.map((item, index) => (
                 <li key={index} className="patient-info-item">
@@ -114,11 +114,11 @@ const ImmunisationView: React.FC = () => {
             </ul>
           </div>
 
-          <div className="patient-resources">
+          <div className="patient-resources patient-section-divider">
             <h3 className="patient-resources-heading">NHS and local support links</h3>
-            <div className="patient-resource-list">
+            <div className="patient-resource-list patient-resource-list--compact">
               {template.nhsLinks.map((link) => (
-                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
                   <div className="patient-resource-meta">
                     <div className="patient-resource-chip">NHS</div>
                     <span className="patient-resource-meta-text">National guidance</span>
@@ -129,7 +129,7 @@ const ImmunisationView: React.FC = () => {
                 </a>
               ))}
               {(localPhone || localEmail || localWebsite) && (
-                <div className="patient-resource-link" style={{ cursor: 'default' }}>
+                <div className="patient-resource-link patient-resource-link--compact" style={{ cursor: 'default' }}>
                   <div className="patient-resource-meta">
                     <div className="patient-resource-chip" style={{ background: '#007f3b' }}>LOCAL</div>
                     <span className="patient-resource-meta-text">{localSupportName}</span>

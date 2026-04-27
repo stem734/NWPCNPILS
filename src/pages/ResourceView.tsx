@@ -500,11 +500,11 @@ const ResourceView: React.FC = () => {
                   </div>
 
                   <h1 className="patient-medication-title">{content.title}</h1>
-                  <p>{content.description}</p>
+                  <p className="patient-section-copy">{content.description}</p>
 
                   {content.state !== 'placeholder' && content.keyInfo.length > 0 && (
                     <div className="patient-info-section">
-                      <h2>Key Information</h2>
+                      <h2 className="patient-section-title patient-section-title--small">Key Information</h2>
                       <ul className="patient-info-list">
                         {content.keyInfo.map((info, i) => (
                           <li key={i} className="patient-info-item">
@@ -535,13 +535,13 @@ const ResourceView: React.FC = () => {
                   )}
 
                   {content.state !== 'placeholder' && (content.nhsLink || content.trendLinks.length > 0) && (
-                    <div className="patient-resources">
+                    <div className="patient-resources patient-section-divider">
                       <h2 className="patient-resources-heading">
                         Trusted Resources for {content.title.split('-')[0].trim()}
                       </h2>
-                      <div className="patient-resource-list">
+                      <div className="patient-resource-list patient-resource-list--compact">
                         {content.nhsLink && (
-                          <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                          <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
                             <div className="patient-resource-meta">
                               <div className="patient-resource-chip">NHS</div>
                               <span className="patient-resource-meta-text">Official Guidance</span>
@@ -553,7 +553,7 @@ const ResourceView: React.FC = () => {
                         )}
 
                         {content.trendLinks.map((link, i) => (
-                          <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+                          <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
                             <div className="patient-resource-meta patient-resource-meta--trend">
                               <FlaskConical size={24} color="#007f3b" />
                               <span className="patient-resource-meta-text">Trend Diabetes</span>

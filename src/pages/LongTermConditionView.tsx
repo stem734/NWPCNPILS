@@ -76,10 +76,10 @@ const LongTermConditionView: React.FC = () => {
 
       <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
 
-      <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #005eb8', marginBottom: '1rem' }}>
-        <h2 style={{ marginBottom: '0.4rem' }}>{selectedTemplate.label}</h2>
-        <p style={{ color: '#1d2a33', marginBottom: '0.65rem' }}>{selectedTemplate.headline}</p>
-        <p style={{ color: '#4c6272', marginBottom: '1rem' }}>{selectedTemplate.explanation}</p>
+      <div className="card patient-section-card">
+        <h2 className="patient-section-title">{selectedTemplate.label}</h2>
+        <p className="patient-section-copy">{selectedTemplate.headline}</p>
+        <p className="patient-section-copy">{selectedTemplate.explanation}</p>
 
         {selectedTemplate.importantMessage && (
           <div style={{
@@ -113,7 +113,7 @@ const LongTermConditionView: React.FC = () => {
 
       {selectedTemplate.zones && selectedTemplate.zones.length > 0 && (
         <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #4c6272', marginBottom: '1rem' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Asthma action plan zones</h3>
+          <h3 className="patient-section-title patient-section-title--small" style={{ marginTop: 0, marginBottom: '0.75rem' }}>Asthma action plan zones</h3>
           <div style={{ display: 'grid', gap: '0.85rem' }}>
             {selectedTemplate.zones.map((zone) => {
               const tone = zone.color === 'green'
@@ -170,11 +170,11 @@ const LongTermConditionView: React.FC = () => {
         </div>
       )}
 
-      <div className="patient-resources" style={{ marginTop: 0 }}>
+      <div className="patient-resources patient-section-divider" style={{ marginTop: 0 }}>
         <h2 className="patient-resources-heading">Trusted resources</h2>
-        <div className="patient-resource-list">
+        <div className="patient-resource-list patient-resource-list--compact">
           {selectedTemplate.nhsLinks.map((link) => (
-            <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link">
+            <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
               <div className="patient-resource-meta">
                 <div className="patient-resource-chip">NHS</div>
                 <span className="patient-resource-meta-text">National guidance</span>

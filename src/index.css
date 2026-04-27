@@ -787,6 +787,53 @@ p {
   flex: 0 0 auto;
 }
 
+.patient-content-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.patient-section-card {
+  padding: 1.5rem;
+  border-left: 4px solid #005eb8;
+  margin-bottom: 0;
+}
+
+.patient-section-card--muted {
+  border-left-color: #4c6272;
+}
+
+.patient-section-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: var(--nhs-text);
+}
+
+.patient-section-title--small {
+  font-size: 1.05rem;
+}
+
+.patient-section-copy {
+  color: #4c6272;
+  margin: 0 0 1rem;
+  line-height: 1.55;
+}
+
+.patient-section-divider {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--nhs-border);
+}
+
+.patient-resource-list--compact {
+  gap: 0.65rem;
+}
+
+.patient-resource-link--compact {
+  padding: 0.9rem 2.75rem 0.9rem 0.95rem;
+  background: #fff;
+}
+
 .patient-demo-banner {
   margin-bottom: 1rem;
   padding: 1rem 1.25rem;
