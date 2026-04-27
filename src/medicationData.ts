@@ -5,6 +5,8 @@ export interface MedContent {
   badge: 'NEW' | 'REAUTH' | 'GENERAL';
   category: string;
   keyInfoMode?: 'do' | 'dont';
+  doKeyInfo?: string[];
+  dontKeyInfo?: string[];
   reviewMonths?: number;
   contentReviewDate?: string;
   nhsLink?: string;
@@ -21,6 +23,11 @@ export const MEDICATIONS: MedContent[] = [
     badge: 'NEW',
     category: 'Sulfonylureas',
     keyInfoMode: 'do',
+    doKeyInfo: [
+      'Take this medication with a meal.',
+      'Be aware of "hypos" (low blood sugar).',
+      'Always carry glucose or a sugary snack.'
+    ],
     reviewMonths: 12,
     nhsLink: 'https://www.nhs.uk/medicines/gliclazide/',
     trendLinks: [

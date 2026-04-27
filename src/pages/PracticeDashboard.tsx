@@ -7,9 +7,7 @@ import {
   Edit2,
   Eye,
   FlaskConical,
-  LogOut,
   Plus,
-  RefreshCw,
   Save,
   Star,
   Trash2,
@@ -931,11 +929,6 @@ const PracticeDashboard: React.FC = () => {
     });
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate(resolvePath('/practice'));
-  };
-
   if (loadingPortal || loadingMedications) {
     return (
       <div style={{ maxWidth: '820px', margin: '2rem auto' }}>
@@ -953,9 +946,6 @@ const PracticeDashboard: React.FC = () => {
         <div className="card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
           <h1 style={{ fontSize: '1.25rem', color: '#d5281b' }}>Practice Access Error</h1>
           <p>{error || 'No practice is linked to this account. Contact your administrator.'}</p>
-          <button onClick={handleSignOut} className="action-button" style={{ backgroundColor: '#d5281b' }}>
-            <LogOut size={16} /> Sign Out
-          </button>
         </div>
       </div>
     );
@@ -993,14 +983,6 @@ const PracticeDashboard: React.FC = () => {
             <FlaskConical size={28} color="#005eb8" /> {selectedPractice.name}
           </h1>
           <p>Review the medication library, accept global templates, and maintain practice-owned card versions for this practice.</p>
-        </div>
-        <div className="dashboard-actions">
-          <button onClick={() => { void loadPracticeCards(selectedPracticeId); void loadPracticeTemplates(selectedPracticeId); }} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-            <RefreshCw size={16} /> Refresh
-          </button>
-          <button onClick={handleSignOut} className="action-button" style={{ backgroundColor: '#d5281b' }}>
-            <LogOut size={16} /> Sign Out
-          </button>
         </div>
       </div>
 

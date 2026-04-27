@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, Check, ExternalLink, FlaskConical, Info, Printer, Star } from 'lucide-react';
+import { AlertCircle, ExternalLink, FlaskConical, Info, Printer, Star } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from '../protocolService';
 import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from '../practiceFeatures';
 import { useMedicationCatalog } from '../medicationCatalog';
@@ -9,6 +9,7 @@ import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
 import { isIssuedDateStale } from '../dateHelpers';
 import InsetText from '../components/InsetText';
+import { NhsCross, NhsTick } from '../components/NhsIcons';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const VALIDATION_CACHE_VERSION = 'v2';
@@ -511,9 +512,9 @@ const ResourceView: React.FC = () => {
                           <li key={i} className="patient-info-item">
                             <div className="patient-info-icon">
                               {content.keyInfoMode === 'dont' ? (
-                                <span style={{ color: '#c43a2a', fontSize: '1.2rem', fontWeight: 700 }} aria-hidden="true">×</span>
+                                <NhsCross size={22} aria-hidden="true" />
                               ) : (
-                                <Check size={22} color="#377c42" style={{ flexShrink: 0 }} aria-hidden="true" />
+                                <NhsTick size={22} aria-hidden="true" />
                               )}
                             </div>
                             <span className="patient-info-text">{info}</span>

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Check, ExternalLink, Eye, FlaskConical, ShieldAlert, X } from 'lucide-react';
+import { ExternalLink, Eye, FlaskConical, ShieldAlert } from 'lucide-react';
 import type { MedContent } from '../medicationData';
 import { getMedicationIcon } from '../medicationIcons';
 import Modal from './Modal';
+import { NhsCross, NhsTick } from './NhsIcons';
 
 type MedicationPreviewModalProps = {
   med: MedContent;
@@ -58,9 +59,9 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
             {[...(med.keyInfoMode === 'dont' ? [...med.keyInfo].reverse() : med.keyInfo)].map((info, index) => (
               <li key={`${med.code}-info-${index}`} className="medication-preview__key-item">
                 {med.keyInfoMode === 'dont' ? (
-                  <X size={20} color="var(--nhs-red)" aria-hidden="true" />
+                  <NhsCross size={20} aria-hidden="true" />
                 ) : (
-                  <Check size={20} color="#377c42" aria-hidden="true" />
+                  <NhsTick size={20} aria-hidden="true" />
                 )}
                 <span>{info}</span>
               </li>

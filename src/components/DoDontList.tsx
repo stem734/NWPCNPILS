@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, X } from 'lucide-react';
+import { NhsCross, NhsTick } from './NhsIcons';
 
 type DoDontListProps = {
   title: string;
@@ -22,7 +22,7 @@ const DoDontList: React.FC<DoDontListProps> = ({ title, doItems = [], dontItems 
           <ul className="do-dont-list__items">
             {doItems.map((item, index) => (
               <li key={index} className="do-dont-list__item">
-                <Check size={34} className="do-dont-list__icon do-dont-list__icon--do" aria-hidden="true" />
+                <NhsTick size={34} className="do-dont-list__icon do-dont-list__icon--do" aria-hidden="true" />
                 <span>{item}</span>
               </li>
             ))}
@@ -36,7 +36,7 @@ const DoDontList: React.FC<DoDontListProps> = ({ title, doItems = [], dontItems 
           <ul className="do-dont-list__items">
             {dontItems.map((item, index) => (
               <li key={index} className="do-dont-list__item">
-                <X size={34} className="do-dont-list__icon do-dont-list__icon--dont" aria-hidden="true" />
+                <NhsCross size={34} className="do-dont-list__icon do-dont-list__icon--dont" aria-hidden="true" />
                 <span>{item}</span>
               </li>
             ))}
