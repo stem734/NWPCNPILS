@@ -92,6 +92,7 @@ const ResourceView: React.FC = () => {
     category: string;
     doKeyInfo?: string[];
     dontKeyInfo?: string[];
+    generalKeyInfo?: string[];
     keyInfo: string[];
     nhsLink?: string;
     trendLinks: { title: string; url: string }[];
@@ -504,6 +505,22 @@ const ResourceView: React.FC = () => {
 
                   <h2 className="patient-medication-title">{content.title}</h2>
                   <p className="patient-section-copy">{content.description}</p>
+
+                  {content.state !== 'placeholder' && content.generalKeyInfo && content.generalKeyInfo.length > 0 && (
+                    <div className="patient-info-section">
+                      <h2 className="patient-section-title patient-section-title--small">General advice</h2>
+                      <ul className="patient-info-list">
+                        {content.generalKeyInfo.map((info, i) => (
+                          <li key={`general-${i}`} className="patient-info-item">
+                            <div className="patient-info-icon">
+                              <span style={{ color: '#005eb8', fontSize: '1rem', fontWeight: 700 }} aria-hidden="true">i</span>
+                            </div>
+                            <span className="patient-info-text">{info}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {(content.state !== 'placeholder' && ((content.doKeyInfo && content.doKeyInfo.length > 0) || content.keyInfo.length > 0)) && (
                     <div className="patient-info-section">

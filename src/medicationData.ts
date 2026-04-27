@@ -7,6 +7,7 @@ export interface MedContent {
   keyInfoMode?: 'do' | 'dont';
   doKeyInfo?: string[];
   dontKeyInfo?: string[];
+  generalKeyInfo?: string[];
   reviewMonths?: number;
   contentReviewDate?: string;
   nhsLink?: string;

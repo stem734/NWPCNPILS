@@ -294,6 +294,7 @@ const CardBuilder: React.FC = () => {
   const [category, setCategory] = useState('');
   const [doKeyInfo, setDoKeyInfo] = useState<string[]>(['']);
   const [dontKeyInfo, setDontKeyInfo] = useState<string[]>(['']);
+  const [generalKeyInfo, setGeneralKeyInfo] = useState<string[]>(['']);
   const [nhsLink, setNhsLink] = useState('');
   const [trendLinks, setTrendLinks] = useState<TrendLink[]>([]);
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
@@ -461,6 +462,7 @@ const CardBuilder: React.FC = () => {
       keyInfoMode: doKeyInfo.filter((item) => item.trim()).length > 0 ? 'do' : 'dont',
       doKeyInfo: doKeyInfo.filter((item) => item.trim()),
       dontKeyInfo: dontKeyInfo.filter((item) => item.trim()),
+      generalKeyInfo: generalKeyInfo.filter((item) => item.trim()),
       keyInfo: [...doKeyInfo, ...dontKeyInfo].filter((item) => item.trim()),
       nhsLink: nhsLink.trim(),
       trendLinks: trendLinks.filter((item) => item.title.trim() && item.url.trim()),
@@ -470,7 +472,7 @@ const CardBuilder: React.FC = () => {
       source: editingCode ? 'override' : 'custom',
       isBuiltIn: false,
     };
-  }, [badge, category, description, editingCode, hasContent, doKeyInfo, dontKeyInfo, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
+  }, [badge, category, description, editingCode, hasContent, doKeyInfo, dontKeyInfo, generalKeyInfo, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
 
   const getFriendlyMedicationName = (medication: MedicationRecord) => {
     const [baseTitle] = medication.title.split(' - ');
@@ -486,6 +488,7 @@ const CardBuilder: React.FC = () => {
     setCategory(medication.category);
     setDoKeyInfo(medication.doKeyInfo?.length ? medication.doKeyInfo : medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
     setDontKeyInfo(medication.dontKeyInfo?.length ? medication.dontKeyInfo : ['']);
+    setGeneralKeyInfo(medication.generalKeyInfo?.length ? medication.generalKeyInfo : ['']);
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
@@ -513,6 +516,7 @@ const CardBuilder: React.FC = () => {
     setCategory(medication.category);
     setDoKeyInfo(medication.doKeyInfo?.length ? medication.doKeyInfo : medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
     setDontKeyInfo(medication.dontKeyInfo?.length ? medication.dontKeyInfo : ['']);
+    setGeneralKeyInfo(medication.generalKeyInfo?.length ? medication.generalKeyInfo : ['']);
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks);
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
@@ -923,6 +927,7 @@ const CardBuilder: React.FC = () => {
         setCategory((c.category as string) || '');
         setDoKeyInfo((c.doKeyInfo as string[]) || (c.keyInfo as string[]) || ['']);
         setDontKeyInfo((c.dontKeyInfo as string[]) || ['']);
+        setGeneralKeyInfo((c.generalKeyInfo as string[]) || ['']);
         setNhsLink((c.nhsLink as string) || '');
         setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
         setReviewMonths((c.reviewMonths as number) || 12);
@@ -971,6 +976,7 @@ const CardBuilder: React.FC = () => {
           keyInfo: [...doKeyInfo, ...dontKeyInfo].filter(k => k.trim()),
           doKeyInfo: doKeyInfo.filter(k => k.trim()),
           dontKeyInfo: dontKeyInfo.filter(k => k.trim()),
+          generalKeyInfo: generalKeyInfo.filter(k => k.trim()),
           nhsLink: nhsLink.trim(),
           trendLinks: trendLinks.filter(l => l.title.trim() && l.url.trim()),
           sickDaysNeeded,
@@ -1035,10 +1041,18 @@ const CardBuilder: React.FC = () => {
     setDontKeyInfo(updated);
   };
 
+  const updateGeneralKeyInfo = (index: number, value: string) => {
+    const updated = [...generalKeyInfo];
+    updated[index] = value;
+    setGeneralKeyInfo(updated);
+  };
+
   const addDoKeyInfo = () => setDoKeyInfo([...doKeyInfo, '']);
   const addDontKeyInfo = () => setDontKeyInfo([...dontKeyInfo, '']);
+  const addGeneralKeyInfo = () => setGeneralKeyInfo([...generalKeyInfo, '']);
   const removeDoKeyInfo = (index: number) => setDoKeyInfo(doKeyInfo.filter((_, i) => i !== index).length ? doKeyInfo.filter((_, i) => i !== index) : ['']);
   const removeDontKeyInfo = (index: number) => setDontKeyInfo(dontKeyInfo.filter((_, i) => i !== index).length ? dontKeyInfo.filter((_, i) => i !== index) : ['']);
+  const removeGeneralKeyInfo = (index: number) => setGeneralKeyInfo(generalKeyInfo.filter((_, i) => i !== index).length ? generalKeyInfo.filter((_, i) => i !== index) : ['']);
 
   const updateTrendLink = (index: number, field: 'title' | 'url', value: string) => {
     const updated = [...trendLinks];
@@ -1058,6 +1072,7 @@ const CardBuilder: React.FC = () => {
     setCategory('');
     setDoKeyInfo(['']);
     setDontKeyInfo(['']);
+    setGeneralKeyInfo(['']);
     setNhsLink('');
     setTrendLinks([]);
     setSickDaysNeeded(false);
@@ -1421,6 +1436,7 @@ const CardBuilder: React.FC = () => {
             {/* Key Information */}
             <div style={{ display: 'grid', gap: '1rem' }}>
               {[
+                { label: 'General advice', values: generalKeyInfo, add: addGeneralKeyInfo, update: updateGeneralKeyInfo, remove: removeGeneralKeyInfo },
                 { label: 'Do', values: doKeyInfo, add: addDoKeyInfo, update: updateDoKeyInfo, remove: removeDoKeyInfo },
                 { label: "Don't", values: dontKeyInfo, add: addDontKeyInfo, update: updateDontKeyInfo, remove: removeDontKeyInfo },
               ].map((section) => (
