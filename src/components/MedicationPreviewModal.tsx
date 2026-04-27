@@ -53,21 +53,33 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
         </h2>
         <p className="medication-preview__description">{med.description}</p>
 
-        <div className="medication-preview__section">
-          <h3>{med.keyInfoMode === 'dont' ? "Don't" : 'Do'}</h3>
-          <ul className="medication-preview__key-list">
-            {[...(med.keyInfoMode === 'dont' ? [...med.keyInfo].reverse() : med.keyInfo)].map((info, index) => (
-              <li key={`${med.code}-info-${index}`} className="medication-preview__key-item">
-                {med.keyInfoMode === 'dont' ? (
-                  <NhsCross size={20} aria-hidden="true" />
-                ) : (
+        {(med.doKeyInfo?.length || med.keyInfo.length > 0) && (
+          <div className="medication-preview__section">
+            <h3>Do</h3>
+            <ul className="medication-preview__key-list">
+              {(med.doKeyInfo?.length ? med.doKeyInfo : med.keyInfo).map((info, index) => (
+                <li key={`${med.code}-do-${index}`} className="medication-preview__key-item">
                   <NhsTick size={20} aria-hidden="true" />
-                )}
-                <span>{info}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+                  <span>{info}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {med.dontKeyInfo?.length ? (
+          <div className="medication-preview__section">
+            <h3>Don't</h3>
+            <ul className="medication-preview__key-list">
+              {med.dontKeyInfo.map((info, index) => (
+                <li key={`${med.code}-dont-${index}`} className="medication-preview__key-item">
+                  <NhsCross size={20} aria-hidden="true" />
+                  <span>{info}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {med.sickDaysNeeded && (
           <div className="medication-preview__alert" role="alert">

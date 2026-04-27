@@ -90,7 +90,8 @@ const ResourceView: React.FC = () => {
     title: string;
     description: string;
     category: string;
-    keyInfoMode?: 'do' | 'dont';
+    doKeyInfo?: string[];
+    dontKeyInfo?: string[];
     keyInfo: string[];
     nhsLink?: string;
     trendLinks: { title: string; url: string }[];
@@ -504,18 +505,30 @@ const ResourceView: React.FC = () => {
                   <h2 className="patient-medication-title">{content.title}</h2>
                   <p className="patient-section-copy">{content.description}</p>
 
-                  {content.state !== 'placeholder' && content.keyInfo.length > 0 && (
+                  {(content.state !== 'placeholder' && ((content.doKeyInfo && content.doKeyInfo.length > 0) || content.keyInfo.length > 0)) && (
                     <div className="patient-info-section">
-                      <h2 className="patient-section-title patient-section-title--small">{content.keyInfoMode === 'dont' ? "Don't" : 'Do'}</h2>
+                      <h2 className="patient-section-title patient-section-title--small">Do</h2>
                       <ul className="patient-info-list">
-                        {[...(content.keyInfoMode === 'dont' ? [...content.keyInfo].reverse() : content.keyInfo)].map((info, i) => (
-                          <li key={i} className="patient-info-item">
+                        {(content.doKeyInfo?.length ? content.doKeyInfo : content.keyInfo).map((info, i) => (
+                          <li key={`do-${i}`} className="patient-info-item">
                             <div className="patient-info-icon">
-                              {content.keyInfoMode === 'dont' ? (
-                                <NhsCross size={22} aria-hidden="true" />
-                              ) : (
-                                <NhsTick size={22} aria-hidden="true" />
-                              )}
+                              <NhsTick size={22} aria-hidden="true" />
+                            </div>
+                            <span className="patient-info-text">{info}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {content.state !== 'placeholder' && content.dontKeyInfo && content.dontKeyInfo.length > 0 && (
+                    <div className="patient-info-section">
+                      <h2 className="patient-section-title patient-section-title--small">Don't</h2>
+                      <ul className="patient-info-list">
+                        {content.dontKeyInfo.map((info, i) => (
+                          <li key={`dont-${i}`} className="patient-info-item">
+                            <div className="patient-info-icon">
+                              <NhsCross size={22} aria-hidden="true" />
                             </div>
                             <span className="patient-info-text">{info}</span>
                           </li>
