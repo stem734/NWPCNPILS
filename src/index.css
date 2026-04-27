@@ -450,7 +450,8 @@ main {
 }
 
 .medication-preview__callout--grey {
-  background: #f0f4f5;
+  background: #f0f9f0;
+  border-left-color: var(--nhs-green);
 }
 
 .medication-preview__callout-title {
@@ -460,7 +461,7 @@ main {
 }
 
 .medication-preview__callout-title--dark {
-  color: var(--nhs-text);
+  color: var(--nhs-green);
 }
 
 .medication-preview__callout-body {
