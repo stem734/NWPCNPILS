@@ -978,11 +978,12 @@ const PracticeDashboard: React.FC = () => {
       )}
 
       <div className="dashboard-header">
-        <div className="dashboard-header-copy">
-          <h1>
-            <FlaskConical size={28} color="#005eb8" /> {selectedPractice.name}
-          </h1>
-          <p>Review the medication library, accept global templates, and maintain practice-owned card versions for this practice.</p>
+        <div className="dashboard-org-header">
+          <img className="dashboard-org-header__logo" src="/nhs-wordmark-blue.jpg" alt="NHS" />
+          <div className="dashboard-org-header__text">
+            <h1>{selectedPractice.name}</h1>
+            <p>Medication cards and shared patient information for this practice.</p>
+          </div>
         </div>
       </div>
 
