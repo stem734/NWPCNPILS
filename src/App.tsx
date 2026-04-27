@@ -107,12 +107,12 @@ const AppContent: React.FC = () => {
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
       <main id="main-content">
+        <SubdomainRoutes />
         {showPatientGuidance && (
           <div className="main-guidance-banner" role="note" aria-label="Guidance">
-            <p>This information is for guidance only. Always follow the specific advice from your GP or clinical team.</p>
+            <p>For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser.</p>
           </div>
         )}
-        <SubdomainRoutes />
       </main>
 
       <footer className="footer">

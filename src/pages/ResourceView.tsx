@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, ExternalLink, FlaskConical, Info, Printer, ShieldAlert, ShieldCheck, Star } from 'lucide-react';
+import { AlertCircle, ExternalLink, FlaskConical, Info, Printer, ShieldAlert, Star } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from '../protocolService';
 import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from '../practiceFeatures';
 import { useMedicationCatalog } from '../medicationCatalog';
@@ -638,10 +638,6 @@ const ResourceView: React.FC = () => {
         </div>
       )}
 
-      <div className="data-indicator no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#005eb8', fontSize: '0.9rem', backgroundColor: '#eef7ff', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #005eb8', lineHeight: '1.4', marginTop: '2rem' }}>
-        <ShieldCheck size={20} style={{ flexShrink: 0 }} />
-        <span>This information has been sent to you directly from your GP practice. All information is stored on this device only. If you clear your browser this information will be removed.</span>
-      </div>
     </div>
   );
 };
