@@ -79,7 +79,7 @@ const AppContent: React.FC = () => {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
-  const versionLabel = `0.0.1+${__APP_COMMIT_COUNT__}`;
+  const gitRefLabel = __APP_COMMIT_HASH__;
 
   // Detect implicit-flow Supabase auth recovery tokens in the URL hash
   // and redirect to /reset-password. The PKCE ?code= flow is NOT handled
@@ -114,7 +114,7 @@ const AppContent: React.FC = () => {
       <header className="site-header">
         <div className="site-header__inner">
           <a className="site-header__logo-link" href="/" aria-label="MyMedInfo home">
-            <img className="site-header__logo" src="/nhs-wordmark-blue.jpg" alt="NHS" />
+            <img className="site-header__logo" src="/MyMedInfo.jpeg" alt="MyMedInfo" />
             <span className="site-header__service">MyMedInfo</span>
           </a>
           <HeaderNav />
@@ -127,15 +127,13 @@ const AppContent: React.FC = () => {
       <footer className="footer">
         <span className="footer__border" aria-hidden="true" />
         <div className="footer__container">
-          <img className="footer__logo" src="/nhs-wordmark-blue.jpg" alt="NHS" />
-          <div className="footer__divider" aria-hidden="true" />
           <div className="footer__meta">
             <p className="footer__copyright">
               © {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo
             </p>
             <p className="footer__version" title={`Commit ${__APP_COMMIT_HASH__}`}>
               <span className="footer__beta">Beta</span>
-              <span>Version {versionLabel}</span>
+              <span>GitHub ref {gitRefLabel}</span>
               <span className="footer__build-stamp">{buildLabel}</span>
             </p>
           </div>

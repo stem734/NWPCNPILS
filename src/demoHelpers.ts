@@ -1,3 +1,4 @@
+import { HEALTH_CHECK_CODE_VALUES } from './healthCheckCodes';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS } from './healthCheckVariantConfig';
 import { MEDICATIONS } from './medicationData';
 import {
@@ -16,6 +17,52 @@ export type DemoSample = {
 };
 
 const DEMO_PRACTICE_NAME = 'Demo GP Practice';
+
+const pickOne = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
+
+const randomDecimal = (min: number, max: number, digits = 1) =>
+  (Math.random() * (max - min) + min).toFixed(digits);
+
+const buildRandomHealthCheckParams = () => {
+  const bpCode = pickOne(HEALTH_CHECK_CODE_VALUES.bp);
+  const bmiCode = pickOne(HEALTH_CHECK_CODE_VALUES.bmi);
+  const cvdCode = pickOne(HEALTH_CHECK_CODE_VALUES.cvd);
+  const cholCode = pickOne(HEALTH_CHECK_CODE_VALUES.chol);
+  const hba1cCode = pickOne(HEALTH_CHECK_CODE_VALUES.hba1c);
+  const actCode = pickOne(HEALTH_CHECK_CODE_VALUES.act);
+  const alcCode = pickOne(HEALTH_CHECK_CODE_VALUES.alc);
+  const smkCode = pickOne(HEALTH_CHECK_CODE_VALUES.smk);
+
+  const bpValue = bpCode === 'BPNORMAL' ? '124/78' : '156/96';
+  const bmiValue = bmiCode === 'BMINORMAL' ? randomDecimal(21.2, 24.4) : bmiCode === 'BMI1' ? randomDecimal(25.1, 29.8) : bmiCode === 'BMI2' ? randomDecimal(30.1, 39.2) : randomDecimal(40.1, 46.5);
+  const cvdValue = cvdCode === 'QRISKLOW' ? randomDecimal(4.2, 9.4) : randomDecimal(10.1, 24.8);
+  const hba1cValue = hba1cCode === 'HBA1CNORMAL' ? randomDecimal(34, 41, 0) : hba1cCode === 'HBA1CNDH1' ? randomDecimal(42, 47, 0) : randomDecimal(48, 76, 0);
+  const alcValue = alcCode === 'ALCRISKTEETOTAL' ? 'Teetotal' : alcCode === 'ALCRISKOK' ? '8' : alcCode === 'ALCRISKATRISK' ? '24' : '16';
+  const smkValue = smkCode === 'SMOKNONSMOK' ? 'No' : smkCode === 'SMOKSTOPPED' ? 'Stopped' : 'Yes';
+  const actValue = actCode === 'GPPAQACTIVE' ? 'Active' : actCode === 'GPPAQINACTIVE' ? 'Inactive' : actCode === 'GPPAQUNABLE' ? 'Unable' : 'Moderately active';
+  const cholValue = cholCode === 'CHOLNORMAL' ? '4.6' : '5.8';
+  const hdlValue = cholCode === 'CHOLNORMAL' ? '1.3' : '1.0';
+  const ldlValue = cholCode === 'CHOLNORMAL' ? '2.7' : '3.7';
+
+  return new URLSearchParams({
+    type: 'healthcheck',
+    demo: '1',
+    hc: [
+      `bp:${bpValue}:${bpCode}`,
+      `bmi:${bmiValue}:${bmiCode}`,
+      `cvd:${cvdValue}:${cvdCode}`,
+      `ldl:${ldlValue}:${cholCode}`,
+      `hba1c:${hba1cValue}:${hba1cCode}`,
+      `act:${actValue}:${actCode}`,
+      `alc:${alcValue}:${alcCode}`,
+      `smk:${smkValue}:${smkCode}`,
+    ].join(','),
+    hdl: hdlValue,
+    ldl: ldlValue,
+    totchol: cholValue,
+    cholrv: cholCode,
+  });
+};
 
 export const DEMO_SAMPLES: DemoSample[] = [
   ...MEDICATIONS.map((medication) => ({
@@ -37,8 +84,6 @@ export const DEMO_SAMPLES: DemoSample[] = [
     practiceName: DEMO_PRACTICE_NAME,
     params: {
       type: 'healthcheck',
-      previewOnly: '1',
-      previewDomain: domainId,
     },
   })),
   ...Object.values(SCREENING_TEMPLATES).map((template) => ({
@@ -87,6 +132,13 @@ export const buildDemoPatientUrl = (sample: DemoSample) => {
     demo: '1',
     ...sample.params,
   });
+
+  if (sample.category === 'Health check') {
+    const healthCheckParams = buildRandomHealthCheckParams();
+    healthCheckParams.forEach((value, key) => {
+      params.set(key, value);
+    });
+  }
 
   return `/patient?${params.toString()}`;
 };
