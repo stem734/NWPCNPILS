@@ -14,7 +14,6 @@ import PatientRouter from './pages/PatientRouter';
 import LegalPage from './pages/LegalPage';
 import { supabase } from './supabase';
 import { getSubdomain } from './subdomainUtils';
-import PatientGuidanceNotice from './components/PatientGuidanceNotice';
 import HeaderNav from './components/HeaderNav';
 
 declare const __APP_COMMIT_COUNT__: string;
@@ -75,7 +74,6 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
-  const showPatientGuidance = location.pathname === '/patient';
   const versionLabel = `0.0.1+${__APP_COMMIT_COUNT__}`;
 
   // Detect implicit-flow Supabase auth recovery tokens in the URL hash
@@ -119,9 +117,6 @@ const AppContent: React.FC = () => {
       </header>
       <main id="main-content">
         <SubdomainRoutes />
-        {showPatientGuidance && (
-          <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
-        )}
       </main>
 
       <footer className="footer">

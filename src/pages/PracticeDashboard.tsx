@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
@@ -249,14 +249,17 @@ const PracticeDashboard: React.FC = () => {
   const [disclaimerRequest, setDisclaimerRequest] = useState<DisclaimerRequest | null>(null);
   const { medications: allMedications, loading: loadingMedications } = useMedicationCatalog();
   const navigate = useNavigate();
+  const isMountedRef = useRef(true);
 
   const loadMemberships = useCallback(async () => {
+    if (!isMountedRef.current) return;
     setLoadingPortal(true);
     setError('');
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        if (!isMountedRef.current) return;
         navigate(resolvePath('/practice'));
         return;
       }
@@ -302,12 +305,14 @@ const PracticeDashboard: React.FC = () => {
         });
 
       if (mappedMemberships.length === 0) {
+        if (!isMountedRef.current) return;
         setMemberships([]);
         setSelectedPracticeId('');
         setError('No practice is linked to this account. Contact your administrator.');
         return;
       }
 
+      if (!isMountedRef.current) return;
       setMemberships(mappedMemberships);
 
       const savedPracticeId = safeSessionStorageGet(PRACTICE_SELECTION_STORAGE_KEY) || '';
@@ -316,16 +321,20 @@ const PracticeDashboard: React.FC = () => {
         mappedMemberships.find((membership) => membership.is_default)?.practice_id ||
         mappedMemberships[0].practice_id;
 
+      if (!isMountedRef.current) return;
       setSelectedPracticeId(defaultPracticeId);
     } catch (err) {
       console.error('Error loading practice memberships:', err);
+      if (!isMountedRef.current) return;
       setError('Unable to load your practice access. Please try again.');
     } finally {
+      if (!isMountedRef.current) return;
       setLoadingPortal(false);
     }
   }, [navigate]);
 
   const loadPracticeCards = useCallback(async (practiceId: string) => {
+    if (!isMountedRef.current) return;
     setLoadingCards(true);
     setError('');
 
@@ -343,11 +352,14 @@ const PracticeDashboard: React.FC = () => {
         (data || []).map((row: { code: string } & PracticeMedicationCardRow) => [row.code, row as PracticeMedicationCardRow]),
       );
 
+      if (!isMountedRef.current) return;
       setPracticeCards(nextCards);
     } catch (err) {
       console.error('Error loading practice cards:', err);
+      if (!isMountedRef.current) return;
       setError('Unable to load medication cards for this practice.');
     } finally {
+      if (!isMountedRef.current) return;
       setLoadingCards(false);
     }
   }, []);
@@ -402,7 +414,10 @@ const PracticeDashboard: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMountedRef.current = false;
+      subscription.unsubscribe();
+    };
   }, [loadMemberships, navigate]);
 
   useEffect(() => {

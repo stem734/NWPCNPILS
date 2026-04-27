@@ -9,6 +9,7 @@ import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
 import { isIssuedDateStale } from '../dateHelpers';
 import WarningCallout from '../components/WarningCallout';
+import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -669,6 +670,10 @@ const ResourceView: React.FC = () => {
             </p>
           )}
         </div>
+      )}
+
+      {orgName && isAuthorised && contents.length > 0 && (
+        <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
       )}
 
     </div>
