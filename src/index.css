@@ -679,6 +679,12 @@ p {
   margin-bottom: 1rem;
 }
 
+.patient-page-shell {
+  max-width: 68rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .patient-view h1.patient-medication-title {
   font-size: 1.25rem;
   margin-bottom: 0.35rem;
@@ -842,6 +848,39 @@ p {
   border-radius: 8px;
 }
 
+.hc-page {
+  max-width: 68rem;
+  box-shadow: none;
+  background: transparent;
+}
+
+.hc-group {
+  border-radius: 8px;
+  box-shadow: none;
+  background: #fff;
+  border: 1px solid #d8dde0;
+}
+
+.hc-group--red,
+.hc-group--amber,
+.hc-group--ok {
+  background: #fff;
+  box-shadow: none;
+}
+
+.hc-topbar {
+  border-bottom-color: #d8dde0;
+}
+
+.hc-hero {
+  padding-bottom: 0.9rem;
+}
+
+.hc-triage {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
 .patient-demo-banner {
   margin-bottom: 1rem;
   padding: 1rem 1.25rem;
@@ -901,6 +940,10 @@ p {
   height: 100%;
   display: flex;
   flex-direction: column;
+  padding: 1.25rem;
+  border-radius: 8px;
+  box-shadow: none;
+  border-color: #d8dde0;
 }
 
 .patient-group-heading {
@@ -931,7 +974,7 @@ p {
   align-items: center;
   gap: 0.6rem;
   flex-wrap: wrap;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .patient-code-chip {
@@ -946,9 +989,11 @@ p {
 }
 
 .patient-medication-title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  display: block;
+  font-size: 1.1rem;
+  line-height: 1.25;
+  margin: 0 0 0.35rem;
+  color: var(--nhs-text);
 }
 
 .patient-info-section {
@@ -1097,6 +1142,26 @@ p {
 .resource-card h3 {
   color: var(--nhs-blue);
   margin-bottom: 0.5rem;
+}
+
+.patient-empty-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.sick-days-callout {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #f5b7b1;
+  border-left: 4px solid var(--nhs-red);
+  background: #fff1f0;
+  border-radius: 8px;
+}
+
+.sick-days-header h2 {
+  font-size: 1rem;
+  margin: 0;
 }
 
 .badge {

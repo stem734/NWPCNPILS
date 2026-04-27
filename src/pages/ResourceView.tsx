@@ -455,7 +455,7 @@ const ResourceView: React.FC = () => {
   }
 
   return (
-    <div className="animation-container patient-view">
+    <div className="animation-container patient-view patient-page-shell">
       {isDemoMode && (
         <div className="patient-demo-banner no-print" role="note" aria-live="polite">
           {getDemoNoticeText()}
@@ -498,7 +498,7 @@ const ResourceView: React.FC = () => {
                     </span>
                   </div>
 
-                  <h1 className="patient-medication-title">{content.title}</h1>
+                  <h2 className="patient-medication-title">{content.title}</h2>
                   <p className="patient-section-copy">{content.description}</p>
 
                   {content.state !== 'placeholder' && content.keyInfo.length > 0 && (
@@ -521,7 +521,7 @@ const ResourceView: React.FC = () => {
                     <div className="sick-days-callout">
                       <div className="sick-days-header">
                         <ShieldAlert size={28} color="#d5281b" />
-                        <h2 style={{ margin: 0, color: '#212b32' }}>Sick Day Rules Apply</h2>
+                        <h3>Sick Day Rules Apply</h3>
                       </div>
                       <p style={{ marginBottom: '1rem', color: '#212b32' }}>
                         If you become unwell and are unable to eat or drink normally, you may need to pause this medication.

@@ -308,7 +308,7 @@ const HealthCheckView: React.FC = () => {
 
   // ─── Results view ────────────────────────────────────────────────────────────
   return (
-    <div className="hc-page hc-page--mobile">
+    <div className="hc-page hc-page--mobile patient-page-shell">
       {/* Top bar */}
       <div className="hc-topbar">
         <Activity size={20} color="#005eb8" />
