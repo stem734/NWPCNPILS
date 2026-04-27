@@ -489,7 +489,7 @@ const ResourceView: React.FC = () => {
 
       {groupedContents.map(([badge, items]) => (
         <section key={badge} className="patient-section">
-          <div className="patient-group-heading">
+          <div className={`patient-group-heading patient-group-heading--${badge.toLowerCase()}`}>
             <div className="patient-group-eyebrow">{GROUP_COPY[badge].title}</div>
             <p className="patient-group-copy">{GROUP_COPY[badge].description}</p>
           </div>

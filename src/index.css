@@ -1072,6 +1072,21 @@ p {
   border: 1px solid #c8def6;
 }
 
+.patient-group-heading--new {
+  background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
+  border-color: #c8def6;
+}
+
+.patient-group-heading--reauth {
+  background: linear-gradient(135deg, #f0f9f0 0%, #ecf8ef 100%);
+  border-color: #bfe4c9;
+}
+
+.patient-group-heading--general {
+  background: linear-gradient(135deg, #f7f8fa 0%, #eef1f4 100%);
+  border-color: #d8dde0;
+}
+
 .patient-group-eyebrow {
   font-size: 0.8rem;
   font-weight: 800;
@@ -1079,6 +1094,14 @@ p {
   text-transform: uppercase;
   color: #005eb8;
   margin-bottom: 0.2rem;
+}
+
+.patient-group-heading--reauth .patient-group-eyebrow {
+  color: #007f3b;
+}
+
+.patient-group-heading--general .patient-group-eyebrow {
+  color: #4c6272;
 }
 
 .patient-group-copy {
