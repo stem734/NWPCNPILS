@@ -52,6 +52,11 @@ const GROUP_COPY: Record<'NEW' | 'REAUTH' | 'GENERAL', { title: string; descript
   },
 };
 
+const stripTreatmentSuffix = (title: string) =>
+  title
+    .replace(/\s*-\s*Starting Treatment$/i, '')
+    .replace(/\s*-\s*Annual Review$/i, '');
+
 const sortMedicationGroups = <
   T extends {
     id: string;
@@ -514,7 +519,7 @@ const ResourceView: React.FC = () => {
                     </span>
                   </div>
 
-                  <h2 className="patient-medication-title">{content.title}</h2>
+                  <h2 className="patient-medication-title">{stripTreatmentSuffix(content.title)}</h2>
                   <p className="patient-section-copy">{content.description}</p>
 
                   {content.state !== 'placeholder' && content.generalKeyInfo && content.generalKeyInfo.length > 0 && (

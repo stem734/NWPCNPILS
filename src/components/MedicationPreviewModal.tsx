@@ -12,6 +12,11 @@ type MedicationPreviewModalProps = {
 };
 
 const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, onClose }) => {
+  const displayTitle = med.title
+    .replace(/\s*-\s*Starting Treatment$/i, '')
+    .replace(/\s*-\s*Annual Review$/i, '');
+  const calloutTitle = med.badge === 'NEW' ? `Start ${displayTitle}` : med.badge === 'REAUTH' ? `Review ${displayTitle}` : 'Medication information';
+
   return (
     <Modal
       isOpen
@@ -32,25 +37,25 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
 
         {med.badge === 'NEW' && (
           <div className="medication-preview__callout medication-preview__callout--blue">
-            <div className="medication-preview__callout-title">Beginning Your Treatment</div>
+            <div className="medication-preview__callout-title">{calloutTitle}</div>
             <p className="medication-preview__callout-body">
-              You are starting a new course of treatment. This information will help you understand your medication and how to take it safely.
+              You are starting this medication. This information will help you understand your treatment and how to take it safely.
             </p>
           </div>
         )}
 
         {med.badge === 'REAUTH' && (
           <div className="medication-preview__callout medication-preview__callout--grey">
-            <div className="medication-preview__callout-title medication-preview__callout-title--dark">Annual Treatment Reminder</div>
+            <div className="medication-preview__callout-title medication-preview__callout-title--dark">{calloutTitle}</div>
             <p className="medication-preview__callout-body medication-preview__callout-body--muted">
-              As you have been taking this medication for 12 months or more, we are sending this as a routine review reminder of safe management.
+              As you have been taking this medication for 12 months or more, this is a routine review reminder of safe management.
             </p>
           </div>
         )}
 
         <h2 className="medication-preview__title">
           <span className="medication-preview__title-icon" aria-hidden="true">{getMedicationIcon(med.code)}</span>
-          {med.title}
+          {displayTitle}
         </h2>
         <p className="medication-preview__description">{med.description}</p>
 
