@@ -15,6 +15,7 @@ import LegalPage from './pages/LegalPage';
 import { supabase } from './supabase';
 import { getSubdomain } from './subdomainUtils';
 import PatientGuidanceNotice from './components/PatientGuidanceNotice';
+import HeaderNav from './components/HeaderNav';
 
 declare const __APP_COMMIT_COUNT__: string;
 declare const __APP_COMMIT_HASH__: string;
@@ -107,6 +108,15 @@ const AppContent: React.FC = () => {
   return (
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
+      <header className="site-header">
+        <div className="site-header__inner">
+          <a className="site-header__logo-link" href="/" aria-label="MyMedInfo home">
+            <img className="site-header__logo" src="/nhs-wordmark-blue.jpg" alt="NHS" />
+            <span className="site-header__service">MyMedInfo</span>
+          </a>
+          <HeaderNav />
+        </div>
+      </header>
       <main id="main-content">
         <SubdomainRoutes />
         {showPatientGuidance && (

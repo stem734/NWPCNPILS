@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, ExternalLink, FlaskConical, Info, Printer, Star } from 'lucide-react';
+import { AlertCircle, Check, ExternalLink, FlaskConical, Info, Printer, Star } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from '../protocolService';
 import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from '../practiceFeatures';
 import { useMedicationCatalog } from '../medicationCatalog';
@@ -504,12 +504,12 @@ const ResourceView: React.FC = () => {
 
                   {content.state !== 'placeholder' && content.keyInfo.length > 0 && (
                     <div className="patient-info-section">
-                      <h2 className="patient-section-title patient-section-title--small">Key Information</h2>
+                      <h2 className="patient-section-title patient-section-title--small">Key information</h2>
                       <ul className="patient-info-list">
                         {content.keyInfo.map((info, i) => (
                           <li key={i} className="patient-info-item">
                             <div className="patient-info-icon">
-                              <Info size={22} color="#005eb8" style={{ flexShrink: 0 }} aria-hidden="true" />
+                              <Check size={22} color="#377c42" style={{ flexShrink: 0 }} aria-hidden="true" />
                             </div>
                             <span className="patient-info-text">{info}</span>
                           </li>
