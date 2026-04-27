@@ -5,7 +5,6 @@ import { SCREENING_TEMPLATES, type ScreeningTemplate } from '../patientTemplateC
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
-import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 
 /**
  * ScreeningView — renders screening invitation / result info.
@@ -84,8 +83,6 @@ const ScreeningView: React.FC = () => {
           you information about {selectedTemplate.label.toLowerCase()}.
         </p>
       </div>
-
-      <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
 
       <div className="card patient-section-card">
         <h2 className="patient-section-title">{selectedTemplate.label}</h2>

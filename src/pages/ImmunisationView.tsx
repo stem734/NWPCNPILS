@@ -5,7 +5,6 @@ import { IMMUNISATION_TEMPLATES, type ImmunisationTemplate } from '../patientTem
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
-import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -93,8 +92,6 @@ const ImmunisationView: React.FC = () => {
           you information about your immunisation{selectedVaccines.length !== 1 ? 's' : ''}.
         </p>
       </div>
-
-      <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
 
       {selectedVaccines.map((template) => (
         <div key={template.id} className="card patient-section-card">

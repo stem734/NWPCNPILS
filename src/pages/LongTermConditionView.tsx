@@ -5,7 +5,6 @@ import { LONG_TERM_CONDITION_TEMPLATES, type LongTermConditionTemplate } from '.
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
-import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -73,8 +72,6 @@ const LongTermConditionView: React.FC = () => {
           Hi, {org ? `${org} has` : 'your practice has'} sent you information about {selectedTemplate.label.toLowerCase()}.
         </p>
       </div>
-
-      <PatientGuidanceNotice text="For guidance only. Follow the specific advice from your GP or clinical team. This information is stored on this device and will be removed if you clear your browser." />
 
       <div className="card patient-section-card">
         <h2 className="patient-section-title">{selectedTemplate.label}</h2>
