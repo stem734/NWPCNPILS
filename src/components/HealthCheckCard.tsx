@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, Check, AlertTriangle, ExternalLink, Globe, Heart, Mail, Phone, X } from 'lucide-react';
+import WarningCallout from './WarningCallout';
+import InsetText from './InsetText';
 
 interface HealthCheckCardLink {
   title: string;
@@ -214,8 +216,10 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
 
           {resolvedExpanded ? (
             <div className={`hc-card__results-message hc-card__results-message--${metric.badgeClass} hc-card__results-message--header`}>
-              <strong>What does this result mean?</strong>
-              <div className="hc-card__results-message-body">{renderLinkedText(resultsMessage || metric.pathway || '')}</div>
+              <InsetText>
+                <strong className="hc-card__results-message-title">What does this result mean?</strong>
+                <div className="hc-card__results-message-body">{renderLinkedText(resultsMessage || metric.pathway || '')}</div>
+              </InsetText>
             </div>
           ) : null}
         </div>
@@ -433,8 +437,10 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
           {metric.oneLiner ? <div className="hc-card__one-liner">{renderLinkedText(metric.oneLiner)}</div> : null}
 
           {importantText ? (
-            <div className="hc-card__important-message" role="alert">
-              <strong>Important:</strong> {renderLinkedText(importantText)}
+            <div className="hc-card__important-wrap">
+              <WarningCallout title="Important">
+                {renderLinkedText(importantText)}
+              </WarningCallout>
             </div>
           ) : null}
 
