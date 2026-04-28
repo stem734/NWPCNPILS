@@ -20,6 +20,9 @@ type MedicationDbRow = {
   category: string;
   key_info_mode?: 'do' | 'dont';
   key_info?: string[];
+  do_key_info?: string[];
+  dont_key_info?: string[];
+  general_key_info?: string[];
   nhs_link?: string;
   trend_links?: { title: string; url: string }[];
   sick_days_needed?: boolean;
@@ -70,6 +73,9 @@ export const mergeMedicationCatalog = (overrides: MedicationOverride[]): Medicat
       category: override.category,
       keyInfoMode: override.keyInfoMode,
       keyInfo: Array.isArray(override.keyInfo) ? override.keyInfo : base?.keyInfo ?? [],
+      doKeyInfo: Array.isArray(override.doKeyInfo) ? override.doKeyInfo : base?.doKeyInfo ?? [],
+      dontKeyInfo: Array.isArray(override.dontKeyInfo) ? override.dontKeyInfo : base?.dontKeyInfo ?? [],
+      generalKeyInfo: Array.isArray(override.generalKeyInfo) ? override.generalKeyInfo : base?.generalKeyInfo ?? [],
       reviewMonths:
         typeof override.reviewMonths === 'number' && override.reviewMonths > 0
           ? override.reviewMonths
@@ -105,6 +111,9 @@ export const loadMedicationCatalog = async (): Promise<MedicationRecord[]> => {
     category: row.category,
     keyInfoMode: row.key_info_mode,
     keyInfo: row.key_info,
+    doKeyInfo: row.do_key_info,
+    dontKeyInfo: row.dont_key_info,
+    generalKeyInfo: row.general_key_info,
     nhsLink: row.nhs_link,
     trendLinks: row.trend_links,
     sickDaysNeeded: row.sick_days_needed,

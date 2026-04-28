@@ -59,6 +59,9 @@ export type PracticeMedicationCardRow = {
   category?: string | null;
   key_info_mode?: 'do' | 'dont' | null;
   key_info?: string[] | null;
+  do_key_info?: string[] | null;
+  dont_key_info?: string[] | null;
+  general_key_info?: string[] | null;
   nhs_link?: string | null;
   trend_links?: Array<{ title: string; url: string }> | null;
   sick_days_needed?: boolean | null;
@@ -109,6 +112,9 @@ export const coerceResolvedMedicationCard = (value: unknown): ResolvedMedication
     category: typeof row.category === 'string' ? row.category : 'Medication Information',
     keyInfoMode: row.key_info_mode === 'dont' ? 'dont' : 'do',
     keyInfo: toStringArray(row.keyInfo),
+    doKeyInfo: toStringArray(row.do_key_info),
+    dontKeyInfo: toStringArray(row.dont_key_info),
+    generalKeyInfo: toStringArray(row.general_key_info),
     nhsLink: typeof row.nhsLink === 'string' ? row.nhsLink : '',
     trendLinks: toTrendLinks(row.trendLinks),
     sickDaysNeeded: Boolean(row.sickDaysNeeded),

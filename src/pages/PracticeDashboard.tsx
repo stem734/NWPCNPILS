@@ -305,15 +305,17 @@ const PracticeDashboard: React.FC = () => {
         });
 
       if (mappedMemberships.length === 0) {
-        if (!isMountedRef.current) return;
-        setMemberships([]);
-        setSelectedPracticeId('');
-        setError('No practice is linked to this account. Contact your administrator.');
+        if (isMountedRef.current) {
+          setMemberships([]);
+          setSelectedPracticeId('');
+          setError('No practice is linked to this account. Contact your administrator.');
+        }
         return;
       }
 
-      if (!isMountedRef.current) return;
-      setMemberships(mappedMemberships);
+      if (isMountedRef.current) {
+        setMemberships(mappedMemberships);
+      }
 
       const savedPracticeId = safeSessionStorageGet(PRACTICE_SELECTION_STORAGE_KEY) || '';
       const defaultPracticeId =
@@ -321,15 +323,18 @@ const PracticeDashboard: React.FC = () => {
         mappedMemberships.find((membership) => membership.is_default)?.practice_id ||
         mappedMemberships[0].practice_id;
 
-      if (!isMountedRef.current) return;
-      setSelectedPracticeId(defaultPracticeId);
+      if (isMountedRef.current) {
+        setSelectedPracticeId(defaultPracticeId);
+      }
     } catch (err) {
       console.error('Error loading practice memberships:', err);
-      if (!isMountedRef.current) return;
-      setError('Unable to load your practice access. Please try again.');
+      if (isMountedRef.current) {
+        setError('Unable to load your practice access. Please try again.');
+      }
     } finally {
-      if (!isMountedRef.current) return;
-      setLoadingPortal(false);
+      if (isMountedRef.current) {
+        setLoadingPortal(false);
+      }
     }
   }, [navigate]);
 
@@ -352,15 +357,18 @@ const PracticeDashboard: React.FC = () => {
         (data || []).map((row: { code: string } & PracticeMedicationCardRow) => [row.code, row as PracticeMedicationCardRow]),
       );
 
-      if (!isMountedRef.current) return;
-      setPracticeCards(nextCards);
+      if (isMountedRef.current) {
+        setPracticeCards(nextCards);
+      }
     } catch (err) {
       console.error('Error loading practice cards:', err);
-      if (!isMountedRef.current) return;
-      setError('Unable to load medication cards for this practice.');
+      if (isMountedRef.current) {
+        setError('Unable to load medication cards for this practice.');
+      }
     } finally {
-      if (!isMountedRef.current) return;
-      setLoadingCards(false);
+      if (isMountedRef.current) {
+        setLoadingCards(false);
+      }
     }
   }, []);
 

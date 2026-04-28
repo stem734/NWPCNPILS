@@ -16,7 +16,6 @@ import { supabase } from './supabase';
 import { getSubdomain } from './subdomainUtils';
 import HeaderNav from './components/HeaderNav';
 
-declare const __APP_COMMIT_COUNT__: string;
 declare const __APP_COMMIT_HASH__: string;
 declare const __APP_BUILD_STAMP__: string;
 
