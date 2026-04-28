@@ -16,6 +16,8 @@ export type DemoSample = {
   params: Record<string, string>;
 };
 
+export type DemoType = 'medication' | 'healthcheck' | 'screening' | 'immunisation' | 'ltc';
+
 const DEMO_PRACTICE_NAME = 'Demo GP Practice';
 
 const pickOne = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
@@ -126,6 +128,19 @@ export const getRandomDemoSample = (): DemoSample => {
   return DEMO_SAMPLES[index];
 };
 
+export const getRandomDemoSampleForType = (type: DemoType): DemoSample => {
+  const filtered = DEMO_SAMPLES.filter((sample) => {
+    if (type === 'medication') return sample.category === 'Medication';
+    if (type === 'healthcheck') return sample.category === 'Health check';
+    if (type === 'screening') return sample.category === 'Screening';
+    if (type === 'immunisation') return sample.category === 'Immunisation';
+    return sample.category === 'Long term condition';
+  });
+
+  const index = Math.floor(Math.random() * filtered.length);
+  return filtered[index] ?? DEMO_SAMPLES[0];
+};
+
 export const buildDemoPatientUrl = (sample: DemoSample) => {
   const params = new URLSearchParams({
     org: sample.practiceName,
@@ -142,6 +157,9 @@ export const buildDemoPatientUrl = (sample: DemoSample) => {
 
   return `/patient?${params.toString()}`;
 };
+
+export const buildDemoPatientUrlForType = (type: DemoType) =>
+  buildDemoPatientUrl(getRandomDemoSampleForType(type));
 
 export const getDemoNoticeText = () =>
   'This is dummy information only and should not be used for clinical decisions.';

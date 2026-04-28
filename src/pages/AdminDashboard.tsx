@@ -20,6 +20,7 @@ import {
   type LocalResourceDraft,
   type LocalResourceLink,
 } from '../localResourceLibrary';
+import { buildDemoPatientUrlForType } from '../demoHelpers';
 
 interface Practice {
   id: string;
@@ -786,24 +787,45 @@ const AdminDashboard: React.FC = () => {
           <div>
             <h2 className="dashboard-panel-title">Demo Access</h2>
             <p className="dashboard-panel-subtitle">
-              Jump straight into the patient or clinician demo without leaving the admin area.
+              Open a realistic patient sample for each content type.
             </p>
           </div>
         </div>
-        <div className="dashboard-inline-actions">
+        <div className="dashboard-inline-actions dashboard-inline-actions--wrap">
           <button
-            onClick={() => navigate('/demo')}
+            onClick={() => navigate(buildDemoPatientUrlForType('medication'))}
             className="action-button"
             style={{ backgroundColor: '#005eb8' }}
           >
-            <FlaskConical size={16} /> Clinician Demo
+            <FlaskConical size={16} /> Medication
           </button>
           <button
-            onClick={() => navigate('/patient?demo=1')}
+            onClick={() => navigate(buildDemoPatientUrlForType('healthcheck'))}
             className="action-button"
             style={{ backgroundColor: '#4c6272' }}
           >
-            <ShieldAlert size={16} /> Patient Demo
+            <ShieldAlert size={16} /> Health Check
+          </button>
+          <button
+            onClick={() => navigate(buildDemoPatientUrlForType('screening'))}
+            className="action-button"
+            style={{ backgroundColor: '#007f3b' }}
+          >
+            <FlaskConical size={16} /> Screening
+          </button>
+          <button
+            onClick={() => navigate(buildDemoPatientUrlForType('immunisation'))}
+            className="action-button"
+            style={{ backgroundColor: '#7a3db8' }}
+          >
+            <ShieldAlert size={16} /> Immunisation
+          </button>
+          <button
+            onClick={() => navigate(buildDemoPatientUrlForType('ltc'))}
+            className="action-button"
+            style={{ backgroundColor: '#212b32' }}
+          >
+            <FlaskConical size={16} /> Long Term Condition
           </button>
         </div>
       </div>
