@@ -145,6 +145,7 @@ export const buildDemoPatientUrl = (sample: DemoSample) => {
   const params = new URLSearchParams({
     org: sample.practiceName,
     demo: '1',
+    exactDemo: '1',
     ...sample.params,
   });
 

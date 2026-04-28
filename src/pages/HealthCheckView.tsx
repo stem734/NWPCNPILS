@@ -128,8 +128,8 @@ const HealthCheckView: React.FC = () => {
     [metrics],
   );
   const effectiveTemplateOverrides = useMemo(
-    () => (isDemoMode || templateIds.length === 0 ? {} : templateOverrides),
-    [isDemoMode, templateIds, templateOverrides],
+    () => (templateIds.length === 0 ? {} : templateOverrides),
+    [templateIds, templateOverrides],
   );
   const previewTemplateOverrides = useMemo<Record<string, HealthCheckTemplatePayload>>(() => {
     if (!previewOnly || !previewDomain || !previewToken || typeof window === 'undefined') {
@@ -151,7 +151,7 @@ const HealthCheckView: React.FC = () => {
   );
 
   useEffect(() => {
-    if (isDemoMode || templateIds.length === 0) {
+    if (templateIds.length === 0) {
       return;
     }
     const loadOverrides = async () => {

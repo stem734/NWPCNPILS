@@ -80,6 +80,7 @@ const ResourceView: React.FC = () => {
   const codesParam = searchParams.get('codes');
   const dateParam = searchParams.get('date');
   const isDemoMode = searchParams.get('demo') === '1';
+  const isExactDemo = searchParams.get('exactDemo') === '1';
 
   const isOutOfDate = useMemo(() => isIssuedDateStale(dateParam, 6), [dateParam]);
 
@@ -477,7 +478,7 @@ const ResourceView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view patient-page-shell">
-      {isDemoMode && (
+      {isDemoMode && !isExactDemo && (
         <div className="patient-demo-banner no-print" role="note" aria-live="polite">
           {getDemoNoticeText()}
         </div>
@@ -503,7 +504,7 @@ const ResourceView: React.FC = () => {
       </div>
 
       {groupedContents.map(([badge, items]) => (
-        <section key={badge} className="patient-section">
+        <section key={badge} className={`patient-section patient-section--${badge.toLowerCase()}`}>
           <div className={`patient-group-heading patient-group-heading--${badge.toLowerCase()}`}>
             <div className="patient-group-eyebrow">{GROUP_COPY[badge].title}</div>
             <p className="patient-group-copy">{GROUP_COPY[badge].description}</p>
