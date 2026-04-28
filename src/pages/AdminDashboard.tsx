@@ -114,11 +114,11 @@ const PRACTICE_FUNCTIONS: Array<{
   { key: 'ltc_enabled', label: 'Long term conditions', isEnabled: (practice) => practice.ltc_enabled === true },
 ];
 
-type AdminTab = 'practices' | 'practiceUsers' | 'admins' | 'library' | 'setup' | 'audit';
+type AdminTab = 'practices' | 'practiceUsers' | 'admins' | 'library' | 'setup' | 'audit' | 'demo';
 
 const parseAdminTabFromSearch = (search: string): AdminTab | null => {
   const value = new URLSearchParams(search).get('tab');
-  return value === 'practices' || value === 'practiceUsers' || value === 'admins' || value === 'library' || value === 'setup' || value === 'audit'
+  return value === 'practices' || value === 'practiceUsers' || value === 'admins' || value === 'library' || value === 'setup' || value === 'audit' || value === 'demo'
     ? value
     : null;
 };
@@ -780,54 +780,9 @@ const AdminDashboard: React.FC = () => {
         <button className={`dashboard-tab${activeTab === 'audit' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('audit')}>
           User Audit
         </button>
-      </div>
-
-      <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
-        <div className="dashboard-panel-header">
-          <div>
-            <h2 className="dashboard-panel-title">Demo Access</h2>
-            <p className="dashboard-panel-subtitle">
-              Open a realistic patient sample for each content type.
-            </p>
-          </div>
-        </div>
-        <div className="dashboard-inline-actions dashboard-inline-actions--wrap">
-          <button
-            onClick={() => navigate(buildDemoPatientUrlForType('medication'))}
-            className="action-button"
-            style={{ backgroundColor: '#005eb8' }}
-          >
-            <FlaskConical size={16} /> Medication
-          </button>
-          <button
-            onClick={() => navigate(buildDemoPatientUrlForType('healthcheck'))}
-            className="action-button"
-            style={{ backgroundColor: '#4c6272' }}
-          >
-            <ShieldAlert size={16} /> Health Check
-          </button>
-          <button
-            onClick={() => navigate(buildDemoPatientUrlForType('screening'))}
-            className="action-button"
-            style={{ backgroundColor: '#007f3b' }}
-          >
-            <FlaskConical size={16} /> Screening
-          </button>
-          <button
-            onClick={() => navigate(buildDemoPatientUrlForType('immunisation'))}
-            className="action-button"
-            style={{ backgroundColor: '#7a3db8' }}
-          >
-            <ShieldAlert size={16} /> Immunisation
-          </button>
-          <button
-            onClick={() => navigate(buildDemoPatientUrlForType('ltc'))}
-            className="action-button"
-            style={{ backgroundColor: '#212b32' }}
-          >
-            <FlaskConical size={16} /> Long Term Condition
-          </button>
-        </div>
+        <button className={`dashboard-tab${activeTab === 'demo' ? ' dashboard-tab--active' : ''}`} onClick={() => setActiveTab('demo')}>
+          Demo Access
+        </button>
       </div>
 
       {loadError && (
@@ -1626,6 +1581,56 @@ const AdminDashboard: React.FC = () => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'demo' && (
+        <div className="dashboard-panel dashboard-section" style={{ borderLeft: '4px solid #005eb8' }}>
+          <div className="dashboard-panel-header">
+            <div>
+              <h2 className="dashboard-panel-title">Demo Access</h2>
+              <p className="dashboard-panel-subtitle">
+                Open a realistic patient sample for each content type.
+              </p>
+            </div>
+          </div>
+          <div className="dashboard-inline-actions dashboard-inline-actions--wrap">
+            <button
+              onClick={() => navigate(buildDemoPatientUrlForType('medication'))}
+              className="action-button"
+              style={{ backgroundColor: '#005eb8' }}
+            >
+              <FlaskConical size={16} /> Medication
+            </button>
+            <button
+              onClick={() => navigate(buildDemoPatientUrlForType('healthcheck'))}
+              className="action-button"
+              style={{ backgroundColor: '#4c6272' }}
+            >
+              <ShieldAlert size={16} /> Health Check
+            </button>
+            <button
+              onClick={() => navigate(buildDemoPatientUrlForType('screening'))}
+              className="action-button"
+              style={{ backgroundColor: '#007f3b' }}
+            >
+              <FlaskConical size={16} /> Screening
+            </button>
+            <button
+              onClick={() => navigate(buildDemoPatientUrlForType('immunisation'))}
+              className="action-button"
+              style={{ backgroundColor: '#7a3db8' }}
+            >
+              <ShieldAlert size={16} /> Immunisation
+            </button>
+            <button
+              onClick={() => navigate(buildDemoPatientUrlForType('ltc'))}
+              className="action-button"
+              style={{ backgroundColor: '#212b32' }}
+            >
+              <FlaskConical size={16} /> Long Term Condition
+            </button>
+          </div>
         </div>
       )}
     </div>
