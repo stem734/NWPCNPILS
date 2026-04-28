@@ -307,6 +307,7 @@ const CardBuilder: React.FC = () => {
   // Save state
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [saveCompleted, setSaveCompleted] = useState(false);
 
   const [deletingCode, setDeletingCode] = useState('');
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
@@ -987,6 +988,7 @@ const CardBuilder: React.FC = () => {
       if (invokeError) throw invokeError;
       if (data.success) {
         await reloadMeds();
+        setSaveCompleted(true);
         showBuilderNotice('medication', `Card ${saveAction} successfully.`);
       }
     } catch (err) {
@@ -1082,6 +1084,7 @@ const CardBuilder: React.FC = () => {
     setEditingCode('');
     setRequestedCode('');
     setSaveError('');
+    setSaveCompleted(false);
     setGenError('');
   };
 
@@ -1553,7 +1556,7 @@ const CardBuilder: React.FC = () => {
               <Save size={16} /> {saving ? 'Saving...' : editingCode ? 'Save Changes' : 'Save'}
             </button>
             <button onClick={resetForm} className="action-button" style={{ flex: '1 1 auto', justifyContent: 'center', backgroundColor: '#4c6272' }}>
-              {editingCode ? 'Cancel Edit' : 'Reset'}
+              {saveCompleted ? 'Close' : editingCode ? 'Cancel Edit' : 'Reset'}
             </button>
           </div>
         </div>

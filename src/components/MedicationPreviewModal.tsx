@@ -1,5 +1,5 @@
 import React from 'react';
-import { CircleHelp, ExternalLink, Eye, FlaskConical } from 'lucide-react';
+import { ExternalLink, Eye, FlaskConical } from 'lucide-react';
 import type { MedContent } from '../medicationData';
 import { getMedicationIcon } from '../medicationIcons';
 import Modal from './Modal';
@@ -65,7 +65,7 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
             <ul className="medication-preview__key-list">
               {med.generalKeyInfo.map((info, index) => (
                 <li key={`${med.code}-general-${index}`} className="medication-preview__key-item">
-                  <CircleHelp size={20} color="var(--nhs-blue)" aria-hidden="true" />
+                  <span className="medication-preview__bullet" aria-hidden="true">•</span>
                   <span>{info}</span>
                 </li>
               ))}

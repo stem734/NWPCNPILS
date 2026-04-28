@@ -511,6 +511,18 @@ main {
   align-items: flex-start;
 }
 
+.medication-preview__bullet,
+.patient-info-bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  color: var(--nhs-secondary-text);
+  font-size: 1rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
 .medication-preview__links {
   display: flex;
   flex-direction: column;

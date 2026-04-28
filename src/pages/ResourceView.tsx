@@ -529,7 +529,7 @@ const ResourceView: React.FC = () => {
                         {content.generalKeyInfo.map((info, i) => (
                           <li key={`general-${i}`} className="patient-info-item">
                             <div className="patient-info-icon">
-                              <span style={{ color: '#005eb8', fontSize: '1rem', fontWeight: 700 }} aria-hidden="true">i</span>
+                              <span className="patient-info-bullet" aria-hidden="true">•</span>
                             </div>
                             <span className="patient-info-text">{info}</span>
                           </li>
