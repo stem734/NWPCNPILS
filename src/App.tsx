@@ -126,6 +126,10 @@ const AppContent: React.FC = () => {
       <footer className="footer">
         <span className="footer__border" aria-hidden="true" />
         <div className="footer__container">
+          <div className="footer__notice" role="note" aria-label="Clinical and legal notice">
+            <p>This information is for guidance only. Always follow the specific advice from your GP or clinical team.</p>
+            <a href="/legal">Legal &amp; Compliance</a>
+          </div>
           <div className="footer__meta">
             <p className="footer__copyright">
               © {new Date().getFullYear()} <a href="https://www.nottinghamwestpcn.co.uk/" target="_blank" rel="noopener noreferrer">Nottingham West Primary Care Network</a> - MyMedInfo
