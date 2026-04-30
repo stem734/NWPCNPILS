@@ -113,8 +113,7 @@ const AppContent: React.FC = () => {
       <header className="site-header">
         <div className="site-header__inner">
           <a className="site-header__logo-link" href="/" aria-label="MyMedInfo home">
-            <img className="site-header__logo" src="/MyMedInfo.jpeg" alt="MyMedInfo" />
-            <span className="site-header__service">MyMedInfo</span>
+            <img className="site-header__logo" src="/MyMedInfo-logo.png" alt="MyMedInfo" />
           </a>
           <HeaderNav />
         </div>
