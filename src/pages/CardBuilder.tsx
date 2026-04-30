@@ -4,7 +4,6 @@ import { supabase } from '../supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Copy, ExternalLink, Link, Eye, Edit2, CopyPlus, X } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
-import HealthCheckCard from '../components/HealthCheckCard';
 import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Modal from '../components/Modal';
@@ -624,6 +623,7 @@ const CardBuilder: React.FC = () => {
       }),
       ...selectedHealthCheckDomainWhatFields,
     };
+  const selectedHealthCheckPreviewUrl = buildHealthCheckFamilyPreviewUrl(selectedHealthCheckDomain);
   const resolveHealthCheckLibraryStatus = (resultCode: string): 'ok' | 'amber' | 'red' => {
     const code = resultCode.toUpperCase().trim();
     if (code === 'BPNORMAL' || code === 'BMINORMAL' || code === 'QRISKLOW' || code === 'HBA1CNORMAL' || code === 'GPPAQACTIVE' || code === 'ALCRISKOK' || code === 'ALCRISKTEETOTAL' || code === 'SMOKNONSMOK' || code === 'SMOKSTOPPED' || code === 'CHOLNORMAL') {
@@ -1913,28 +1913,14 @@ const CardBuilder: React.FC = () => {
                   </div>
 
                   <div style={{ position: 'sticky', top: 0, alignSelf: 'start' }}>
-                    <HealthCheckCard
-                      metric={{
-                        label: selectedHealthCheckMetric.label,
-                        value: selectedHealthCheckMetric.value,
-                        unit: selectedHealthCheckMetric.unit,
-                        badge: selectedHealthCheckMetric.badge,
-                        badgeClass: selectedHealthCheckMetric.badgeClass,
-                        whatTitle: selectedHealthCheckVariantSafe.whatIsTitle,
-                        what: selectedHealthCheckVariantSafe.whatIsText,
-                        pathway: selectedHealthCheckVariantSafe.resultsMessage || selectedHealthCheckMetric.pathway,
-                        breakdown: selectedHealthCheckMetric.breakdown,
-                        oneLiner: selectedHealthCheckMetric.oneLiner,
-                      }}
-                      resultsMessage={selectedHealthCheckVariantSafe.resultsMessage}
-                      importantText={selectedHealthCheckVariantSafe.importantText}
-                      nextStepsTitle={selectedHealthCheckVariantSafe.nextStepsTitle}
-                      nextStepsText={selectedHealthCheckVariantSafe.nextStepsText}
-                      links={[
-                        ...selectedHealthCheckVariantSafe.links.filter((link) => (link.title || '').trim() && ((link.phone || '').trim() || (link.email || '').trim() || (link.website || '').trim())),
-                      ]}
-                      expanded
-                    />
+                    <div style={{ border: '1px solid #d8dde0', borderRadius: '12px', overflow: 'hidden', background: '#ffffff', boxShadow: '0 6px 18px rgba(33, 43, 50, 0.08)' }}>
+                      <iframe
+                        key={selectedHealthCheckPreviewUrl}
+                        title="Health check patient preview"
+                        src={selectedHealthCheckPreviewUrl}
+                        style={{ width: '100%', minHeight: '960px', border: 'none', display: 'block', background: '#ffffff' }}
+                      />
+                    </div>
                   </div>
                   </div>
                 </div>

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Eye } from 'lucide-react';
 import type { MedContent } from '../medicationData';
+import { resolvePath } from '../subdomainUtils';
 import Modal from './Modal';
-import { NhsCross, NhsTick } from './NhsIcons';
-import WarningCallout from './WarningCallout';
 
 type MedicationPreviewModalProps = {
   med: MedContent;
@@ -11,9 +10,30 @@ type MedicationPreviewModalProps = {
 };
 
 const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, onClose }) => {
-  const displayTitle = med.title
-    .replace(/\s*-\s*Starting Treatment$/i, '')
-    .replace(/\s*-\s*Annual Review$/i, '');
+  const previewUrl = React.useMemo(() => {
+    const params = new URLSearchParams({
+      type: 'meds',
+      previewOnly: '1',
+      previewToken: `medication-preview:${med.code}:${Date.now()}`,
+      codes: med.code,
+    });
+
+    try {
+      window.sessionStorage.setItem(params.get('previewToken') || '', JSON.stringify({
+        cards: [
+          {
+            ...med,
+            state: 'custom',
+            code: med.code,
+          },
+        ],
+      }));
+    } catch {
+      // sessionStorage may be unavailable; this preview route depends on it.
+    }
+
+    return `${window.location.origin}${resolvePath('/patient')}?${params.toString()}`;
+  }, [med]);
 
   return (
     <Modal
@@ -26,96 +46,12 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
       footer={<div className="medication-preview__footer-copy">This is a preview of what patients will see when they access this medication block.</div>}
     >
       <div className="medication-preview">
-        <span
-          className="medication-preview__badge"
-          data-badge={med.badge}
-        >
-          {med.badge === 'NEW' ? 'NEW MEDICATION' : med.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
-        </span>
-
-        <h2 className="medication-preview__title">{displayTitle}</h2>
-
-        {med.badge === 'NEW' && (
-          <div className="medication-preview__callout medication-preview__callout--blue">
-            <p className="medication-preview__callout-body">
-              This page explains how to use this medicine safely and what to watch for.
-            </p>
-          </div>
-        )}
-
-        {med.badge === 'REAUTH' && (
-          <div className="medication-preview__callout medication-preview__callout--grey">
-            <p className="medication-preview__callout-body medication-preview__callout-body--muted">
-              This page summarises safe ongoing use and key reminders for this medicine.
-            </p>
-          </div>
-        )}
-        <p className="medication-preview__description">{med.description}</p>
-
-        {med.generalKeyInfo?.length ? (
-          <div className="medication-preview__section">
-            <h3>General advice</h3>
-            <ul className="medication-preview__key-list">
-              {med.generalKeyInfo.map((info, index) => (
-                <li key={`${med.code}-general-${index}`} className="medication-preview__key-item">
-                  <span className="medication-preview__bullet" aria-hidden="true">•</span>
-                  <span>{info}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {(med.doKeyInfo?.length || med.keyInfo.length > 0) && (
-          <div className="medication-preview__section">
-            <h3>Do</h3>
-            <ul className="medication-preview__key-list">
-              {(med.doKeyInfo?.length ? med.doKeyInfo : med.keyInfo).map((info, index) => (
-                <li key={`${med.code}-do-${index}`} className="medication-preview__key-item">
-                  <NhsTick size={20} aria-hidden="true" />
-                  <span>{info}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {med.dontKeyInfo?.length ? (
-          <div className="medication-preview__section">
-            <h3>Don't</h3>
-            <ul className="medication-preview__key-list">
-              {med.dontKeyInfo.map((info, index) => (
-                <li key={`${med.code}-dont-${index}`} className="medication-preview__key-item">
-                  <NhsCross size={20} aria-hidden="true" />
-                  <span>{info}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {med.sickDaysNeeded && (
-          <WarningCallout title="Important: Sick day rules apply">
-            <p>If you become unwell and are unable to eat or drink normally, you may need to pause this medication.</p>
-          </WarningCallout>
-        )}
-
-        <div className="medication-preview__section">
-          <h3>Linked Resources</h3>
-          <div className="medication-preview__links">
-            {med.nhsLink && (
-              <a href={med.nhsLink} target="_blank" rel="noopener noreferrer" className="medication-preview__link medication-preview__link--nhs">
-                <div className="medication-preview__link-pill">NHS</div>
-                <span>Official NHS Guidance</span>
-              </a>
-            )}
-            {med.trendLinks.map((link, index) => (
-              <a key={`${med.code}-link-${index}`} href={link.url} target="_blank" rel="noopener noreferrer" className="medication-preview__link medication-preview__link--trend">
-                <span>{link.title}</span>
-              </a>
-            ))}
-          </div>
-        </div>
+        <iframe
+          key={previewUrl}
+          title="Medication patient preview"
+          src={previewUrl}
+          style={{ width: '100%', minHeight: '1040px', border: 'none', display: 'block', background: '#ffffff' }}
+        />
       </div>
     </Modal>
   );

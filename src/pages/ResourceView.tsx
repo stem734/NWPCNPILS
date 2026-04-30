@@ -80,6 +80,8 @@ const ResourceView: React.FC = () => {
   const dateParam = searchParams.get('date');
   const isDemoMode = searchParams.get('demo') === '1';
   const isExactDemo = searchParams.get('exactDemo') === '1';
+  const previewOnly = searchParams.get('previewOnly') === '1';
+  const previewToken = (searchParams.get('previewToken') || '').trim();
 
   const isOutOfDate = useMemo(() => isIssuedDateStale(dateParam, 6), [dateParam]);
 
@@ -114,6 +116,74 @@ const ResourceView: React.FC = () => {
   const [isSubmittingRating, setIsSubmittingRating] = useState<boolean>(false);
   const [ratingError, setRatingError] = useState<string | null>(null);
 
+  const previewContents = useMemo(() => {
+    if (!previewOnly || !previewToken || typeof window === 'undefined') {
+      return [] as Array<{
+        state: 'global' | 'custom' | 'placeholder';
+        code: string;
+        badge: 'NEW' | 'REAUTH' | 'GENERAL';
+        title: string;
+        description: string;
+        category: string;
+        doKeyInfo?: string[];
+        dontKeyInfo?: string[];
+        generalKeyInfo?: string[];
+        keyInfo: string[];
+        nhsLink?: string;
+        trendLinks: { title: string; url: string }[];
+        sickDaysNeeded?: boolean;
+        reviewMonths?: number;
+      }>;
+    }
+
+    try {
+      const raw = window.sessionStorage.getItem(previewToken);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as { cards?: Array<{
+        state?: 'global' | 'custom' | 'placeholder';
+        code?: string;
+        badge?: 'NEW' | 'REAUTH' | 'GENERAL';
+        title?: string;
+        description?: string;
+        category?: string;
+        doKeyInfo?: string[];
+        dontKeyInfo?: string[];
+        generalKeyInfo?: string[];
+        keyInfo?: string[];
+        nhsLink?: string;
+        trendLinks?: { title: string; url: string }[];
+        sickDaysNeeded?: boolean;
+        reviewMonths?: number;
+      }> };
+
+      return (parsed.cards || []).filter((card) =>
+        card &&
+        typeof card.code === 'string' &&
+        typeof card.title === 'string' &&
+        typeof card.description === 'string' &&
+        typeof card.category === 'string' &&
+        (card.badge === 'NEW' || card.badge === 'REAUTH' || card.badge === 'GENERAL'),
+      ).map((card) => ({
+        state: card.state || 'custom',
+        code: card.code as string,
+        badge: card.badge as 'NEW' | 'REAUTH' | 'GENERAL',
+        title: card.title as string,
+        description: card.description as string,
+        category: card.category as string,
+        doKeyInfo: Array.isArray(card.doKeyInfo) ? card.doKeyInfo : [],
+        dontKeyInfo: Array.isArray(card.dontKeyInfo) ? card.dontKeyInfo : [],
+        generalKeyInfo: Array.isArray(card.generalKeyInfo) ? card.generalKeyInfo : [],
+        keyInfo: Array.isArray(card.keyInfo) ? card.keyInfo : [],
+        nhsLink: card.nhsLink,
+        trendLinks: Array.isArray(card.trendLinks) ? card.trendLinks : [],
+        sickDaysNeeded: Boolean(card.sickDaysNeeded),
+        reviewMonths: typeof card.reviewMonths === 'number' ? card.reviewMonths : undefined,
+      }));
+    } catch {
+      return [];
+    }
+  }, [previewOnly, previewToken]);
+
   const handleRating = async (value: number) => {
     if (hasRated || !orgName) return;
     setRating(value);
@@ -143,6 +213,13 @@ const ResourceView: React.FC = () => {
   };
 
   useEffect(() => {
+    if (previewOnly) {
+      setIsAuthorised(true);
+      setAuthError(null);
+      setIsValidating(false);
+      return;
+    }
+
     if (isDemoMode) {
       setIsAuthorised(true);
       setAuthError(null);
@@ -224,10 +301,10 @@ const ResourceView: React.FC = () => {
         window.clearTimeout(loadingTimer);
       }
     };
-  }, [isDemoMode, orgName, validationNonce]);
+  }, [isDemoMode, orgName, previewOnly, validationNonce]);
 
   useEffect(() => {
-    if (isDemoMode) {
+    if (isDemoMode || previewOnly) {
       loggedAccessKeyRef.current = null;
       return;
     }
@@ -253,7 +330,7 @@ const ResourceView: React.FC = () => {
         setValidationNonce((n) => n + 1);
       }
     })();
-  }, [codesParam, isAuthorised, isDemoMode, orgName, rawCode]);
+  }, [codesParam, isAuthorised, isDemoMode, orgName, previewOnly, rawCode]);
 
   const requestedCodes = useMemo(() => {
     if (codesParam) {
@@ -269,8 +346,26 @@ const ResourceView: React.FC = () => {
 
     const resolveCards = async () => {
       if (requestedCodes.length === 0) {
+        if (previewOnly && previewContents.length > 0) {
+          if (!cancelled) {
+            setResolvedContents(previewContents);
+            setResolveError(null);
+            setIsResolvingContents(false);
+          }
+          return;
+        }
+
         if (!cancelled) {
           setResolvedContents([]);
+          setResolveError(null);
+          setIsResolvingContents(false);
+        }
+        return;
+      }
+
+      if (previewOnly) {
+        if (!cancelled) {
+          setResolvedContents(previewContents);
           setResolveError(null);
           setIsResolvingContents(false);
         }
@@ -327,9 +422,18 @@ const ResourceView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [allMeds, isAuthorised, isDemoMode, orgName, practiceFeatures.medication_enabled, requestedCodes]);
+  }, [allMeds, isAuthorised, isDemoMode, orgName, practiceFeatures.medication_enabled, previewContents, previewOnly, requestedCodes]);
 
   const contents = useMemo(() => {
+    if (previewOnly) {
+      return sortMedicationGroups(
+        previewContents.map((card) => ({
+          id: card.code,
+          ...card,
+        })),
+      );
+    }
+
     if (isDemoMode || !orgName) {
       return sortMedicationGroups(
         requestedCodes
@@ -356,7 +460,7 @@ const ResourceView: React.FC = () => {
         .map((code) => (allMeds[code] ? { id: code, state: 'global' as const, ...allMeds[code] } : null))
         .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title),
     );
-  }, [allMeds, isAuthorised, isDemoMode, orgName, requestedCodes, resolvedContents]);
+  }, [allMeds, isAuthorised, isDemoMode, orgName, previewContents, previewOnly, requestedCodes, resolvedContents]);
 
   const groupedContents = useMemo(() => {
     const groups = new Map<'NEW' | 'REAUTH' | 'GENERAL', typeof contents>();
@@ -385,7 +489,7 @@ const ResourceView: React.FC = () => {
 
   const guidanceNoticeText = `This information has been prepared and checked by the clinical pharmacists at ${guidanceOrganisationName}.`;
 
-  if ((isValidating || isResolvingContents) && orgName) {
+  if ((isValidating || isResolvingContents) && orgName && !previewOnly) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '1rem' }}>
@@ -398,7 +502,7 @@ const ResourceView: React.FC = () => {
     );
   }
 
-  if (orgName && isAuthorised === false) {
+  if (orgName && isAuthorised === false && !previewOnly) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
@@ -411,7 +515,7 @@ const ResourceView: React.FC = () => {
     );
   }
 
-  if (orgName && isAuthorised === true && !practiceFeatures.medication_enabled) {
+  if (orgName && isAuthorised === true && !practiceFeatures.medication_enabled && !previewOnly) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
@@ -494,11 +598,13 @@ const ResourceView: React.FC = () => {
         </div>
       )}
 
-      <div className="patient-print-bar no-print">
-        <button onClick={() => window.print()} className="action-button patient-print-button" style={{ backgroundColor: '#4c6272', color: 'white', padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}>
-          <Printer size={16} /> Print to PDF
-        </button>
-      </div>
+      {!previewOnly && (
+        <div className="patient-print-bar no-print">
+          <button onClick={() => window.print()} className="action-button patient-print-button" style={{ backgroundColor: '#4c6272', color: 'white', padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}>
+            <Printer size={16} /> Print to PDF
+          </button>
+        </div>
+      )}
 
       {groupedContents.map(([badge, items]) => (
         <section key={badge} className={`patient-section patient-section--${badge.toLowerCase()}`}>
