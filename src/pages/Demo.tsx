@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, ArrowLeft, ClipboardList, Monitor, Search, ShieldPlus, Shuffle, Tablets } from 'lucide-react';
-import { buildDemoPatientUrl, DEMO_SAMPLES, getRandomDemoSample, type DemoSample } from '../demoHelpers';
+import { buildDemoPatientUrl, buildDemoSamples, getRandomDemoSample, type DemoSample } from '../demoHelpers';
+import { useMedicationCatalog } from '../medicationCatalog';
 
 const CARD_CATEGORY_ORDER: DemoSample['category'][] = [
   'Medication',
@@ -21,18 +22,23 @@ const CATEGORY_ICONS: Record<DemoSample['category'], React.ElementType> = {
 
 const Demo: React.FC = () => {
   const navigate = useNavigate();
+  const { medications } = useMedicationCatalog();
+  const demoSamples = React.useMemo(() => buildDemoSamples(medications), [medications]);
 
   const openDemo = (index: number) => {
-    navigate(buildDemoPatientUrl(DEMO_SAMPLES[index]));
+    navigate(buildDemoPatientUrl(demoSamples[index]));
   };
 
   const openRandomDemo = () => {
-    navigate(buildDemoPatientUrl(getRandomDemoSample()));
+    const medicationSamples = demoSamples.filter((sample) => sample.category === 'Medication');
+    const samples = medicationSamples.length > 0 ? demoSamples : buildDemoSamples();
+    const index = Math.floor(Math.random() * samples.length);
+    navigate(buildDemoPatientUrl(samples[index] || getRandomDemoSample()));
   };
 
   const samplesByCategory = CARD_CATEGORY_ORDER.map((category) => ({
     category,
-    samples: DEMO_SAMPLES.filter((sample) => sample.category === category),
+    samples: demoSamples.filter((sample) => sample.category === category),
   })).filter(({ samples }) => samples.length > 0);
 
   return (
@@ -92,7 +98,7 @@ const Demo: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
                 {samples.map((sample) => {
-                  const sampleIndex = DEMO_SAMPLES.findIndex((item) => item.id === sample.id);
+                  const sampleIndex = demoSamples.findIndex((item) => item.id === sample.id);
 
                   return (
                     <button

@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const getGitMetadata = () => {
@@ -16,11 +16,16 @@ const getGitMetadata = () => {
 const { commitCount, commitHash } = getGitMetadata();
 const buildStamp = new Date().toISOString();
 
-export default defineConfig({
-  plugins: [react()],
-  define: {
-    __APP_COMMIT_COUNT__: JSON.stringify(commitCount),
-    __APP_COMMIT_HASH__: JSON.stringify(commitHash),
-    __APP_BUILD_STAMP__: JSON.stringify(buildStamp),
-  },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
+    plugins: [react()],
+    define: {
+      __APP_COMMIT_COUNT__: JSON.stringify(commitCount),
+      __APP_COMMIT_HASH__: JSON.stringify(commitHash),
+      __APP_BUILD_STAMP__: JSON.stringify(buildStamp),
+      'import.meta.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || ''),
+    },
+  };
 });

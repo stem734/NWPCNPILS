@@ -1,6 +1,7 @@
 import { HEALTH_CHECK_CODE_VALUES } from './healthCheckCodes';
 import { CLINICAL_DOMAIN_IDS, PREVIEW_DOMAIN_CONFIGS } from './healthCheckVariantConfig';
 import { MEDICATIONS } from './medicationData';
+import type { MedicationRecord } from './medicationCatalog';
 import {
   IMMUNISATION_TEMPLATES,
   LONG_TERM_CONDITION_TEMPLATES,
@@ -24,6 +25,19 @@ const pickOne = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.le
 
 const randomDecimal = (min: number, max: number, digits = 1) =>
   (Math.random() * (max - min) + min).toFixed(digits);
+
+const buildMedicationDemoSamples = (medications: Array<Pick<MedicationRecord, 'code' | 'title' | 'category'>>) =>
+  medications.map((medication) => ({
+    id: `medication-${medication.code}`,
+    category: 'Medication' as const,
+    title: medication.title,
+    description: medication.category,
+    practiceName: DEMO_PRACTICE_NAME,
+    params: {
+      type: 'meds',
+      codes: medication.code,
+    },
+  }));
 
 const buildRandomHealthCheckParams = () => {
   const bpCode = pickOne(HEALTH_CHECK_CODE_VALUES.bp);
@@ -66,18 +80,10 @@ const buildRandomHealthCheckParams = () => {
   });
 };
 
-export const DEMO_SAMPLES: DemoSample[] = [
-  ...MEDICATIONS.map((medication) => ({
-    id: `medication-${medication.code}`,
-    category: 'Medication' as const,
-    title: medication.title,
-    description: medication.category,
-    practiceName: DEMO_PRACTICE_NAME,
-    params: {
-      type: 'meds',
-      codes: medication.code,
-    },
-  })),
+export const buildDemoSamples = (
+  medications: Array<Pick<MedicationRecord, 'code' | 'title' | 'category'>> = MEDICATIONS,
+): DemoSample[] => [
+  ...buildMedicationDemoSamples(medications),
   ...CLINICAL_DOMAIN_IDS.map((domainId) => ({
     id: `healthcheck-${domainId}`,
     category: 'Health check' as const,
@@ -123,13 +129,17 @@ export const DEMO_SAMPLES: DemoSample[] = [
   })),
 ];
 
+export const DEMO_SAMPLES: DemoSample[] = buildDemoSamples();
+
 export const getRandomDemoSample = (): DemoSample => {
-  const index = Math.floor(Math.random() * DEMO_SAMPLES.length);
-  return DEMO_SAMPLES[index];
+  const samples = buildDemoSamples();
+  const index = Math.floor(Math.random() * samples.length);
+  return samples[index];
 };
 
 export const getRandomDemoSampleForType = (type: DemoType): DemoSample => {
-  const filtered = DEMO_SAMPLES.filter((sample) => {
+  const samples = buildDemoSamples();
+  const filtered = samples.filter((sample) => {
     if (type === 'medication') return sample.category === 'Medication';
     if (type === 'healthcheck') return sample.category === 'Health check';
     if (type === 'screening') return sample.category === 'Screening';
@@ -138,7 +148,7 @@ export const getRandomDemoSampleForType = (type: DemoType): DemoSample => {
   });
 
   const index = Math.floor(Math.random() * filtered.length);
-  return filtered[index] ?? DEMO_SAMPLES[0];
+  return filtered[index] ?? samples[0];
 };
 
 export const buildDemoPatientUrl = (sample: DemoSample) => {
