@@ -6,6 +6,7 @@ export type PatientResourceLink = {
 
 export type ScreeningTemplate = {
   id: string;
+  code: string;
   label: string;
   headline: string;
   explanation: string;
@@ -45,6 +46,7 @@ export type LongTermConditionTemplate = {
 export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
   cervical: {
     id: 'cervical',
+    code: 'CS1',
     label: 'Cervical screening',
     headline: 'Cervical screening helps prevent cervical cancer.',
     explanation:
@@ -69,6 +71,7 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
   },
   bowel: {
     id: 'bowel',
+    code: 'BS1',
     label: 'Bowel screening',
     headline: 'Bowel screening checks for signs that may need further tests.',
     explanation:
@@ -93,6 +96,7 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
   },
   breast: {
     id: 'breast',
+    code: 'BR1',
     label: 'Breast screening',
     headline: 'Breast screening uses X-rays (mammograms) to find changes early.',
     explanation:
@@ -117,6 +121,7 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
   },
   aaa: {
     id: 'aaa',
+    code: 'AA1',
     label: 'AAA screening',
     headline: 'AAA screening checks for swelling in the main blood vessel in your abdomen.',
     explanation:
@@ -141,6 +146,7 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
   },
   diabetic_eye: {
     id: 'diabetic_eye',
+    code: 'DE1',
     label: 'Diabetic eye screening',
     headline: 'Diabetic eye screening checks for changes caused by diabetes.',
     explanation:
@@ -163,6 +169,44 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
       },
     ],
   },
+};
+
+export const getDefaultScreeningCode = (templateId: string) => {
+  if (SCREENING_TEMPLATES[templateId]?.code) {
+    return SCREENING_TEMPLATES[templateId].code;
+  }
+
+  const compact = templateId
+    .split(/[^a-z0-9]+/i)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('')
+    .slice(0, 3);
+
+  return `${compact || 'SC'}1`;
+};
+
+export const withScreeningTemplateDefaults = (template: ScreeningTemplate): ScreeningTemplate => ({
+  ...template,
+  code: template.code?.trim() || getDefaultScreeningCode(template.id),
+});
+
+const normalizeScreeningIdentifier = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+
+export const findScreeningTemplateByIdentifier = (
+  identifier: string,
+  templates: ScreeningTemplate[],
+): ScreeningTemplate | null => {
+  const normalized = normalizeScreeningIdentifier(identifier);
+  if (!normalized) return null;
+
+  return templates.find((template) => {
+    const hydrated = withScreeningTemplateDefaults(template);
+    return (
+      normalizeScreeningIdentifier(hydrated.id) === normalized ||
+      normalizeScreeningIdentifier(hydrated.code) === normalized
+    );
+  }) || null;
 };
 
 export const IMMUNISATION_TEMPLATES: Record<string, ImmunisationTemplate> = {

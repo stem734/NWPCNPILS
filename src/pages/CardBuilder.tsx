@@ -18,10 +18,12 @@ import {
   SCREENING_TEMPLATES,
   IMMUNISATION_TEMPLATES,
   LONG_TERM_CONDITION_TEMPLATES,
+  getDefaultScreeningCode,
   type ScreeningTemplate,
   type ImmunisationTemplate,
   type LongTermConditionTemplate,
   type PatientResourceLink,
+  withScreeningTemplateDefaults,
 } from '../patientTemplateCatalog';
 import {
   fetchCardTemplateRevisions,
@@ -209,7 +211,7 @@ const withHealthCheckDomainWhatFields = (
 
 const cloneResourceLinks = (links: PatientResourceLink[]) => links.map((link) => ({ ...link }));
 const cloneScreeningTemplate = (template: ScreeningTemplate): ScreeningTemplate => ({
-  ...template,
+  ...withScreeningTemplateDefaults(template),
   guidance: [...template.guidance],
   nhsLinks: cloneResourceLinks(template.nhsLinks),
 });
@@ -1980,11 +1982,11 @@ const CardBuilder: React.FC = () => {
           <h3 style={{ marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
           <div className="dashboard-list">
               {Object.values(screeningTemplates).map((template) => {
-                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: template.id }));
+                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: template.code || template.id }));
                 return (
                   <div key={template.id} className="dashboard-list-card">
                     <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
-                      {template.id.toUpperCase()}
+                      {(template.code || template.id).toUpperCase()}
                     </div>
                     <div className="dashboard-list-main">
                       <div className="dashboard-list-title">{template.label}</div>
@@ -2139,6 +2141,15 @@ const CardBuilder: React.FC = () => {
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input
+                type="text"
+                value={selectedScreeningTemplate.code || getDefaultScreeningCode(selectedScreeningTemplate.id)}
+                onChange={(e) => updateScreeningTemplate(screeningType, {
+                  code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                })}
+                placeholder="Protocol code"
+                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', fontFamily: 'monospace' }}
+              />
               <input type="text" value={selectedScreeningTemplate.label} onChange={(e) => updateScreeningTemplate(screeningType, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <input type="text" value={selectedScreeningTemplate.headline} onChange={(e) => updateScreeningTemplate(screeningType, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <textarea value={selectedScreeningTemplate.explanation} onChange={(e) => updateScreeningTemplate(screeningType, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />

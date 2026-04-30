@@ -6,6 +6,7 @@ import {
   IMMUNISATION_TEMPLATES,
   LONG_TERM_CONDITION_TEMPLATES,
   SCREENING_TEMPLATES,
+  withScreeningTemplateDefaults,
 } from './patientTemplateCatalog';
 
 export type DemoSample = {
@@ -94,7 +95,9 @@ export const buildDemoSamples = (
       type: 'healthcheck',
     },
   })),
-  ...Object.values(SCREENING_TEMPLATES).map((template) => ({
+  ...Object.values(SCREENING_TEMPLATES).map((sourceTemplate) => {
+    const template = withScreeningTemplateDefaults(sourceTemplate);
+    return ({
     id: `screening-${template.id}`,
     category: 'Screening' as const,
     title: template.label,
@@ -102,9 +105,10 @@ export const buildDemoSamples = (
     practiceName: DEMO_PRACTICE_NAME,
     params: {
       type: 'screening',
-      screen: template.id,
+      screen: template.code,
     },
-  })),
+  });
+  }),
   ...Object.values(IMMUNISATION_TEMPLATES).map((template) => ({
     id: `immunisation-${template.id}`,
     category: 'Immunisation' as const,

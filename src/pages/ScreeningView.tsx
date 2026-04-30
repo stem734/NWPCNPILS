@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ShieldCheck, ExternalLink } from 'lucide-react';
-import { SCREENING_TEMPLATES, type ScreeningTemplate } from '../patientTemplateCatalog';
+import {
+  SCREENING_TEMPLATES,
+  findScreeningTemplateByIdentifier,
+  type ScreeningTemplate,
+  withScreeningTemplateDefaults,
+} from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
@@ -20,11 +25,15 @@ const ScreeningView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
   const isDemoMode = searchParams.get('demo') === '1';
-  const screenType = (searchParams.get('screen') || searchParams.get('screening') || '').trim().toLowerCase();
-  const fallbackTemplate = SCREENING_TEMPLATES[screenType] || SCREENING_TEMPLATES.cervical;
+  const screenIdentifier = (searchParams.get('screen') || searchParams.get('screening') || '').trim();
+  const builtInTemplates = useMemo(
+    () => Object.values(SCREENING_TEMPLATES).map(withScreeningTemplateDefaults),
+    [],
+  );
+  const fallbackTemplate = findScreeningTemplateByIdentifier(screenIdentifier, builtInTemplates) || SCREENING_TEMPLATES.cervical;
   const [loadedTemplate, setLoadedTemplate] = useState<ScreeningTemplate | null>(null);
   const access = usePracticeContentAccess(org, 'screening_enabled', { skip: isDemoMode });
-  const selectedTemplate = loadedTemplate?.id === fallbackTemplate.id ? loadedTemplate : fallbackTemplate;
+  const selectedTemplate = loadedTemplate || fallbackTemplate;
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -34,21 +43,25 @@ const ScreeningView: React.FC = () => {
       }
 
       try {
-        const [practiceRow] = await fetchPatientPracticeCardTemplates<ScreeningTemplate>(org, 'screening', [fallbackTemplate.id]);
-        if (practiceRow?.payload) {
-          setLoadedTemplate(practiceRow.payload);
-          return;
-        }
-
-        const [row] = await fetchCardTemplates<ScreeningTemplate>('screening', [fallbackTemplate.id]);
-        setLoadedTemplate(row?.payload || null);
+        const practiceRows = await fetchPatientPracticeCardTemplates<ScreeningTemplate>(
+          org,
+          'screening',
+          builtInTemplates.map((template) => template.id),
+        );
+        const globalRows = await fetchCardTemplates<ScreeningTemplate>('screening');
+        const candidateTemplates = [
+          ...practiceRows.map((row) => withScreeningTemplateDefaults(row.payload)),
+          ...globalRows.map((row) => withScreeningTemplateDefaults(row.payload)),
+          ...builtInTemplates,
+        ];
+        setLoadedTemplate(findScreeningTemplateByIdentifier(screenIdentifier, candidateTemplates));
       } catch (error) {
         console.error('Failed to load screening template override', error);
         setLoadedTemplate(null);
       }
     };
     void loadTemplate();
-  }, [fallbackTemplate, isDemoMode, org]);
+  }, [builtInTemplates, isDemoMode, org, screenIdentifier]);
 
   if (access.loading) {
     return (

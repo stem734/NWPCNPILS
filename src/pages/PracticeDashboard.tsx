@@ -25,6 +25,7 @@ import {
   IMMUNISATION_TEMPLATES,
   LONG_TERM_CONDITION_TEMPLATES,
   SCREENING_TEMPLATES,
+  withScreeningTemplateDefaults,
   type ImmunisationTemplate,
   type LongTermConditionTemplate,
   type PatientResourceLink,
@@ -197,6 +198,12 @@ const safeSessionStorageSet = (key: string, value: string) => {
 const isEditablePatientTemplate = (value: unknown): value is EditablePatientTemplate => {
   const row = value as Partial<EditablePatientTemplate> | null;
   return Boolean(row && typeof row.id === 'string' && typeof row.label === 'string' && Array.isArray(row.guidance) && Array.isArray(row.nhsLinks));
+};
+
+const getTemplateDisplayCode = (builderType: PracticeTemplateBuilderType, templateId: string, payload: unknown) => {
+  if (builderType !== 'screening') return templateId;
+  const template = isEditablePatientTemplate(payload) ? withScreeningTemplateDefaults(payload as ScreeningTemplate) : null;
+  return template?.code || templateId;
 };
 
 const resourceLinksToText = (links: PatientResourceLink[]) =>
@@ -1137,7 +1144,9 @@ const PracticeDashboard: React.FC = () => {
                       <div className="dashboard-list-main">
                         <div className="dashboard-list-title">{customRow?.label || template.label}</div>
                         <div className="dashboard-meta">
-                          <span className="dashboard-badge dashboard-badge--blue">{template.templateId}</span>
+                          <span className="dashboard-badge dashboard-badge--blue">
+                            {getTemplateDisplayCode(template.builderType, template.templateId, customRow?.payload || template.payload)}
+                          </span>
                           <span className={`dashboard-badge ${state === 'custom' ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>
                             {state === 'custom' ? 'USING PRACTICE VERSION' : 'USING GLOBAL TEMPLATE'}
                           </span>
