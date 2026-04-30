@@ -672,6 +672,10 @@ p {
   width: 100%;
 }
 
+.patient-page-shell__notice {
+  margin-bottom: 1rem;
+}
+
 .patient-view h1.patient-medication-title {
   font-size: 1.25rem;
   margin-bottom: 0.35rem;
@@ -1412,6 +1416,23 @@ p {
 
 .footer__notice a:hover {
   color: var(--nhs-dark-blue);
+}
+
+.footer__links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer__links a {
+  color: var(--nhs-blue);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer__links a:hover {
+  text-decoration: underline;
 }
 
 .footer__meta {
