@@ -723,6 +723,69 @@ p {
   gap: 1rem;
 }
 
+.patient-bundle-summary {
+  padding: 1rem 1rem 1.1rem;
+  border-left: 4px solid #005eb8;
+  margin-bottom: 1rem;
+}
+
+.patient-bundle-summary__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.patient-bundle-summary__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #005eb8;
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.patient-bundle-jumps {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.patient-bundle-jump {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #b7d6f5;
+  background: #eef7ff;
+  color: #005eb8;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.patient-bundle-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: #eef7ff;
+  color: #005eb8;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.patient-section-card--bundle {
+  scroll-margin-top: 5.5rem;
+}
+
 .patient-summary-icon {
   background: #005eb8;
   color: white;

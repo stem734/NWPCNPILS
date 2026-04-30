@@ -5,6 +5,7 @@ import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 
 // All content views are lazy-loaded to keep patient routes split by content type.
 const ResourceView = React.lazy(() => import('./ResourceView'));
+const CombinedPatientView = React.lazy(() => import('./CombinedPatientView'));
 const HealthCheckView = React.lazy(() => import('./HealthCheckView'));
 const ScreeningView = React.lazy(() => import('./ScreeningView'));
 const ImmunisationView = React.lazy(() => import('./ImmunisationView'));
@@ -23,6 +24,9 @@ const LongTermConditionView = React.lazy(() => import('./LongTermConditionView')
  */
 const PatientRouter: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const hasMedicationParams = Boolean((searchParams.get('codes') || searchParams.get('code') || searchParams.get('med') || '').trim());
+  const hasScreeningParams = Boolean((searchParams.get('screen') || searchParams.get('screening') || '').trim());
+  const isCombinedBundle = hasMedicationParams && hasScreeningParams;
 
   const { contentType } = useMemo(
     () => detectContentType(searchParams),
@@ -30,6 +34,10 @@ const PatientRouter: React.FC = () => {
   );
 
   const renderContent = () => {
+    if (isCombinedBundle) {
+      return <CombinedPatientView />;
+    }
+
     switch (contentType) {
       case CONTENT_TYPES.HEALTH_CHECK:
         return <HealthCheckView />;
