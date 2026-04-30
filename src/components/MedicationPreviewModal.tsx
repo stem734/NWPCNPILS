@@ -10,16 +10,14 @@ type MedicationPreviewModalProps = {
 };
 
 const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, onClose }) => {
-  const previewUrl = React.useMemo(() => {
-    const params = new URLSearchParams({
-      type: 'meds',
-      previewOnly: '1',
-      previewToken: `medication-preview:${med.code}:${Date.now()}`,
-      codes: med.code,
-    });
+  const previewToken = React.useMemo(
+    () => `medication-preview:${med.code}`,
+    [med.code],
+  );
 
+  React.useEffect(() => {
     try {
-      window.sessionStorage.setItem(params.get('previewToken') || '', JSON.stringify({
+      window.sessionStorage.setItem(previewToken, JSON.stringify({
         cards: [
           {
             ...med,
@@ -31,9 +29,18 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
     } catch {
       // sessionStorage may be unavailable; this preview route depends on it.
     }
+  }, [med, previewToken]);
+
+  const previewUrl = React.useMemo(() => {
+    const params = new URLSearchParams({
+      type: 'meds',
+      previewOnly: '1',
+      previewToken,
+      codes: med.code,
+    });
 
     return `${window.location.origin}${resolvePath('/patient')}?${params.toString()}`;
-  }, [med]);
+  }, [med.code, previewToken]);
 
   return (
     <Modal
