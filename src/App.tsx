@@ -74,6 +74,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const showClinicianDemo = location.pathname === '/patient' || location.pathname === '/demo';
+  const isPatientRoute = location.pathname === '/patient';
   const buildLabel = new Date(__APP_BUILD_STAMP__).toLocaleString('en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -110,14 +111,16 @@ const AppContent: React.FC = () => {
   return (
     <div className="app-container">
       <a href="#main-content" className="sr-only">Skip to content</a>
-      <header className="site-header">
-        <div className="site-header__inner">
-          <a className="site-header__logo-link" href="/" aria-label="MyMedInfo home">
-            <img className="site-header__logo" src="/MyMedInfo-logo.png" alt="MyMedInfo" />
-          </a>
-          <HeaderNav />
-        </div>
-      </header>
+      {!isPatientRoute && (
+        <header className="site-header">
+          <div className="site-header__inner">
+            <a className="site-header__logo-link" href="/" aria-label="MyMedInfo home">
+              <img className="site-header__logo" src="/MyMedInfo-logo.png" alt="MyMedInfo" />
+            </a>
+            <HeaderNav />
+          </div>
+        </header>
+      )}
       <main id="main-content">
         <SubdomainRoutes />
       </main>

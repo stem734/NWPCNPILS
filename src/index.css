@@ -645,6 +645,18 @@ p {
   width: 100%;
 }
 
+.patient-page-shell__brand {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 0.9rem;
+}
+
+.patient-page-shell__brand-logo {
+  width: min(180px, 52vw);
+  height: auto;
+  display: block;
+}
+
 .patient-page-shell__notice {
   margin-bottom: 1rem;
 }

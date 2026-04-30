@@ -81,6 +81,9 @@ const PatientRouter: React.FC = () => {
       </div>
     }>
       <div className="patient-page-shell">
+        <div className="patient-page-shell__brand no-print" aria-hidden="true">
+          <img className="patient-page-shell__brand-logo" src="/MyMedInfo-logo.png" alt="" />
+        </div>
         <div className="patient-page-shell__notice">
           <PatientGuidanceNotice
             text="This information is for guidance only. Always follow the specific advice from your GP or clinical team."
