@@ -455,16 +455,6 @@ main {
   border-left-color: var(--nhs-green);
 }
 
-.medication-preview__callout-title {
-  font-weight: 700;
-  color: var(--nhs-blue);
-  margin-bottom: 0.25rem;
-}
-
-.medication-preview__callout-title--dark {
-  color: var(--nhs-green);
-}
-
 .medication-preview__callout-body {
   margin: 0;
   font-size: 0.95rem;

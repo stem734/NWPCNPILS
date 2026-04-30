@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Eye, FlaskConical } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import type { MedContent } from '../medicationData';
 import Modal from './Modal';
 import { NhsCross, NhsTick } from './NhsIcons';
@@ -14,7 +14,6 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
   const displayTitle = med.title
     .replace(/\s*-\s*Starting Treatment$/i, '')
     .replace(/\s*-\s*Annual Review$/i, '');
-  const calloutTitle = med.badge === 'NEW' ? `Start ${displayTitle}` : med.badge === 'REAUTH' ? `Review ${displayTitle}` : 'Medication information';
 
   return (
     <Modal
@@ -34,9 +33,10 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
           {med.badge === 'NEW' ? 'NEW MEDICATION' : med.badge === 'REAUTH' ? 'ANNUAL REVIEW' : 'MEDICATION INFORMATION'}
         </span>
 
+        <h2 className="medication-preview__title">{displayTitle}</h2>
+
         {med.badge === 'NEW' && (
           <div className="medication-preview__callout medication-preview__callout--blue">
-            <div className="medication-preview__callout-title">{calloutTitle}</div>
             <p className="medication-preview__callout-body">
               This page explains how to use this medicine safely and what to watch for.
             </p>
@@ -45,14 +45,11 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
 
         {med.badge === 'REAUTH' && (
           <div className="medication-preview__callout medication-preview__callout--grey">
-            <div className="medication-preview__callout-title medication-preview__callout-title--dark">{calloutTitle}</div>
             <p className="medication-preview__callout-body medication-preview__callout-body--muted">
               This page summarises safe ongoing use and key reminders for this medicine.
             </p>
           </div>
         )}
-
-        <h2 className="medication-preview__title">{displayTitle}</h2>
         <p className="medication-preview__description">{med.description}</p>
 
         {med.generalKeyInfo?.length ? (
@@ -110,14 +107,11 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
               <a href={med.nhsLink} target="_blank" rel="noopener noreferrer" className="medication-preview__link medication-preview__link--nhs">
                 <div className="medication-preview__link-pill">NHS</div>
                 <span>Official NHS Guidance</span>
-                <ExternalLink size={16} color="var(--nhs-blue)" />
               </a>
             )}
             {med.trendLinks.map((link, index) => (
               <a key={`${med.code}-link-${index}`} href={link.url} target="_blank" rel="noopener noreferrer" className="medication-preview__link medication-preview__link--trend">
-                <FlaskConical size={16} color="var(--nhs-green)" />
                 <span>{link.title}</span>
-                <ExternalLink size={16} color="var(--nhs-green)" />
               </a>
             ))}
           </div>
