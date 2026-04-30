@@ -4,6 +4,7 @@ import { Search, ShieldCheck, ExternalLink } from 'lucide-react';
 import {
   SCREENING_TEMPLATES,
   findScreeningTemplateByIdentifier,
+  hydrateScreeningTemplate,
   type ScreeningTemplate,
   withScreeningTemplateDefaults,
 } from '../patientTemplateCatalog';
@@ -26,6 +27,8 @@ const ScreeningView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const org = searchParams.get('org') || '';
   const isDemoMode = searchParams.get('demo') === '1';
+  const previewOnly = searchParams.get('previewOnly') === '1';
+  const previewToken = (searchParams.get('previewToken') || '').trim();
   const screenIdentifier = (searchParams.get('screen') || searchParams.get('screening') || '').trim();
   const builtInTemplates = useMemo(
     () => Object.values(SCREENING_TEMPLATES).map(withScreeningTemplateDefaults),
@@ -33,7 +36,7 @@ const ScreeningView: React.FC = () => {
   );
   const fallbackTemplate = findScreeningTemplateByIdentifier(screenIdentifier, builtInTemplates) || SCREENING_TEMPLATES.cervical;
   const [loadedTemplate, setLoadedTemplate] = useState<ScreeningTemplate | null>(null);
-  const access = usePracticeContentAccess(org, 'screening_enabled', { skip: isDemoMode });
+  const access = usePracticeContentAccess(org, 'screening_enabled', { skip: isDemoMode || previewOnly });
   const selectedTemplate = loadedTemplate || fallbackTemplate;
 
   useEffect(() => {
@@ -41,6 +44,18 @@ const ScreeningView: React.FC = () => {
       if (isDemoMode) {
         setLoadedTemplate(null);
         return;
+      }
+
+      if (previewOnly && previewToken && typeof window !== 'undefined') {
+        try {
+          const raw = window.sessionStorage.getItem(previewToken);
+          if (raw) {
+            setLoadedTemplate(withScreeningTemplateDefaults(JSON.parse(raw) as ScreeningTemplate));
+            return;
+          }
+        } catch {
+          // ignore malformed preview payloads and fall back to stored templates
+        }
       }
 
       try {
@@ -51,8 +66,8 @@ const ScreeningView: React.FC = () => {
         );
         const globalRows = await fetchCardTemplates<ScreeningTemplate>('screening');
         const candidateTemplates = [
-          ...practiceRows.map((row) => withScreeningTemplateDefaults(row.payload)),
-          ...globalRows.map((row) => withScreeningTemplateDefaults(row.payload)),
+          ...practiceRows.map((row) => hydrateScreeningTemplate(row.payload)),
+          ...globalRows.map((row) => hydrateScreeningTemplate(row.payload)),
           ...builtInTemplates,
         ];
         setLoadedTemplate(findScreeningTemplateByIdentifier(screenIdentifier, candidateTemplates));
@@ -62,7 +77,7 @@ const ScreeningView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [builtInTemplates, isDemoMode, org, screenIdentifier]);
+  }, [builtInTemplates, isDemoMode, org, previewOnly, previewToken, screenIdentifier]);
 
   if (access.loading) {
     return (

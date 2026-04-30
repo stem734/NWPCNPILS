@@ -10,6 +10,7 @@ import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore'
 import {
   SCREENING_TEMPLATES,
   findScreeningTemplateByIdentifier,
+  hydrateScreeningTemplate,
   type ScreeningTemplate,
   withScreeningTemplateDefaults,
 } from '../patientTemplateCatalog';
@@ -340,8 +341,8 @@ const CombinedPatientView: React.FC = () => {
         ]);
 
         const candidates = [
-          ...practiceRows.map((row) => withScreeningTemplateDefaults(row.payload)),
-          ...globalRows.map((row) => withScreeningTemplateDefaults(row.payload)),
+          ...practiceRows.map((row) => hydrateScreeningTemplate(row.payload)),
+          ...globalRows.map((row) => hydrateScreeningTemplate(row.payload)),
           ...builtInScreeningTemplates,
         ];
 

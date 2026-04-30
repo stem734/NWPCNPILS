@@ -19,6 +19,7 @@ import {
   IMMUNISATION_TEMPLATES,
   LONG_TERM_CONDITION_TEMPLATES,
   getDefaultScreeningCode,
+  hydrateScreeningTemplate,
   type ScreeningTemplate,
   type ImmunisationTemplate,
   type LongTermConditionTemplate,
@@ -319,6 +320,8 @@ const CardBuilder: React.FC = () => {
   const [healthCheckBuilderConfigs, setHealthCheckBuilderConfigs] = useState<Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>>>(() => createDefaultHealthCheckBuilderState());
   const [screeningTemplates, setScreeningTemplates] = useState<Record<string, ScreeningTemplate>>(() => createDefaultScreeningState());
   const [screeningType, setScreeningType] = useState('cervical');
+  const [patientPreviewUrl, setPatientPreviewUrl] = useState<string | null>(null);
+  const [patientPreviewFooter, setPatientPreviewFooter] = useState<string>('This is a preview of what patients will see.');
   const [immunisationTemplates, setImmunisationTemplates] = useState<Record<string, ImmunisationTemplate>>(() => createDefaultImmunisationState());
   const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
   const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
@@ -383,7 +386,7 @@ const CardBuilder: React.FC = () => {
           setScreeningTemplates((current) => {
             const next = { ...current };
             screeningRows.forEach((row) => {
-              next[row.template_id] = cloneScreeningTemplate(row.payload as ScreeningTemplate);
+              next[row.template_id] = cloneScreeningTemplate(hydrateScreeningTemplate(row.payload as ScreeningTemplate));
             });
             return next;
           });
@@ -573,6 +576,24 @@ const CardBuilder: React.FC = () => {
     } catch {
       // sessionStorage may be unavailable; fall back to saved templates only.
     }
+    return buildPatientUrl(params);
+  };
+
+  const buildScreeningPreviewUrl = (template: ScreeningTemplate) => {
+    const params = new URLSearchParams({
+      type: 'screening',
+      previewOnly: '1',
+      screen: template.code || template.id,
+    });
+
+    try {
+      const previewToken = `screening-preview:${template.id}:${Date.now()}`;
+      window.sessionStorage.setItem(previewToken, JSON.stringify(template));
+      params.set('previewToken', previewToken);
+    } catch {
+      // sessionStorage may be unavailable; fall back to saved templates only.
+    }
+
     return buildPatientUrl(params);
   };
 
@@ -853,6 +874,16 @@ const CardBuilder: React.FC = () => {
     updateScreeningTemplate(templateId, { dontGuidance });
   };
 
+  const addScreeningGuidance = (templateId: string) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    updateScreeningTemplate(templateId, { guidance: [...template.guidance, ''] });
+  };
+
+  const addScreeningDontGuidance = (templateId: string) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    updateScreeningTemplate(templateId, { dontGuidance: [...(template.dontGuidance || []), ''] });
+  };
+
   const updateScreeningLink = (templateId: string, index: number, field: keyof PatientResourceLink, value: string) => {
     const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
     const nhsLinks = template.nhsLinks.map((link, linkIndex) => linkIndex === index ? { ...link, [field]: value } : link);
@@ -1089,8 +1120,9 @@ const CardBuilder: React.FC = () => {
     }, 2200);
   };
 
-  const openPreview = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const openPreview = (url: string, footerCopy = 'This is a preview of what patients will see.') => {
+    setPatientPreviewUrl(url);
+    setPatientPreviewFooter(footerCopy);
   };
 
   const persistCardTemplate = async (
@@ -1239,6 +1271,25 @@ const CardBuilder: React.FC = () => {
       )}
       <div className="dashboard-shell">
       {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
+      {patientPreviewUrl && (
+        <Modal
+          isOpen
+          onClose={() => setPatientPreviewUrl(null)}
+          size="lg"
+          title="Patient Preview"
+          bodyClassName="medication-preview__body"
+          footer={<div className="medication-preview__footer-copy">{patientPreviewFooter}</div>}
+        >
+          <div className="medication-preview">
+            <iframe
+              key={patientPreviewUrl}
+              title="Patient preview"
+              src={patientPreviewUrl}
+              style={{ width: '100%', minHeight: '1040px', border: 'none', display: 'block', background: '#ffffff' }}
+            />
+          </div>
+        </Modal>
+      )}
 
       <div className="dashboard-header">
         <div className="dashboard-header-copy" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
@@ -1990,7 +2041,7 @@ const CardBuilder: React.FC = () => {
           <h3 style={{ marginBottom: '1rem' }}>2. Screening Card Catalogue</h3>
           <div className="dashboard-list">
               {Object.values(screeningTemplates).map((template) => {
-                const previewUrl = buildPatientUrl(new URLSearchParams({ type: 'screening', screen: template.code || template.id }));
+                const previewUrl = buildScreeningPreviewUrl(template);
                 return (
                   <div key={template.id} className="dashboard-list-card">
                     <div style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', background: '#005eb8', color: 'white', minWidth: '72px', textAlign: 'center' }}>
@@ -2003,7 +2054,7 @@ const CardBuilder: React.FC = () => {
                       </div>
                     </div>
                     <div className="dashboard-list-actions">
-                      <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <button onClick={() => openPreview(previewUrl, 'This is a preview of what patients will see when they access this screening card.')} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Eye size={14} /> Preview
                       </button>
                       <button onClick={() => { setScreeningType(template.id); setScreeningEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
@@ -2149,26 +2200,49 @@ const CardBuilder: React.FC = () => {
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input
-                type="text"
-                value={selectedScreeningTemplate.code || getDefaultScreeningCode(selectedScreeningTemplate.id)}
-                onChange={(e) => updateScreeningTemplate(screeningType, {
-                  code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-                })}
-                placeholder="Protocol code"
-                style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', fontFamily: 'monospace' }}
-              />
-              <input type="text" value={selectedScreeningTemplate.label} onChange={(e) => updateScreeningTemplate(screeningType, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <input type="text" value={selectedScreeningTemplate.headline} onChange={(e) => updateScreeningTemplate(screeningType, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <textarea value={selectedScreeningTemplate.explanation} onChange={(e) => updateScreeningTemplate(screeningType, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <div>
-                <h4 style={{ margin: '0 0 0.5rem' }}>Do</h4>
+              <div className="dashboard-field">
+                <label>Title *</label>
+                <input type="text" value={selectedScreeningTemplate.label} onChange={(e) => updateScreeningTemplate(screeningType, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              </div>
+              <div className="dashboard-field">
+                <label>Description *</label>
+                <input type="text" value={selectedScreeningTemplate.headline} onChange={(e) => updateScreeningTemplate(screeningType, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(180px, 220px)', gap: '0.85rem' }}>
+                <div className="dashboard-field">
+                  <label>Code</label>
+                  <input
+                    type="text"
+                    value={selectedScreeningTemplate.code || getDefaultScreeningCode(selectedScreeningTemplate.id)}
+                    onChange={(e) => updateScreeningTemplate(screeningType, {
+                      code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                    })}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                  />
+                </div>
+              </div>
+              <div className="dashboard-field">
+                <label>Guidance *</label>
+                <textarea value={selectedScreeningTemplate.explanation} onChange={(e) => updateScreeningTemplate(screeningType, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '0.8rem 0.85rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
+                  <h4 style={{ margin: 0 }}>Do</h4>
+                  <button type="button" onClick={() => addScreeningGuidance(screeningType)} className="action-button-sm" style={{ background: '#ffffff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.35rem 0.6rem' }}>
+                    <Plus size={14} /> Add Point
+                  </button>
+                </div>
                 {selectedScreeningTemplate.guidance.map((item, index) => (
                   <input key={index} type="text" value={item} onChange={(e) => updateScreeningGuidance(screeningType, index, e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
                 ))}
               </div>
-              <div>
-                <h4 style={{ margin: '0 0 0.5rem' }}>Don&apos;t</h4>
+              <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '0.8rem 0.85rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
+                  <h4 style={{ margin: 0 }}>Don&apos;t</h4>
+                  <button type="button" onClick={() => addScreeningDontGuidance(screeningType)} className="action-button-sm" style={{ background: '#ffffff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.35rem 0.6rem' }}>
+                    <Plus size={14} /> Add Point
+                  </button>
+                </div>
                 {(selectedScreeningTemplate.dontGuidance || []).map((item, index) => (
                   <input
                     key={`dont-${index}`}

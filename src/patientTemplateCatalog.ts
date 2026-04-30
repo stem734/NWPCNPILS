@@ -212,6 +212,17 @@ export const withScreeningTemplateDefaults = (template: ScreeningTemplate): Scre
   code: template.code?.trim() || getDefaultScreeningCode(template.id),
 });
 
+export const hydrateScreeningTemplate = (template: ScreeningTemplate): ScreeningTemplate => {
+  const builtInTemplate = SCREENING_TEMPLATES[template.id];
+  const hasStructuredDontGuidance = Array.isArray(template.dontGuidance);
+
+  if (builtInTemplate && !hasStructuredDontGuidance) {
+    return withScreeningTemplateDefaults(builtInTemplate);
+  }
+
+  return withScreeningTemplateDefaults(template);
+};
+
 const normalizeScreeningIdentifier = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
 export const findScreeningTemplateByIdentifier = (
