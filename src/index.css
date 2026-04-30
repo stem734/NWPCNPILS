@@ -1759,14 +1759,18 @@ p {
   display: grid;
   gap: 1.3rem;
   padding: 1.25rem 1.3rem;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #d8dde0;
+  box-shadow: none;
 }
 
 .dashboard-list-card--practice-active {
-  background: linear-gradient(180deg, #f7fcf8 0%, #eff8f1 100%);
+  border-left: 4px solid #007f3b;
 }
 
 .dashboard-list-card--practice-inactive {
-  background: linear-gradient(180deg, #fffaf7 0%, #fef1ec 100%);
+  border-left: 4px solid #d5281b;
 }
 
 .dashboard-list-title {
@@ -1978,16 +1982,13 @@ p {
 .dashboard-list-actions--practice-primary {
   display: flex;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  align-items: center;
 }
 
-.dashboard-list-actions--practice-secondary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, max-content));
-  align-items: stretch;
-  gap: 0.75rem;
-  justify-content: flex-end;
+.dashboard-list-actions--practice-primary > * {
+  white-space: nowrap;
 }
 
 .dashboard-list-actions--practice-primary > *,
@@ -2309,6 +2310,7 @@ p {
 
   .dashboard-list-actions--practice-primary {
     display: grid;
+    gap: 0.5rem;
   }
 
   .dashboard-list-actions--practice-primary > *,

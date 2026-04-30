@@ -1359,6 +1359,12 @@ const AdminDashboard: React.FC = () => {
                                   <CheckCircle size={14} /> Activate
                                 </button>
                               )}
+                              <button onClick={() => resetPracticeCounters(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
+                                <RefreshCw size={14} /> Reset
+                              </button>
+                              <button onClick={() => deletePractice(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
+                                <Trash2 size={16} /> Delete
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1393,14 +1399,6 @@ const AdminDashboard: React.FC = () => {
                         ) : (
                           <p className="dashboard-practice-feature-empty">No functions enabled for this practice yet.</p>
                         )}
-                      </div>
-                      <div className="dashboard-list-actions dashboard-list-actions--practice-secondary">
-                        <button onClick={() => resetPracticeCounters(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
-                          <RefreshCw size={14} /> Reset
-                        </button>
-                        <button onClick={() => deletePractice(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
-                          <Trash2 size={16} /> Delete
-                        </button>
                       </div>
                     </>
                   );
