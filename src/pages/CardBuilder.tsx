@@ -2,7 +2,7 @@ import React, { useMemo, useReducer, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Plus, Trash2, Save, Copy, ExternalLink, Link, AlertCircle, Eye, Edit2, CopyPlus, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Copy, ExternalLink, Link, Eye, Edit2, CopyPlus, X } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import HealthCheckCard from '../components/HealthCheckCard';
 import { resolvePath } from '../subdomainUtils';
@@ -284,8 +284,6 @@ const CardBuilder: React.FC = () => {
   // Search / generate
   const [medName, setMedName] = useState('');
   const [medType, setMedType] = useState<'NEW' | 'REAUTH'>('NEW');
-  const [generating, setGenerating] = useState(false);
-  const [genError, setGenError] = useState('');
 
   // Editable fields
   const [title, setTitle] = useState('');
@@ -499,7 +497,6 @@ const CardBuilder: React.FC = () => {
     setRequestedCode(medication.code);
     setHasContent(true);
     setSaveError('');
-    setGenError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -527,7 +524,6 @@ const CardBuilder: React.FC = () => {
     setRequestedCode('');
     setHasContent(true);
     setSaveError('');
-    setGenError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -910,50 +906,24 @@ const CardBuilder: React.FC = () => {
     updateLongTermConditionTemplate(templateId, { additionalSections });
   };
 
-  const handleGenerate = async () => {
-    if (!medName.trim()) return;
-    setGenerating(true);
-    setGenError('');
-    try {
-      const { data, error: invokeError } = await supabase.functions.invoke('generate-medication-content', {
-        body: { medicationName: medName.trim(), type: medType },
-      });
-      if (invokeError) throw invokeError;
-
-      if (data.success && data.content) {
-        const c = data.content;
-        setTitle((c.title as string) || medName);
-        setDescription((c.description as string) || '');
-        setBadge(medType);
-        setCategory((c.category as string) || '');
-        setDoKeyInfo((c.doKeyInfo as string[]) || (c.keyInfo as string[]) || ['']);
-        setDontKeyInfo((c.dontKeyInfo as string[]) || ['']);
-        setGeneralKeyInfo((c.generalKeyInfo as string[]) || ['']);
-        setNhsLink((c.nhsLink as string) || '');
-        setSickDaysNeeded((c.sickDaysNeeded as boolean) || false);
-        setReviewMonths((c.reviewMonths as number) || 12);
-        
-        const targetDate = new Date();
-        targetDate.setMonth(targetDate.getMonth() + 12);
-        setContentReviewDate(targetDate.toISOString().slice(0, 10));
-
-        setTrendLinks((c.trendLinks as TrendLink[]) || []);
-        setHasContent(true);
-        setRequestedCode('');
-      }
-    } catch (err) {
-      console.error('Generation error:', err);
-      const message = await getFunctionErrorMessage(err, 'AI generation failed.');
-      setGenError(message);
-      // Still show the editor so they can fill manually
-      setTitle(medName);
-      setBadge(medType);
-      setDoKeyInfo(['']);
-      setDontKeyInfo(['']);
-      setHasContent(true);
-      setRequestedCode('');
-    }
-    setGenerating(false);
+  const startBlankMedicationCard = () => {
+    const trimmedName = medName.trim();
+    setTitle(trimmedName);
+    setDescription('');
+    setBadge(medType);
+    setCategory('');
+    setDoKeyInfo(['']);
+    setDontKeyInfo(['']);
+    setGeneralKeyInfo(['']);
+    setNhsLink('');
+    setTrendLinks([]);
+    setSickDaysNeeded(false);
+    setReviewMonths(12);
+    setContentReviewDate('');
+    setHasContent(true);
+    setRequestedCode('');
+    setSaveError('');
+    setSaveCompleted(false);
   };
 
   const handleSave = async () => {
@@ -1085,7 +1055,6 @@ const CardBuilder: React.FC = () => {
     setRequestedCode('');
     setSaveError('');
     setSaveCompleted(false);
-    setGenError('');
   };
 
   const copyCode = (code: string) => {
@@ -1293,7 +1262,7 @@ const CardBuilder: React.FC = () => {
         </div>
       </div>
 
-      {/* Step 1: Search and Generate */}
+      {/* Step 1: Search and Start */}
       {selectedOutputType === 'medication' && (
       <>
       {builderNotice?.type === 'medication' && (
@@ -1318,7 +1287,7 @@ const CardBuilder: React.FC = () => {
               flex: '1 1 200px', padding: '0.75rem', border: '2px solid #d8dde0',
               borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box',
             }}
-            onKeyDown={e => e.key === 'Enter' && handleGenerate()}
+            onKeyDown={e => e.key === 'Enter' && startBlankMedicationCard()}
           />
           <select
             value={medType}
@@ -1332,19 +1301,13 @@ const CardBuilder: React.FC = () => {
             <option value="REAUTH">Reauthorisation</option>
           </select>
           <button
-            onClick={handleGenerate}
-            disabled={generating || !medName.trim()}
+            onClick={startBlankMedicationCard}
             className="action-button"
-            style={{ flex: '1 1 auto', backgroundColor: '#005eb8', opacity: generating || !medName.trim() ? 0.6 : 1, justifyContent: 'center' }}
+            style={{ flex: '1 1 auto', backgroundColor: '#005eb8', justifyContent: 'center' }}
           >
-            <Sparkles size={16} /> {generating ? 'Generating...' : 'Generate with AI'}
+            <Plus size={16} /> Start blank card
           </button>
         </div>
-        {genError && (
-          <div style={{ padding: '0.5rem 0.75rem', background: '#fff9c4', color: '#7a6200', borderRadius: '6px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertCircle size={16} /> {genError}
-          </div>
-        )}
       </div>
 
       {/* Step 2: Editor */}
