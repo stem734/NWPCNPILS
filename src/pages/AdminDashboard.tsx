@@ -134,6 +134,7 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [loadingLoginAudit, setLoadingLoginAudit] = useState(true);
+  const [expandedPracticeCards, setExpandedPracticeCards] = useState<Record<string, boolean>>({});
   const [expandedLoginAudit, setExpandedLoginAudit] = useState<Record<string, boolean>>({});
   const [authenticated, setAuthenticated] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -266,6 +267,13 @@ const AdminDashboard: React.FC = () => {
       setLoadingAdmins(false);
       setLoadingLoginAudit(false);
     }
+  };
+
+  const togglePracticeCard = (practiceId: string) => {
+    setExpandedPracticeCards((current) => ({
+      ...current,
+      [practiceId]: !current[practiceId],
+    }));
   };
 
   const loadAdmins = async () => {
@@ -1325,12 +1333,25 @@ const AdminDashboard: React.FC = () => {
               >
                 {(() => {
                   const activeFunctions = PRACTICE_FUNCTIONS.filter((feature) => feature.isEnabled(practice));
+                  const isExpanded = Boolean(expandedPracticeCards[practice.id]);
 
                   return (
                     <>
                       <div className="dashboard-practice-top">
                         <div className="dashboard-list-main">
-                          <div className="dashboard-practice-card-header">
+                          <div
+                            className="dashboard-practice-card-header"
+                            role="button"
+                            tabIndex={0}
+                            aria-expanded={isExpanded}
+                            onClick={() => togglePracticeCard(practice.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                togglePracticeCard(practice.id);
+                              }
+                            }}
+                          >
                             <div className="dashboard-practice-identity">
                               <div className="dashboard-practice-heading-row">
                                 <div className="dashboard-list-title dashboard-list-title--practice">{practice.name}</div>
@@ -1345,59 +1366,74 @@ const AdminDashboard: React.FC = () => {
                               </div>
                             </div>
                             <div className="dashboard-list-actions dashboard-list-actions--practice-primary">
-                              <button onClick={() => openEditForm(practice)} className="dashboard-pill-button dashboard-pill-button--primary">
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  togglePracticeCard(practice.id);
+                                }}
+                                className="dashboard-pill-button dashboard-pill-button--muted"
+                                aria-expanded={isExpanded}
+                              >
+                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                {isExpanded ? 'Hide details' : 'Expand details'}
+                              </button>
+                              <button onClick={(event) => { event.stopPropagation(); openEditForm(practice); }} className="dashboard-pill-button dashboard-pill-button--primary">
                                 <Edit2 size={14} /> Edit
                               </button>
                               {practice.is_active ? (
-                                <button onClick={() => toggleActive(practice)} className="dashboard-pill-button dashboard-pill-button--danger">
+                                <button onClick={(event) => { event.stopPropagation(); toggleActive(practice); }} className="dashboard-pill-button dashboard-pill-button--danger">
                                   <XCircle size={14} /> Deactivate
                                 </button>
                               ) : (
-                                <button onClick={() => toggleActive(practice)} className="dashboard-pill-button dashboard-pill-button--success">
+                                <button onClick={(event) => { event.stopPropagation(); toggleActive(practice); }} className="dashboard-pill-button dashboard-pill-button--success">
                                   <CheckCircle size={14} /> Activate
                                 </button>
                               )}
-                              <button onClick={() => resetPracticeCounters(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
+                              <button onClick={(event) => { event.stopPropagation(); resetPracticeCounters(practice); }} className="dashboard-pill-button dashboard-pill-button--muted">
                                 <RefreshCw size={14} /> Reset
                               </button>
-                              <button onClick={() => deletePractice(practice)} className="dashboard-pill-button dashboard-pill-button--muted">
+                              <button onClick={(event) => { event.stopPropagation(); deletePractice(practice); }} className="dashboard-pill-button dashboard-pill-button--muted">
                                 <Trash2 size={16} /> Delete
                               </button>
                             </div>
                           </div>
                         </div>
                       </div>
-                      <div className="dashboard-practice-stats">
-                        <div className="dashboard-practice-stat">
-                          <span className="dashboard-practice-stat-label">Uses</span>
-                          <strong>{practice.link_visit_count ?? 0}</strong>
-                        </div>
-                        <div className="dashboard-practice-stat">
-                          <span className="dashboard-practice-stat-label">Satisfaction</span>
-                          <strong>{getPracticeSatisfaction(practice)}</strong>
-                        </div>
-                        <div className="dashboard-practice-stat">
-                          <span className="dashboard-practice-stat-label">Last active</span>
-                          <strong>{practice.last_accessed ? new Date(practice.last_accessed).toLocaleDateString() || 'N/A' : 'No visits yet'}</strong>
-                        </div>
-                      </div>
-                      <div className="dashboard-practice-feature-panel dashboard-practice-feature-panel--full">
-                        <div className="dashboard-practice-feature-title">Active functions</div>
-                        {activeFunctions.length > 0 ? (
-                          <div className="dashboard-practice-feature-list">
-                            {activeFunctions.map((feature) => (
-                              <div key={feature.key} className="dashboard-practice-feature-item is-enabled">
-                                <span className="dashboard-practice-feature-icon is-enabled">
-                                  <CheckCircle size={14} />
-                                </span>
-                                <span>{feature.label}</span>
-                              </div>
-                            ))}
+                      {isExpanded && (
+                        <>
+                          <div className="dashboard-practice-stats">
+                            <div className="dashboard-practice-stat">
+                              <span className="dashboard-practice-stat-label">Uses</span>
+                              <strong>{practice.link_visit_count ?? 0}</strong>
+                            </div>
+                            <div className="dashboard-practice-stat">
+                              <span className="dashboard-practice-stat-label">Satisfaction</span>
+                              <strong>{getPracticeSatisfaction(practice)}</strong>
+                            </div>
+                            <div className="dashboard-practice-stat">
+                              <span className="dashboard-practice-stat-label">Last active</span>
+                              <strong>{practice.last_accessed ? new Date(practice.last_accessed).toLocaleDateString() || 'N/A' : 'No visits yet'}</strong>
+                            </div>
                           </div>
-                        ) : (
-                          <p className="dashboard-practice-feature-empty">No functions enabled for this practice yet.</p>
-                        )}
-                      </div>
+                          <div className="dashboard-practice-feature-panel dashboard-practice-feature-panel--full">
+                            <div className="dashboard-practice-feature-title">Active functions</div>
+                            {activeFunctions.length > 0 ? (
+                              <div className="dashboard-practice-feature-list">
+                                {activeFunctions.map((feature) => (
+                                  <div key={feature.key} className="dashboard-practice-feature-item is-enabled">
+                                    <span className="dashboard-practice-feature-icon is-enabled">
+                                      <CheckCircle size={14} />
+                                    </span>
+                                    <span>{feature.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="dashboard-practice-feature-empty">No functions enabled for this practice yet.</p>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </>
                   );
                 })()}

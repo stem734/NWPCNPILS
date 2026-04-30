@@ -884,6 +884,18 @@ const CardBuilder: React.FC = () => {
     updateScreeningTemplate(templateId, { dontGuidance: [...(template.dontGuidance || []), ''] });
   };
 
+  const removeScreeningGuidance = (templateId: string, index: number) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    const guidance = template.guidance.filter((_, itemIndex) => itemIndex !== index);
+    updateScreeningTemplate(templateId, { guidance: guidance.length > 0 ? guidance : [''] });
+  };
+
+  const removeScreeningDontGuidance = (templateId: string, index: number) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    const dontGuidance = (template.dontGuidance || []).filter((_, itemIndex) => itemIndex !== index);
+    updateScreeningTemplate(templateId, { dontGuidance: dontGuidance.length > 0 ? dontGuidance : [''] });
+  };
+
   const updateScreeningLink = (templateId: string, index: number, field: keyof PatientResourceLink, value: string) => {
     const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
     const nhsLinks = template.nhsLinks.map((link, linkIndex) => linkIndex === index ? { ...link, [field]: value } : link);
@@ -2233,7 +2245,12 @@ const CardBuilder: React.FC = () => {
                   </button>
                 </div>
                 {selectedScreeningTemplate.guidance.map((item, index) => (
-                  <input key={index} type="text" value={item} onChange={(e) => updateScreeningGuidance(screeningType, index, e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input type="text" value={item} onChange={(e) => updateScreeningGuidance(screeningType, index, e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                    <button type="button" onClick={() => removeScreeningGuidance(screeningType, index)} style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '6px', padding: '0.5rem', cursor: 'pointer' }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 ))}
               </div>
               <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '0.8rem 0.85rem' }}>
@@ -2244,13 +2261,17 @@ const CardBuilder: React.FC = () => {
                   </button>
                 </div>
                 {(selectedScreeningTemplate.dontGuidance || []).map((item, index) => (
-                  <input
-                    key={`dont-${index}`}
-                    type="text"
-                    value={item}
-                    onChange={(e) => updateScreeningDontGuidance(screeningType, index, e.target.value)}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }}
-                  />
+                  <div key={`dont-${index}`} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => updateScreeningDontGuidance(screeningType, index, e.target.value)}
+                      style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    />
+                    <button type="button" onClick={() => removeScreeningDontGuidance(screeningType, index)} style={{ background: '#fde8e8', border: 'none', color: '#d5281b', borderRadius: '6px', padding: '0.5rem', cursor: 'pointer' }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 ))}
               </div>
               <div>

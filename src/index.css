@@ -1807,6 +1807,12 @@ p {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: start;
+  cursor: pointer;
+}
+
+.dashboard-practice-card-header:focus-visible {
+  outline: 3px solid #ffeb3b;
+  outline-offset: 4px;
 }
 
 .dashboard-practice-top {
