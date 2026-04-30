@@ -146,6 +146,12 @@ const builderUiReducer = (state: BuilderUiState, action: BuilderUiAction): Build
   }
 };
 
+const MEDICATION_DESCRIPTION_DUPLICATION_PATTERNS = [
+  /^you are starting\b/i,
+  /^your\s+.+\s+has been reviewed(?:\s+and\s+renewed)?\b/i,
+  /^this guide will help you start treatment safely\b/i,
+];
+
 const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>> =>
   CLINICAL_DOMAIN_IDS.reduce((domainAcc, domainId) => {
     const domainConfig = PREVIEW_DOMAIN_CONFIGS[domainId];
@@ -472,6 +478,11 @@ const CardBuilder: React.FC = () => {
       isBuiltIn: false,
     };
   }, [badge, category, description, editingCode, hasContent, doKeyInfo, dontKeyInfo, generalKeyInfo, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
+
+  const descriptionNeedsDeduping = useMemo(
+    () => MEDICATION_DESCRIPTION_DUPLICATION_PATTERNS.some((pattern) => pattern.test(description.trim())),
+    [description],
+  );
 
   const getFriendlyMedicationName = (medication: MedicationRecord) => {
     const [baseTitle] = medication.title.split(' - ');
@@ -1332,6 +1343,11 @@ const CardBuilder: React.FC = () => {
                 value={description} onChange={e => setDescription(e.target.value)} rows={3}
                 style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box', resize: 'vertical' }}
               />
+              {descriptionNeedsDeduping && (
+                <p style={{ fontSize: '0.82rem', color: '#7c5a00', background: '#fff4cc', borderRadius: '6px', padding: '0.5rem 0.65rem', margin: '0.5rem 0 0' }}>
+                  Tip: the badge and title already show whether this is a new medicine or review. Start the description with what the medicine is and what it does.
+                </p>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

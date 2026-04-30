@@ -20,7 +20,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '101',
     title: 'Sulfonylurea medicine - Starting Treatment',
-    description: 'You are starting a sulfonylurea medicine. Examples include gliclazide and glimepiride. This medicine helps your body make more insulin to lower your blood sugar.',
+    description: 'Sulfonylureas such as gliclazide and glimepiride help your body make more insulin to lower your blood sugar.',
     badge: 'NEW',
     category: 'Sulfonylureas',
     keyInfoMode: 'do',
@@ -43,7 +43,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '102',
     title: 'Sulfonylurea medicine - Reauthorisation',
-    description: 'Your sulfonylurea medicine has been reviewed and renewed for another year. Examples include gliclazide and glimepiride. It remains an important part of your blood sugar treatment.',
+    description: 'Sulfonylureas such as gliclazide and glimepiride remain an important part of blood sugar treatment by helping your body make more insulin.',
     badge: 'REAUTH',
     category: 'Sulfonylureas',
     keyInfoMode: 'do',
@@ -60,7 +60,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '201',
     title: 'SGLT2 inhibitor medicine - Starting Treatment',
-    description: 'You are starting an SGLT2 inhibitor medicine. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This medicine helps your body pass extra sugar in your urine.',
+    description: 'SGLT2 inhibitors such as dapagliflozin and empagliflozin, which often end in "-gliflozin", help your body pass extra sugar in your urine.',
     badge: 'NEW',
     category: 'SGLT2 Inhibitors',
     keyInfoMode: 'do',
@@ -80,7 +80,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '202',
     title: 'SGLT2 inhibitor medicine - Reauthorisation',
-    description: 'Your SGLT2 inhibitor medicine has been reviewed and renewed. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This treatment can also help protect your heart and kidneys.',
+    description: 'SGLT2 inhibitors such as dapagliflozin and empagliflozin, which often end in "-gliflozin", can help lower blood sugar and may also protect your heart and kidneys.',
     badge: 'REAUTH',
     category: 'SGLT2 Inhibitors',
     keyInfoMode: 'do',
@@ -99,7 +99,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '301',
     title: 'Emollient and skin care treatment - Starting Treatment',
-    description: 'You are starting an emollient and skin care treatment. Examples include Cetraben, Diprobase and E45. These products moisturise your skin and help soothe dryness and irritation.',
+    description: 'Emollients such as Cetraben, Diprobase and E45 moisturise your skin and help soothe dryness and irritation.',
     badge: 'NEW',
     category: 'Dermatology',
     keyInfoMode: 'do',
@@ -115,7 +115,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '302',
     title: 'Emollient and skin care treatment - Reauthorisation',
-    description: 'Your emollient and skin care treatment has been reviewed and renewed. Examples include Cetraben, Diprobase and E45. Keep using it often to protect and soothe your skin.',
+    description: 'Emollients such as Cetraben, Diprobase and E45 help protect the skin barrier and soothe dryness when used regularly.',
     badge: 'REAUTH',
     category: 'Dermatology',
     keyInfoMode: 'do',
@@ -131,7 +131,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '401',
     title: 'Insulin therapy - Starting Treatment',
-    description: 'You are starting insulin therapy. Examples include Levemir, Tresiba and Humulin. Insulin helps control your blood sugar and this guide will help you start treatment safely.',
+    description: 'Insulin treatments such as Levemir, Tresiba and Humulin help control your blood sugar and need careful day-to-day use.',
     badge: 'NEW',
     category: 'Insulin',
     keyInfoMode: 'do',
@@ -151,7 +151,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '402',
     title: 'Insulin therapy - Reauthorisation',
-    description: 'Your insulin therapy has been reviewed and renewed. Examples include Levemir, Tresiba and Humulin. Keep following your insulin plan and checking your blood sugar as advised.',
+    description: 'Insulin treatments such as Levemir, Tresiba and Humulin remain an important part of blood sugar management and should be used in line with your insulin plan.',
     badge: 'REAUTH',
     category: 'Insulin',
     keyInfoMode: 'do',
@@ -171,7 +171,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '501',
     title: 'Mounjaro (Tirzepatide) - Starting Treatment',
-    description: 'You are starting Mounjaro for type 2 diabetes. This medicine is also called tirzepatide. It helps improve blood sugar control and may also help with weight management.',
+    description: 'Mounjaro, also called tirzepatide, helps improve blood sugar control in type 2 diabetes and may also help with weight management.',
     badge: 'NEW',
     category: 'GLP-1 / GIP',
     keyInfoMode: 'do',
@@ -189,7 +189,7 @@ export const MEDICATIONS: MedContent[] = [
   {
     code: '502',
     title: 'Mounjaro (Tirzepatide) - Reauthorisation',
-    description: 'Your Mounjaro treatment has been reviewed and renewed. This medicine is also called tirzepatide. Keep taking it as advised and watch for side effects or dose changes.',
+    description: 'Mounjaro, also called tirzepatide, supports blood sugar control in type 2 diabetes and should be monitored for side effects or dose changes.',
     badge: 'REAUTH',
     category: 'GLP-1 / GIP',
     keyInfoMode: 'do',

@@ -38,7 +38,7 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
           <div className="medication-preview__callout medication-preview__callout--blue">
             <div className="medication-preview__callout-title">{calloutTitle}</div>
             <p className="medication-preview__callout-body">
-              You are starting this medication. This information will help you understand your treatment and how to take it safely.
+              This page explains how to use this medicine safely and what to watch for.
             </p>
           </div>
         )}
@@ -47,7 +47,7 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
           <div className="medication-preview__callout medication-preview__callout--grey">
             <div className="medication-preview__callout-title medication-preview__callout-title--dark">{calloutTitle}</div>
             <p className="medication-preview__callout-body medication-preview__callout-body--muted">
-              As you have been taking this medication for 12 months or more, this is a routine review reminder of safe management.
+              This page summarises safe ongoing use and key reminders for this medicine.
             </p>
           </div>
         )}
