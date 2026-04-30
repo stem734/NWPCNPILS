@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe } from 'lucide-react';
-import { IMMUNISATION_TEMPLATES, type ImmunisationTemplate } from '../patientTemplateCatalog';
+import type { ImmunisationTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
@@ -33,18 +33,15 @@ const ImmunisationView: React.FC = () => {
   const [loadedTemplateMap, setLoadedTemplateMap] = useState<Record<string, ImmunisationTemplate>>({});
   const access = usePracticeContentAccess(org, 'immunisation_enabled', { skip: isDemoMode });
   const selectedVaccines = requestedVaccines
-    .map((vaccineCode) => loadedTemplateMap[vaccineCode] || IMMUNISATION_TEMPLATES[vaccineCode])
+    .map((vaccineCode) => loadedTemplateMap[vaccineCode])
     .filter(Boolean);
 
   useEffect(() => {
     const loadTemplates = async () => {
-      if (isDemoMode) {
-        setLoadedTemplateMap({});
-        return;
-      }
-
       try {
-        const practiceRows = await fetchPatientPracticeCardTemplates<ImmunisationTemplate>(org, 'immunisation', requestedVaccines);
+        const practiceRows = org
+          ? await fetchPatientPracticeCardTemplates<ImmunisationTemplate>(org, 'immunisation', requestedVaccines)
+          : [];
         const practiceMap = Object.fromEntries(practiceRows.map((row) => [row.template_id, row.payload]));
         const rows = await fetchCardTemplates<ImmunisationTemplate>('immunisation', requestedVaccines);
         setLoadedTemplateMap({
@@ -57,7 +54,7 @@ const ImmunisationView: React.FC = () => {
       }
     };
     void loadTemplates();
-  }, [isDemoMode, org, requestedVaccines, requestedVaccinesKey]);
+  }, [org, requestedVaccines, requestedVaccinesKey]);
 
   if (access.loading) {
     return (
@@ -78,6 +75,18 @@ const ImmunisationView: React.FC = () => {
         <h1>Immunisation Information</h1>
         <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
           {access.error || 'This practice has not enabled immunisation information yet.'}
+        </p>
+      </div>
+    );
+  }
+
+  if (selectedVaccines.length === 0) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ShieldPlus size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>Immunisation Information</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          We could not find an immunisation card for this link. Please contact your GP practice if this problem continues.
         </p>
       </div>
     );

@@ -213,13 +213,6 @@ export const withScreeningTemplateDefaults = (template: ScreeningTemplate): Scre
 });
 
 export const hydrateScreeningTemplate = (template: ScreeningTemplate): ScreeningTemplate => {
-  const builtInTemplate = SCREENING_TEMPLATES[template.id];
-  const hasStructuredDontGuidance = Array.isArray(template.dontGuidance);
-
-  if (builtInTemplate && !hasStructuredDontGuidance) {
-    return withScreeningTemplateDefaults(builtInTemplate);
-  }
-
   return withScreeningTemplateDefaults(template);
 };
 

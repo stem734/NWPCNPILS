@@ -314,19 +314,7 @@ const CombinedPatientView: React.FC = () => {
         return;
       }
 
-      if (isDemoMode || !orgName) {
-        if (!cancelled) {
-          setSelectedScreenings(
-            requestedScreenings
-              .map((identifier) => findScreeningTemplateByIdentifier(identifier, builtInScreeningTemplates))
-              .filter((item): item is ScreeningTemplate => Boolean(item)),
-          );
-          setScreeningError(null);
-        }
-        return;
-      }
-
-      if (isAuthorised !== true || !practiceFeatures.screening_enabled) {
+      if (!isDemoMode && (isAuthorised !== true || !practiceFeatures.screening_enabled)) {
         if (!cancelled) {
           setSelectedScreenings([]);
           setScreeningError(null);
@@ -336,23 +324,28 @@ const CombinedPatientView: React.FC = () => {
 
       try {
         const [practiceRows, globalRows] = await Promise.all([
-          fetchPatientPracticeCardTemplates<ScreeningTemplate>(orgName, 'screening', builtInScreeningIds),
+          orgName
+            ? fetchPatientPracticeCardTemplates<ScreeningTemplate>(orgName, 'screening', builtInScreeningIds)
+            : Promise.resolve([]),
           fetchCardTemplates<ScreeningTemplate>('screening'),
         ]);
 
         const candidates = [
           ...practiceRows.map((row) => hydrateScreeningTemplate(row.payload)),
           ...globalRows.map((row) => hydrateScreeningTemplate(row.payload)),
-          ...builtInScreeningTemplates,
         ];
 
+        const resolvedScreenings = requestedScreenings
+          .map((identifier) => findScreeningTemplateByIdentifier(identifier, candidates))
+          .filter((item): item is ScreeningTemplate => Boolean(item));
+
         if (!cancelled) {
-          setSelectedScreenings(
-            requestedScreenings
-              .map((identifier) => findScreeningTemplateByIdentifier(identifier, candidates))
-              .filter((item): item is ScreeningTemplate => Boolean(item)),
+          setSelectedScreenings(resolvedScreenings);
+          setScreeningError(
+            resolvedScreenings.length === requestedScreenings.length
+              ? null
+              : 'Some screening information could not be loaded for this link. Please contact your GP practice if this problem continues.',
           );
-          setScreeningError(null);
         }
       } catch (error) {
         console.error('Failed to load screening templates', error);

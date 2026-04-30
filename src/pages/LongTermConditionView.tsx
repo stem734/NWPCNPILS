@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ClipboardList, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
-import { LONG_TERM_CONDITION_TEMPLATES, type LongTermConditionTemplate } from '../patientTemplateCatalog';
+import type { LongTermConditionTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
@@ -11,26 +11,22 @@ const LongTermConditionView: React.FC = () => {
   const org = searchParams.get('org') || '';
   const isDemoMode = searchParams.get('demo') === '1';
   const conditionType = (searchParams.get('ltc') || searchParams.get('condition') || '').trim().toLowerCase();
-  const fallbackTemplate = LONG_TERM_CONDITION_TEMPLATES[conditionType] || LONG_TERM_CONDITION_TEMPLATES.asthma;
   const [loadedTemplate, setLoadedTemplate] = useState<LongTermConditionTemplate | null>(null);
   const access = usePracticeContentAccess(org, 'ltc_enabled', { skip: isDemoMode });
-  const selectedTemplate = loadedTemplate?.id === fallbackTemplate.id ? loadedTemplate : fallbackTemplate;
+  const selectedTemplate = loadedTemplate;
 
   useEffect(() => {
     const loadTemplate = async () => {
-      if (isDemoMode) {
-        setLoadedTemplate(null);
-        return;
-      }
-
       try {
-        const [practiceRow] = await fetchPatientPracticeCardTemplates<LongTermConditionTemplate>(org, 'ltc', [fallbackTemplate.id]);
+        const [practiceRow] = org
+          ? await fetchPatientPracticeCardTemplates<LongTermConditionTemplate>(org, 'ltc', [conditionType || 'asthma'])
+          : [];
         if (practiceRow?.payload) {
           setLoadedTemplate(practiceRow.payload);
           return;
         }
 
-        const [row] = await fetchCardTemplates<LongTermConditionTemplate>('ltc', [fallbackTemplate.id]);
+        const [row] = await fetchCardTemplates<LongTermConditionTemplate>('ltc', [conditionType || 'asthma']);
         setLoadedTemplate(row?.payload || null);
       } catch (error) {
         console.error('Failed to load long term condition template override', error);
@@ -38,7 +34,7 @@ const LongTermConditionView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [fallbackTemplate, isDemoMode, org]);
+  }, [conditionType, org]);
 
   if (access.loading) {
     return (
@@ -59,6 +55,18 @@ const LongTermConditionView: React.FC = () => {
         <h1>Long Term Condition Information</h1>
         <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
           {access.error || 'This practice has not enabled long term condition information yet.'}
+        </p>
+      </div>
+    );
+  }
+
+  if (!selectedTemplate) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ClipboardList size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>Long Term Condition Information</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          We could not find a long term condition card for this link. Please contact your GP practice if this problem continues.
         </p>
       </div>
     );

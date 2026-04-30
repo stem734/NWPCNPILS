@@ -30,20 +30,15 @@ const ScreeningView: React.FC = () => {
   const previewOnly = searchParams.get('previewOnly') === '1';
   const previewToken = (searchParams.get('previewToken') || '').trim();
   const screenIdentifier = (searchParams.get('screen') || searchParams.get('screening') || '').trim();
-  const builtInTemplates = useMemo(
-    () => Object.values(SCREENING_TEMPLATES).map(withScreeningTemplateDefaults),
-    [],
-  );
-  const fallbackTemplate = findScreeningTemplateByIdentifier(screenIdentifier, builtInTemplates) || SCREENING_TEMPLATES.cervical;
   const [loadedTemplate, setLoadedTemplate] = useState<ScreeningTemplate | null>(null);
   const access = usePracticeContentAccess(org, 'screening_enabled', { skip: isDemoMode || previewOnly });
-  const selectedTemplate = loadedTemplate || fallbackTemplate;
+  const knownTemplateIds = useMemo(() => Object.keys(SCREENING_TEMPLATES), []);
+  const selectedTemplate = loadedTemplate;
 
   useEffect(() => {
     const loadTemplate = async () => {
       if (isDemoMode) {
-        setLoadedTemplate(null);
-        return;
+        // Demo mode still uses the saved global template when one exists.
       }
 
       if (previewOnly && previewToken && typeof window !== 'undefined') {
@@ -59,16 +54,17 @@ const ScreeningView: React.FC = () => {
       }
 
       try {
-        const practiceRows = await fetchPatientPracticeCardTemplates<ScreeningTemplate>(
-          org,
-          'screening',
-          builtInTemplates.map((template) => template.id),
-        );
+        const practiceRows = org
+          ? await fetchPatientPracticeCardTemplates<ScreeningTemplate>(
+            org,
+            'screening',
+            knownTemplateIds,
+          )
+          : [];
         const globalRows = await fetchCardTemplates<ScreeningTemplate>('screening');
         const candidateTemplates = [
           ...practiceRows.map((row) => hydrateScreeningTemplate(row.payload)),
           ...globalRows.map((row) => hydrateScreeningTemplate(row.payload)),
-          ...builtInTemplates,
         ];
         setLoadedTemplate(findScreeningTemplateByIdentifier(screenIdentifier, candidateTemplates));
       } catch (error) {
@@ -77,7 +73,7 @@ const ScreeningView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [builtInTemplates, isDemoMode, org, previewOnly, previewToken, screenIdentifier]);
+  }, [isDemoMode, knownTemplateIds, org, previewOnly, previewToken, screenIdentifier]);
 
   if (access.loading) {
     return (
@@ -98,6 +94,18 @@ const ScreeningView: React.FC = () => {
         <h1>Screening Information</h1>
         <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
           {access.error || 'This practice has not enabled screening information yet.'}
+        </p>
+      </div>
+    );
+  }
+
+  if (!selectedTemplate) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <Search size={64} color="#005eb8" style={{ marginBottom: '1rem' }} />
+        <h1>Screening Information</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          We could not find a screening card for this link. Please contact your GP practice if this problem continues.
         </p>
       </div>
     );

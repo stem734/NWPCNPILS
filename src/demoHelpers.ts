@@ -6,6 +6,9 @@ import {
   IMMUNISATION_TEMPLATES,
   LONG_TERM_CONDITION_TEMPLATES,
   SCREENING_TEMPLATES,
+  type ImmunisationTemplate,
+  type LongTermConditionTemplate,
+  type ScreeningTemplate,
   withScreeningTemplateDefaults,
 } from './patientTemplateCatalog';
 
@@ -19,6 +22,12 @@ export type DemoSample = {
 };
 
 export type DemoType = 'medication' | 'healthcheck' | 'screening' | 'immunisation' | 'ltc';
+
+type DemoTemplateSources = {
+  screeningTemplates?: ScreeningTemplate[];
+  immunisationTemplates?: ImmunisationTemplate[];
+  ltcTemplates?: LongTermConditionTemplate[];
+};
 
 const DEMO_PRACTICE_NAME = 'Demo GP Practice';
 
@@ -83,6 +92,7 @@ const buildRandomHealthCheckParams = () => {
 
 export const buildDemoSamples = (
   medications: Array<Pick<MedicationRecord, 'code' | 'title' | 'category'>> = MEDICATIONS,
+  sources: DemoTemplateSources = {},
 ): DemoSample[] => [
   ...buildMedicationDemoSamples(medications),
   ...CLINICAL_DOMAIN_IDS.map((domainId) => ({
@@ -95,7 +105,7 @@ export const buildDemoSamples = (
       type: 'healthcheck',
     },
   })),
-  ...Object.values(SCREENING_TEMPLATES).map((sourceTemplate) => {
+  ...(sources.screeningTemplates || Object.values(SCREENING_TEMPLATES)).map((sourceTemplate) => {
     const template = withScreeningTemplateDefaults(sourceTemplate);
     return ({
     id: `screening-${template.id}`,
@@ -109,7 +119,7 @@ export const buildDemoSamples = (
     },
   });
   }),
-  ...Object.values(IMMUNISATION_TEMPLATES).map((template) => ({
+  ...(sources.immunisationTemplates || Object.values(IMMUNISATION_TEMPLATES)).map((template) => ({
     id: `immunisation-${template.id}`,
     category: 'Immunisation' as const,
     title: template.label,
@@ -120,7 +130,7 @@ export const buildDemoSamples = (
       vaccine: template.id,
     },
   })),
-  ...Object.values(LONG_TERM_CONDITION_TEMPLATES).map((template) => ({
+  ...(sources.ltcTemplates || Object.values(LONG_TERM_CONDITION_TEMPLATES)).map((template) => ({
     id: `ltc-${template.id}`,
     category: 'Long term condition' as const,
     title: template.label,

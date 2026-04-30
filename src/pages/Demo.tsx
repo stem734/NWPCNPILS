@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, ArrowLeft, ClipboardList, Monitor, Search, ShieldPlus, Shuffle, Tablets } from 'lucide-react';
 import { buildDemoPatientUrl, buildDemoSamples, getRandomDemoSample, type DemoSample } from '../demoHelpers';
 import { useMedicationCatalog } from '../medicationCatalog';
+import { fetchCardTemplates } from '../cardTemplateStore';
+import {
+  type ImmunisationTemplate,
+  type LongTermConditionTemplate,
+  type ScreeningTemplate,
+} from '../patientTemplateCatalog';
 
 const CARD_CATEGORY_ORDER: DemoSample['category'][] = [
   'Medication',
@@ -23,7 +29,46 @@ const CATEGORY_ICONS: Record<DemoSample['category'], React.ElementType> = {
 const Demo: React.FC = () => {
   const navigate = useNavigate();
   const { medications } = useMedicationCatalog();
-  const demoSamples = React.useMemo(() => buildDemoSamples(medications), [medications]);
+  const [screeningTemplates, setScreeningTemplates] = React.useState<ScreeningTemplate[]>([]);
+  const [immunisationTemplates, setImmunisationTemplates] = React.useState<ImmunisationTemplate[]>([]);
+  const [ltcTemplates, setLtcTemplates] = React.useState<LongTermConditionTemplate[]>([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadTemplates = async () => {
+      try {
+        const [screeningRows, immunisationRows, ltcRows] = await Promise.all([
+          fetchCardTemplates<ScreeningTemplate>('screening'),
+          fetchCardTemplates<ImmunisationTemplate>('immunisation'),
+          fetchCardTemplates<LongTermConditionTemplate>('ltc'),
+        ]);
+
+        if (cancelled) return;
+
+        setScreeningTemplates(screeningRows.map((row) => row.payload));
+        setImmunisationTemplates(immunisationRows.map((row) => row.payload));
+        setLtcTemplates(ltcRows.map((row) => row.payload));
+      } catch (error) {
+        console.error('Failed to load demo template catalogue', error);
+        if (cancelled) return;
+        setScreeningTemplates([]);
+        setImmunisationTemplates([]);
+        setLtcTemplates([]);
+      }
+    };
+
+    void loadTemplates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const demoSamples = React.useMemo(
+    () => buildDemoSamples(medications, { screeningTemplates, immunisationTemplates, ltcTemplates }),
+    [immunisationTemplates, ltcTemplates, medications, screeningTemplates],
+  );
 
   const openDemo = (index: number) => {
     navigate(buildDemoPatientUrl(demoSamples[index]));
@@ -31,7 +76,9 @@ const Demo: React.FC = () => {
 
   const openRandomDemo = () => {
     const medicationSamples = demoSamples.filter((sample) => sample.category === 'Medication');
-    const samples = medicationSamples.length > 0 ? demoSamples : buildDemoSamples();
+    const samples = medicationSamples.length > 0
+      ? demoSamples
+      : buildDemoSamples(medications, { screeningTemplates, immunisationTemplates, ltcTemplates });
     const index = Math.floor(Math.random() * samples.length);
     navigate(buildDemoPatientUrl(samples[index] || getRandomDemoSample()));
   };
