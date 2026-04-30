@@ -1,7 +1,6 @@
 import React from 'react';
 import { ExternalLink, Eye, FlaskConical } from 'lucide-react';
 import type { MedContent } from '../medicationData';
-import { getMedicationIcon } from '../medicationIcons';
 import Modal from './Modal';
 import { NhsCross, NhsTick } from './NhsIcons';
 import WarningCallout from './WarningCallout';
@@ -53,10 +52,7 @@ const MedicationPreviewModal: React.FC<MedicationPreviewModalProps> = ({ med, on
           </div>
         )}
 
-        <h2 className="medication-preview__title">
-          <span className="medication-preview__title-icon" aria-hidden="true">{getMedicationIcon(med.code)}</span>
-          {displayTitle}
-        </h2>
+        <h2 className="medication-preview__title">{displayTitle}</h2>
         <p className="medication-preview__description">{med.description}</p>
 
         {med.generalKeyInfo?.length ? (

@@ -18,7 +18,6 @@ import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DisclaimerDialog from '../components/DisclaimerDialog';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
-import { getMedicationIcon } from '../medicationIcons';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import type { CardTemplateRecord, HealthCheckTemplatePayload } from '../cardTemplateTypes';
@@ -1519,9 +1518,6 @@ const PracticeDashboard: React.FC = () => {
 
                 return (
                   <div key={medication.code} className="dashboard-list-card dashboard-list-card--medication">
-                    <div className="dashboard-list-icon dashboard-list-icon--medication" style={{ color: '#005eb8' }}>
-                      {getMedicationIcon(medication.code)}
-                    </div>
                     <div className="dashboard-list-main dashboard-list-main--medication">
                       <div className="dashboard-list-title">{medication.title}</div>
                       <div className="dashboard-meta">

@@ -4,7 +4,6 @@ import { AlertCircle, ExternalLink, FlaskConical, Info, Printer, Star } from 'lu
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from '../protocolService';
 import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from '../practiceFeatures';
 import { useMedicationCatalog } from '../medicationCatalog';
-import { getMedicationIcon } from '../medicationIcons';
 import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
 import { isIssuedDateStale } from '../dateHelpers';
@@ -334,7 +333,7 @@ const ResourceView: React.FC = () => {
     if (isDemoMode || !orgName) {
       return sortMedicationGroups(
         requestedCodes
-          .map((code) => (allMeds[code] ? { id: code, icon: getMedicationIcon(code), state: 'global' as const, ...allMeds[code] } : null))
+          .map((code) => (allMeds[code] ? { id: code, state: 'global' as const, ...allMeds[code] } : null))
           .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title),
       );
     }
@@ -347,7 +346,6 @@ const ResourceView: React.FC = () => {
       return sortMedicationGroups(
         resolvedContents.map((card) => ({
           id: card.code,
-          icon: getMedicationIcon(card.code),
           ...card,
         })),
       );
@@ -355,7 +353,7 @@ const ResourceView: React.FC = () => {
 
     return sortMedicationGroups(
       requestedCodes
-        .map((code) => (allMeds[code] ? { id: code, icon: getMedicationIcon(code), state: 'global' as const, ...allMeds[code] } : null))
+        .map((code) => (allMeds[code] ? { id: code, state: 'global' as const, ...allMeds[code] } : null))
         .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title),
     );
   }, [allMeds, isAuthorised, isDemoMode, orgName, requestedCodes, resolvedContents]);
@@ -465,7 +463,6 @@ const ResourceView: React.FC = () => {
           <div className="patient-empty-grid">
             {Object.entries(allMeds).map(([key, item]) => (
               <a key={key} href={`?code=${key}`} className="resource-card patient-empty-card" style={{ textAlign: 'center' }}>
-                <div className="patient-empty-icon">{getMedicationIcon(key)}</div>
                 <h3>{item.title}</h3>
                 <span className={`badge badge-${item.badge.toLowerCase()}`}>{item.badge}</span>
               </a>
