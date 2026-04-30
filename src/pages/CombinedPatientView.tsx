@@ -652,10 +652,14 @@ const CombinedPatientView: React.FC = () => {
           </div>
           <h2 className="patient-section-title">{template.label}</h2>
           <p className="patient-section-copy">{template.headline}</p>
-          <p className="patient-section-copy">{template.explanation}</p>
 
           <div className="patient-info-section">
-            <h3 className="patient-section-title patient-section-title--small">What to do next</h3>
+            <h3 className="patient-section-title patient-section-title--small">Guidance</h3>
+            <p className="patient-section-copy" style={{ marginBottom: 0 }}>{template.explanation}</p>
+          </div>
+
+          <div className="patient-info-section">
+            <h3 className="patient-section-title patient-section-title--small">Do</h3>
             <ul className="patient-info-list">
               {template.guidance.map((item, index) => (
                 <li key={index} className="patient-info-item">
@@ -665,6 +669,20 @@ const CombinedPatientView: React.FC = () => {
               ))}
             </ul>
           </div>
+
+          {template.dontGuidance && template.dontGuidance.length > 0 && (
+            <div className="patient-info-section">
+              <h3 className="patient-section-title patient-section-title--small">Don&apos;t</h3>
+              <ul className="patient-info-list">
+                {template.dontGuidance.map((item, index) => (
+                  <li key={index} className="patient-info-item">
+                    <div className="patient-info-icon"><NhsCross size={22} aria-hidden="true" /></div>
+                    <span className="patient-info-text">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="patient-resources patient-section-divider">
             <h3 className="patient-resources-heading">Trusted resources</h3>

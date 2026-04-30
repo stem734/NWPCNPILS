@@ -10,6 +10,7 @@ import {
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
+import { NhsCross, NhsTick } from '../components/NhsIcons';
 
 /**
  * ScreeningView — renders screening invitation / result info.
@@ -100,19 +101,37 @@ const ScreeningView: React.FC = () => {
       <div className="card patient-section-card">
         <h2 className="patient-section-title">{selectedTemplate.label}</h2>
         <p className="patient-section-copy">{selectedTemplate.headline}</p>
-        <p className="patient-section-copy">{selectedTemplate.explanation}</p>
 
         <div className="patient-info-section">
-          <h3 className="patient-section-title patient-section-title--small">What to do next</h3>
+          <h3 className="patient-section-title patient-section-title--small">Guidance</h3>
+          <p className="patient-section-copy" style={{ marginBottom: 0 }}>{selectedTemplate.explanation}</p>
+        </div>
+
+        <div className="patient-info-section">
+          <h3 className="patient-section-title patient-section-title--small">Do</h3>
           <ul className="patient-info-list">
             {selectedTemplate.guidance.map((item, index) => (
               <li key={index} className="patient-info-item">
-                <div className="patient-info-icon"><ShieldCheck size={18} color="#007f3b" /></div>
+                <div className="patient-info-icon"><NhsTick size={22} aria-hidden="true" /></div>
                 <span className="patient-info-text">{item}</span>
               </li>
             ))}
           </ul>
         </div>
+
+        {selectedTemplate.dontGuidance && selectedTemplate.dontGuidance.length > 0 && (
+          <div className="patient-info-section">
+            <h3 className="patient-section-title patient-section-title--small">Don&apos;t</h3>
+            <ul className="patient-info-list">
+              {selectedTemplate.dontGuidance.map((item, index) => (
+                <li key={index} className="patient-info-item">
+                  <div className="patient-info-icon"><NhsCross size={22} aria-hidden="true" /></div>
+                  <span className="patient-info-text">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="patient-resources patient-section-divider" style={{ marginTop: 0 }}>

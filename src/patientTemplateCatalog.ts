@@ -11,6 +11,7 @@ export type ScreeningTemplate = {
   headline: string;
   explanation: string;
   guidance: string[];
+  dontGuidance?: string[];
   nhsLinks: PatientResourceLink[];
 };
 
@@ -56,6 +57,10 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
       'Most people have normal results and are invited again later.',
       'If follow-up is needed, your GP practice will explain the next step.',
     ],
+    dontGuidance: [
+      'Do not ignore your invitation because you feel well.',
+      'Do not wait for your next routine contact if you have symptoms or concerns.',
+    ],
     nhsLinks: [
       {
         title: 'NHS cervical screening overview',
@@ -80,6 +85,10 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
       'Complete and return your kit as soon as possible after it arrives.',
       'A positive result does not mean you have cancer, but more checks are needed.',
       'If symptoms change, contact your GP without waiting for routine screening.',
+    ],
+    dontGuidance: [
+      'Do not delay returning your kit once it arrives.',
+      'Do not ignore symptoms while waiting for screening or results.',
     ],
     nhsLinks: [
       {
@@ -106,6 +115,10 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
       'You may be asked to return for extra images, which is common.',
       'Continue to check your breasts and report new changes to your GP.',
     ],
+    dontGuidance: [
+      'Do not wait for your next screening invite if you notice a new breast change.',
+      'Do not assume a recall for extra images means cancer has been found.',
+    ],
     nhsLinks: [
       {
         title: 'NHS breast screening',
@@ -131,6 +144,10 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
       'Most people have a normal result and need no further scans.',
       'If monitoring is needed, follow-up scans are arranged by the NHS programme.',
     ],
+    dontGuidance: [
+      'Do not skip your scan because you feel well.',
+      'Do not ignore new severe abdominal or back pain while waiting for follow-up.',
+    ],
     nhsLinks: [
       {
         title: 'NHS AAA screening programme',
@@ -155,6 +172,10 @@ export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {
       'Attend annual eye screening when invited.',
       'Bring sunglasses as drops can blur vision for a few hours.',
       'Keep blood sugar, blood pressure, and cholesterol controlled to protect your eyes.',
+    ],
+    dontGuidance: [
+      'Do not drive until your vision is clear after the eye drops.',
+      'Do not skip screening because your sight seems normal.',
     ],
     nhsLinks: [
       {

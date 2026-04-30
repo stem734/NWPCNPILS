@@ -213,6 +213,7 @@ const cloneResourceLinks = (links: PatientResourceLink[]) => links.map((link) =>
 const cloneScreeningTemplate = (template: ScreeningTemplate): ScreeningTemplate => ({
   ...withScreeningTemplateDefaults(template),
   guidance: [...template.guidance],
+  dontGuidance: [...(template.dontGuidance || [])],
   nhsLinks: cloneResourceLinks(template.nhsLinks),
 });
 const cloneImmunisationTemplate = (template: ImmunisationTemplate): ImmunisationTemplate => ({
@@ -843,6 +844,13 @@ const CardBuilder: React.FC = () => {
     const guidance = [...template.guidance];
     guidance[index] = value;
     updateScreeningTemplate(templateId, { guidance });
+  };
+
+  const updateScreeningDontGuidance = (templateId: string, index: number, value: string) => {
+    const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
+    const dontGuidance = [...(template.dontGuidance || [])];
+    dontGuidance[index] = value;
+    updateScreeningTemplate(templateId, { dontGuidance });
   };
 
   const updateScreeningLink = (templateId: string, index: number, field: keyof PatientResourceLink, value: string) => {
@@ -2154,9 +2162,21 @@ const CardBuilder: React.FC = () => {
               <input type="text" value={selectedScreeningTemplate.headline} onChange={(e) => updateScreeningTemplate(screeningType, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <textarea value={selectedScreeningTemplate.explanation} onChange={(e) => updateScreeningTemplate(screeningType, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <div>
-                <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Do</h4>
                 {selectedScreeningTemplate.guidance.map((item, index) => (
                   <input key={index} type="text" value={item} onChange={(e) => updateScreeningGuidance(screeningType, index, e.target.value)} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                ))}
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem' }}>Don&apos;t</h4>
+                {(selectedScreeningTemplate.dontGuidance || []).map((item, index) => (
+                  <input
+                    key={`dont-${index}`}
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateScreeningDontGuidance(screeningType, index, e.target.value)}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', marginBottom: '0.5rem' }}
+                  />
                 ))}
               </div>
               <div>
