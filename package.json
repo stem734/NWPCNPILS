@@ -8,7 +8,6 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "migrate:local-resources": "tsx scripts/migrate-local-resources.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -34,7 +33,6 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "firebase-admin": "^13.8.0",
     "globals": "^17.4.0",
     "jsdom": "^29.0.2",
     "tsx": "^4.21.0",

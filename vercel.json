@@ -10,6 +10,7 @@
     { "source": "/practice", "destination": "/" },
     { "source": "/practice/:path*", "destination": "/" },
     { "source": "/dashboard", "destination": "/" },
+    { "source": "/card-builder", "destination": "/" },
     { "source": "/drug-builder", "destination": "/" },
     { "source": "/reset-password", "destination": "/" },
     { "source": "/legal", "destination": "/" }

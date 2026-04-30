@@ -19,7 +19,7 @@ INSERT INTO medications (
   (
     '101',
     $$Sulfonylurea medicine - Starting Treatment$$,
-    $$You are starting a sulfonylurea medicine. Examples include gliclazide and glimepiride. This medicine helps your body make more insulin to lower your blood sugar.$$,
+    $$Sulfonylureas such as gliclazide and glimepiride help your body make more insulin to lower your blood sugar.$$,
     'NEW',
     $$Sulfonylureas$$,
     ARRAY[$$Take this medication with a meal.$$, $$Be aware of "hypos" (low blood sugar).$$, $$Always carry glucose or a sugary snack.$$],
@@ -33,7 +33,7 @@ INSERT INTO medications (
   (
     '102',
     $$Sulfonylurea medicine - Reauthorisation$$,
-    $$Your sulfonylurea medicine has been reviewed and renewed for another year. Examples include gliclazide and glimepiride. It remains an important part of your blood sugar treatment.$$,
+    $$Sulfonylureas such as gliclazide and glimepiride remain an important part of blood sugar treatment by helping your body make more insulin.$$,
     'REAUTH',
     $$Sulfonylureas$$,
     ARRAY[$$Continue taking as prescribed, usually with breakfast.$$, $$Maintain regular check-ups.$$],
@@ -47,7 +47,7 @@ INSERT INTO medications (
   (
     '201',
     $$SGLT2 inhibitor medicine - Starting Treatment$$,
-    $$You are starting an SGLT2 inhibitor medicine. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This medicine helps your body pass extra sugar in your urine.$$,
+    $$SGLT2 inhibitors such as dapagliflozin and empagliflozin, which often end in "-gliflozin", help your body pass extra sugar in your urine.$$,
     'NEW',
     $$SGLT2 Inhibitors$$,
     ARRAY[$$Stay hydrated by drinking plenty of water.$$, $$Maintain good personal hygiene to reduce infection risk.$$, $$Be aware of the risk of Ketoacidosis (rare but serious).$$],
@@ -61,7 +61,7 @@ INSERT INTO medications (
   (
     '202',
     $$SGLT2 inhibitor medicine - Reauthorisation$$,
-    $$Your SGLT2 inhibitor medicine has been reviewed and renewed. Examples include dapagliflozin and empagliflozin, and many of these names end in "-gliflozin". This treatment can also help protect your heart and kidneys.$$,
+    $$SGLT2 inhibitors such as dapagliflozin and empagliflozin, which often end in "-gliflozin", can help lower blood sugar and may also protect your heart and kidneys.$$,
     'REAUTH',
     $$SGLT2 Inhibitors$$,
     ARRAY[$$Continue to stay hydrated.$$, $$Remember "Sick Day Rules" (Pause medication if you are unable to eat or drink).$$],
@@ -75,7 +75,7 @@ INSERT INTO medications (
   (
     '301',
     $$Emollient and skin care treatment - Starting Treatment$$,
-    $$You are starting an emollient and skin care treatment. Examples include Cetraben, Diprobase and E45. These products moisturise your skin and help soothe dryness and irritation.$$,
+    $$Emollients such as Cetraben, Diprobase and E45 moisturise your skin and help soothe dryness and irritation.$$,
     'NEW',
     $$Dermatology$$,
     ARRAY[$$Apply frequently and in the direction of hair growth.$$, $$Important: Emollients with paraffin or oils are flammable. Keep away from naked flames.$$, $$Wash your hands after application if smoking.$$],
@@ -89,7 +89,7 @@ INSERT INTO medications (
   (
     '302',
     $$Emollient and skin care treatment - Reauthorisation$$,
-    $$Your emollient and skin care treatment has been reviewed and renewed. Examples include Cetraben, Diprobase and E45. Keep using it often to protect and soothe your skin.$$,
+    $$Emollients such as Cetraben, Diprobase and E45 help protect the skin barrier and soothe dryness when used regularly.$$,
     'REAUTH',
     $$Dermatology$$,
     ARRAY[$$Continue applying regularly and in the direction of hair growth.$$, $$Important: Emollients with paraffin or oils are flammable. Keep away from naked flames.$$, $$Re-order before you run out so your skin care routine stays consistent.$$],
@@ -103,7 +103,7 @@ INSERT INTO medications (
   (
     '401',
     $$Insulin therapy - Starting Treatment$$,
-    $$You are starting insulin therapy. Examples include Levemir, Tresiba and Humulin. Insulin helps control your blood sugar and this guide will help you start treatment safely.$$,
+    $$Insulin treatments such as Levemir, Tresiba and Humulin help control your blood sugar and need careful day-to-day use.$$,
     'NEW',
     $$Insulin$$,
     ARRAY[$$Rotate your injection sites regularly.$$, $$Check your injection sites for lumps (Lipohypertrophy).$$, $$Inform the DVLA if you are a driver on insulin.$$],
@@ -117,7 +117,7 @@ INSERT INTO medications (
   (
     '402',
     $$Insulin therapy - Reauthorisation$$,
-    $$Your insulin therapy has been reviewed and renewed. Examples include Levemir, Tresiba and Humulin. Keep following your insulin plan and checking your blood sugar as advised.$$,
+    $$Insulin treatments such as Levemir, Tresiba and Humulin remain an important part of blood sugar management and should be used in line with your insulin plan.$$,
     'REAUTH',
     $$Insulin$$,
     ARRAY[$$Continue rotating your injection sites regularly.$$, $$Check your injection sites for lumps (Lipohypertrophy).$$, $$Inform the DVLA if you are a driver on insulin.$$],
@@ -131,7 +131,7 @@ INSERT INTO medications (
   (
     '501',
     $$Mounjaro (Tirzepatide) - Starting Treatment$$,
-    $$You are starting Mounjaro for type 2 diabetes. This medicine is also called tirzepatide. It helps improve blood sugar control and may also help with weight management.$$,
+    $$Mounjaro, also called tirzepatide, helps improve blood sugar control in type 2 diabetes and may also help with weight management.$$,
     'NEW',
     $$GLP-1 / GIP$$,
     ARRAY[$$Usually a once-weekly injection.$$, $$May cause nausea or gastrointestinal side effects initially.$$, $$Report any severe abdominal pain immediately.$$],
@@ -145,7 +145,7 @@ INSERT INTO medications (
   (
     '502',
     $$Mounjaro (Tirzepatide) - Reauthorisation$$,
-    $$Your Mounjaro treatment has been reviewed and renewed. This medicine is also called tirzepatide. Keep taking it as advised and watch for side effects or dose changes.$$,
+    $$Mounjaro, also called tirzepatide, supports blood sugar control in type 2 diabetes and should be monitored for side effects or dose changes.$$,
     'REAUTH',
     $$GLP-1 / GIP$$,
     ARRAY[$$Usually a once-weekly injection.$$, $$May cause nausea or gastrointestinal side effects initially.$$, $$Report any severe abdominal pain immediately.$$],

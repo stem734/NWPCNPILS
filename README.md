@@ -1,148 +1,71 @@
-# NWPCNPILS - Patient Medication Information Portal
+# MyMedInfo
 
-A React + TypeScript application for delivering medication information to patients via SystmOne integration.
+MyMedInfo is a React and TypeScript application for delivering patient information cards for medications, health checks, screening, immunisations, and long-term conditions.
 
-## Overview
+## Current stack
 
-This is a patient-facing medication information portal integrated with NHS SystmOne. GPs can generate protocol strings with medication codes, which patients access via QR codes or direct links. The portal displays tailored medication information based on the codes provided.
+- Frontend: React 19, TypeScript, Vite
+- Hosting: Vercel
+- Data and auth: Supabase
+- Patient entry point: `/patient` with SystmOne-style URL parameters
+- Admin tooling: `/admin/dashboard` and `/admin/card-builder`
 
-## Architecture
+## Active application areas
 
-- **Frontend**: React 19 + TypeScript + Vite (hosted on Vercel)
-- **Backend**: Firebase Cloud Functions (protocol validation)
-- **Database**: Firestore (protocol definitions)
-- **Integration**: SystmOne text variable passing medication codes via URL parameters
+- Patient viewer for medication and pathway content
+- Practice dashboard for adopting and customising cards
+- Admin card builder for medication and template content
+- Supabase Edge Functions for save, restore, audit, user management, and practice actions
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- Firebase CLI (`npm install -g firebase-tools`)
-- Vercel account (for deployment)
-
-### Installation
+## Local development
 
 1. Install dependencies:
+
 ```bash
 npm install
-cd functions && npm install && cd ..
 ```
 
-2. Copy environment template:
+2. Copy the environment template and add your Supabase values:
+
 ```bash
 cp .env.example .env.local
 ```
 
-3. Add your Firebase config to `.env.local` (get from Firebase Console)
+3. Start the dev server:
 
-### Development
-
-Start the dev server:
 ```bash
 npm run dev
 ```
 
-Visit `http://localhost:5173` and use the Clinician Demo button to test different scenarios.
-
-### Building for Production
+## Quality checks
 
 ```bash
+npm run lint
 npm run build
+npm test
 ```
 
-## Firebase Setup
+## Supabase SQL layout
 
-See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for detailed Cloud Functions deployment instructions.
+The active database setup lives in:
 
-**Quick summary:**
-1. Install Firebase CLI
-2. Run `firebase deploy --only functions`
-3. Add Firebase config to `.env.local`
+- `supabase/schema.sql`
+- `supabase/rls.sql`
+- `supabase/rpc.sql`
+- `supabase/seed-medications.sql`
 
-## URL Parameters
+Historical one-shot deployment bundles are archived under `archive/supabase-snapshots/`.
 
-### Single Medication
-```
-?code=101
-```
+## Archived legacy material
 
-### Multiple Medications
-```
-?code=101????301??
-```
-(The regex `/[1-5]0[12]/g` extracts codes from placeholder-filled strings)
+Legacy Firebase assets, migration scripts, and historical review notes have been moved under `archive/` so they do not read as active deployment instructions:
 
-### With Protocol Validation
-```
-?meta=base64EncodedProtocolMetadata
-```
+- `archive/firebase/`
+- `archive/migration/`
+- `archive/reviews/`
+- `archive/supabase-functions/`
+- `archive/supabase-snapshots/`
 
-## Medication Codes
+## Route compatibility
 
-Current codes defined:
-- **101**: Sulfonylurea - Starting Treatment
-- **102**: Sulfonylurea - Reauthorisation
-- **201**: SGLT2 Inhibitor - First Initiation
-- **202**: SGLT2 Inhibitor - Reauthorisation
-- **301**: Emollients and Skin Care - Starting Treatment
-- **302**: Emollients and Skin Care - Reauthorisation
-- **401**: Insulin Therapy - Starting Treatment
-- **402**: Insulin Therapy - Reauthorisation
-- **501**: Mounjaro (Tirzepatide) - Starting Treatment
-- **502**: Mounjaro (Tirzepatide) - Reauthorisation
-
-## Project Structure
-
-```
-├── src/
-│   ├── App.tsx              # Main app component
-│   ├── firebase.ts          # Firebase SDK initialization
-│   ├── protocolService.ts   # Protocol validation helpers
-│   ├── App.css              # Component styles
-│   └── index.css            # Global styles
-├── functions/
-│   ├── src/
-│   │   └── index.ts         # Cloud Function code
-│   ├── package.json
-│   └── tsconfig.json
-├── firebase.json            # Firebase configuration
-└── .firebaserc              # Firebase project alias
-```
-
-## Deployment
-
-### Vercel (React Frontend)
-
-1. Connect your GitHub repo to Vercel
-2. Set environment variables from `.env.local`
-3. Deploy
-
-The build command is:
-```bash
-npm run build
-```
-
-### Firebase (Cloud Functions)
-
-Deploy functions:
-```bash
-firebase deploy --only functions
-```
-
-## Testing
-
-Use the Clinician Demo button (bottom right) to:
-- Test individual medication codes
-- Test multi-medication scenarios
-- Verify protocol validation flow
-
-## Security
-
-- Firestore security rules prevent direct database reads
-- All protocol validation happens server-side via Cloud Functions
-- Firebase SDK validates with environment variables (never exposed to client)
-
-## Support
-
-See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for troubleshooting and monitoring.
+`/admin/card-builder` is the canonical builder route. Older `/drug-builder` aliases are still kept as compatibility routes for existing bookmarks.

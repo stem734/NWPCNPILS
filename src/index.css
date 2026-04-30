@@ -1323,21 +1323,6 @@ p {
   position: relative;
 }
 
-.main-guidance-banner {
-  margin-bottom: 1rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid #005eb8;
-  border-radius: 10px;
-  background: #eef7ff;
-}
-
-.main-guidance-banner p {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--nhs-blue);
-}
-
 .footer__border {
   position: absolute;
   top: 0;
@@ -1356,12 +1341,6 @@ p {
   gap: 1.5rem;
 }
 
-.footer__logo {
-  width: 104px;
-  height: auto;
-  display: block;
-}
-
 .footer__copyright a {
   color: var(--nhs-text);
   text-decoration: none;
@@ -1369,41 +1348,6 @@ p {
 
 .footer__copyright a:hover {
   text-decoration: underline;
-}
-
-.footer__divider {
-  width: 100%;
-  border-top: 1px solid var(--nhs-border);
-}
-
-.footer__notice {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--nhs-border);
-}
-
-.footer__notice p {
-  margin: 0;
-  color: var(--nhs-text);
-  font-size: 0.95rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.footer__notice a {
-  flex: 0 0 auto;
-  color: var(--nhs-blue);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-.footer__notice a:hover {
-  color: var(--nhs-dark-blue);
 }
 
 .footer__links {

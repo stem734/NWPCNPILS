@@ -19,9 +19,6 @@ verify_jwt = false
 [functions.delete-practice-user]
 verify_jwt = false
 
-[functions.generate-medication-content]
-verify_jwt = false
-
 [functions.list-admin-dashboard]
 verify_jwt = false
 
