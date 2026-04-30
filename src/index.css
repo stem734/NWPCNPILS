@@ -2531,18 +2531,33 @@ p {
 @media print {
   body {
     background-color: white !important;
+    color: #212b32 !important;
   }
   .app-container {
     background-color: white !important;
   }
-  .patient-view {
+  .patient-view,
+  .hc-page {
     padding: 0 !important;
     margin: 0 !important;
+    box-shadow: none !important;
+    max-width: none !important;
+    width: 100% !important;
   }
-  .patient-greeting-card, .patient-summary-card {
+  .patient-greeting-card,
+  .patient-summary-card,
+  .patient-section-card,
+  .patient-resource-link--compact,
+  .patient-state-card,
+  .card,
+  .hc-card,
+  .hc-group-heading,
+  .hc-actions {
     border: 1px solid #d8dde0 !important;
-    background: transparent !important;
+    background: #ffffff !important;
     page-break-inside: avoid;
+    break-inside: avoid;
+    box-shadow: none !important;
   }
   .card, .patient-view .card {
     border: 1px solid #d8dde0 !important;
@@ -2550,16 +2565,96 @@ p {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  .patient-group-heading {
-    border: 1px solid #d8dde0 !important;
-    background: transparent !important;
+  .patient-resource-link--compact,
+  .hc-card__contact,
+  .hc-card__breakdown-item,
+  .hc-card__next-steps,
+  .hc-card__what-is,
+  .hc-card__results-message,
+  .warning-callout,
+  .inset-text {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  .no-print {
+  .hc-card__details {
+    display: block !important;
+    max-height: none !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+  }
+  .hc-card--collapsed .hc-card__collapsed-summary,
+  .hc-card--collapsed .hc-card__collapsed-prompt {
     display: none !important;
   }
-  header, .footer, .demo-fab {
+  .hc-card__what-is {
+    display: block !important;
+  }
+  .hc-card__what-is > summary {
+    display: none !important;
+  }
+  .hc-card__what-is-body {
+    display: block !important;
+  }
+  .patient-page-shell,
+  .patient-view.patient-page-shell,
+  .hc-grid,
+  .hc-page {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  .patient-section-divider,
+  .patient-resource-list,
+  .patient-content-grid,
+  .hc-grid {
+    gap: 0.75rem !important;
+  }
+  .patient-resource-link--compact,
+  .hc-card__contact,
+  .hc-card__links,
+  .hc-card__layout,
+  .hc-card__details--open,
+  .hc-card__left,
+  .hc-card__right {
+    display: block !important;
+  }
+  .hc-card__toggle {
+    width: 100% !important;
+    display: block !important;
+  }
+  .hc-card__layout--single {
+    display: block !important;
+  }
+  .patient-group-heading {
+    border: 1px solid #d8dde0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .patient-greeting-card,
+  .patient-summary-card {
+    background: #eef7ff !important;
+  }
+  .patient-section-card,
+  .patient-resource-link--compact,
+  .patient-state-card {
+    border-radius: 8px !important;
+  }
+  .hc-page {
+    padding-bottom: 0 !important;
+  }
+  .hc-topbar,
+  .hc-next-steps,
+  .hc-actions,
+  .hc-rating,
+  .hc-privacy-note,
+  .hc-privacy-details,
+  .patient-print-bar,
+  .patient-demo-banner,
+  .demo-fab,
+  header,
+  .footer {
+    display: none !important;
+  }
+  .no-print {
     display: none !important;
   }
 }
