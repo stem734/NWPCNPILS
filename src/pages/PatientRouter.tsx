@@ -82,7 +82,7 @@ const PatientRouter: React.FC = () => {
     }>
       <div className="patient-page-shell">
         <div className="patient-page-shell__brand no-print" aria-hidden="true">
-          <img className="patient-page-shell__brand-logo" src="/MyMedInfo-logo.png" alt="" />
+          <img className="patient-page-shell__brand-logo" src="/mymedinfo-logo.svg" alt="" />
         </div>
         <div className="patient-page-shell__notice">
           <PatientGuidanceNotice

@@ -18,7 +18,7 @@ const Landing: React.FC = () => {
     <div className="landing-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#ffffff' }}>
       <div style={{ maxWidth: '800px', width: '100%', padding: '2rem', textAlign: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-          <img src="/MyMedInfo-logo.png" alt="MyMedInfo" style={{ height: '120px', width: 'auto', display: 'block' }} />
+          <img src="/mymedinfo-logo.svg" alt="MyMedInfo" style={{ height: '120px', width: 'auto', display: 'block' }} />
         </div>
         <h1 style={{ fontSize: '3rem', color: '#212b32', marginBottom: '1rem' }}>MyMedInfo</h1>
         <p style={{ fontSize: '1.25rem', color: '#4c6272', marginBottom: '3rem' }}>Clear, Trusted Medication Information</p>

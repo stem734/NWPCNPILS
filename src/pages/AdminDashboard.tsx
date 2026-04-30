@@ -1391,7 +1391,7 @@ const AdminDashboard: React.FC = () => {
                             ))}
                           </div>
                         ) : (
-                          <p className="dashboard-practice-feature-empty">No functions enabled</p>
+                          <p className="dashboard-practice-feature-empty">No functions enabled for this practice yet.</p>
                         )}
                       </div>
                       <div className="dashboard-list-actions dashboard-list-actions--practice-secondary">

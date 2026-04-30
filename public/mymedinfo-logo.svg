@@ -1,19 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 280" width="700" height="280">
-  <!-- Dark Blue Cross Background -->
-  <rect x="40" y="20" width="140" height="140" rx="20" fill="#1e3a5f"/>
-  <rect x="10" y="70" width="200" height="100" rx="20" fill="#1e3a5f"/>
-
-  <!-- Pill/Capsule (Blue and White) -->
-  <ellipse cx="80" cy="110" rx="30" ry="40" fill="#5eb3e8"/>
-  <ellipse cx="120" cy="110" rx="30" ry="40" fill="white"/>
-  <rect x="50" y="90" width="60" height="40" fill="#5eb3e8"/>
-  <rect x="120" y="90" width="30" height="40" fill="white"/>
-
-  <!-- Information Circle "i" -->
-  <circle cx="165" cy="125" r="35" fill="#1e3a5f" stroke="white" stroke-width="4"/>
-  <circle cx="165" cy="105" r="7" fill="white"/>
-  <text x="165" y="145" font-size="35" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">i</text>
-
-  <!-- MyMedInfo Text -->
-  <text x="380" y="160" font-size="80" font-weight="bold" fill="#1e3a5f" font-family="Arial, sans-serif">MyMedInfo</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="680" viewBox="0 0 900 680" fill="none">
+  <rect x="210" y="8" width="190" height="470" rx="26" fill="#1C84D6"/>
+  <rect x="58" y="160" width="494" height="190" rx="26" fill="#1C84D6"/>
+  <path d="M210 8h95v470h-95z" fill="#8BD24A"/>
+  <path d="M58 160h247v190H58z" fill="#8BD24A"/>
+  <circle cx="258" cy="90" r="22" fill="#111111"/>
+  <circle cx="353" cy="90" r="22" fill="#111111"/>
+  <path d="M207 201c14-76 42-117 94-117" stroke="#111111" stroke-width="28" stroke-linecap="round"/>
+  <path d="M402 201c-14-76-42-117-94-117" stroke="#111111" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="206" cy="282" r="24" fill="#111111"/>
+  <circle cx="404" cy="282" r="24" fill="#111111"/>
+  <path d="M206 282c24 95 73 147 146 147 73 0 118-52 143-147" stroke="#111111" stroke-width="28" stroke-linecap="round"/>
+  <path d="M301 424c-9 48-12 88-12 120 0 72 45 129 124 129 61 0 125-30 169-73" stroke="#111111" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="499" cy="496" r="81" fill="#ffffff" stroke="#1C84D6" stroke-width="26"/>
+  <circle cx="499" cy="496" r="42" fill="#1C84D6"/>
+  <path d="M61 662V551h43l31 74 31-74h43v111h-29v-71l-25 60h-40l-25-60v71H61zm181 0V598h30v64h-30zm15-74c-10 0-18-7-18-17s8-17 18-17 18 7 18 17-8 17-18 17zm96 76c-40 0-66-23-66-57 0-35 27-59 66-59 24 0 43 8 55 23l-21 18c-8-10-19-15-32-15-20 0-34 13-34 33s14 33 34 33c13 0 24-5 32-15l21 18c-12 15-31 21-55 21zm117 0c-33 0-56-23-56-57 0-34 24-59 56-59 31 0 55 22 55 58 0 2 0 5-1 8h-79c3 15 16 24 34 24 13 0 22-4 31-12l16 17c-12 14-30 21-56 21zm-25-66h50c-2-15-14-25-25-25s-23 10-25 25zm95 64V551h30v111h-30zm50 0V551h30v111h-30zm59 0v-112h30v13c9-10 22-15 37-15 29 0 51 17 51 55v59h-30v-54c0-17-8-25-21-25-15 0-25 9-25 29v50h-30zm167 0V551h30v111h-30zm94 0c-40 0-66-23-66-57 0-35 27-59 66-59 24 0 43 8 55 23l-21 18c-8-10-19-15-32-15-20 0-34 13-34 33s14 33 34 33c13 0 24-5 32-15l21 18c-12 15-31 21-55 21z" fill="url(#wordmark)"/>
+  <defs>
+    <linearGradient id="wordmark" x1="61" y1="607" x2="835" y2="607" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8BD24A"/>
+      <stop offset=".18" stop-color="#6DBE45"/>
+      <stop offset=".34" stop-color="#1C84D6"/>
+      <stop offset="1" stop-color="#48A8F5"/>
+    </linearGradient>
+  </defs>
 </svg>
