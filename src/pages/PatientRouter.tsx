@@ -26,6 +26,9 @@ const PatientRouter: React.FC = () => {
   const [searchParams] = useSearchParams();
   const hasMedicationParams = Boolean((searchParams.get('codes') || searchParams.get('code') || searchParams.get('med') || '').trim());
   const hasScreeningParams = Boolean((searchParams.get('screen') || searchParams.get('screening') || '').trim());
+  const hasHealthCheckParams = Boolean((searchParams.get('s1') || searchParams.get('s1csv') || searchParams.get('payload') || searchParams.get('hc') || '').trim());
+  const hasImmunisationParams = Boolean((searchParams.get('vaccine') || searchParams.get('jab') || searchParams.get('imms') || '').trim());
+  const hasLtcParams = Boolean((searchParams.get('ltc') || searchParams.get('condition') || '').trim());
   const isCombinedBundle = hasMedicationParams && hasScreeningParams;
 
   const { contentType } = useMemo(
@@ -36,6 +39,23 @@ const PatientRouter: React.FC = () => {
   const renderContent = () => {
     if (isCombinedBundle) {
       return <CombinedPatientView />;
+    }
+
+    // Prefer the actual dataset params over a stale/mistyped explicit `type=`.
+    if (hasScreeningParams) {
+      return <ScreeningView />;
+    }
+    if (hasHealthCheckParams) {
+      return <HealthCheckView />;
+    }
+    if (hasImmunisationParams) {
+      return <ImmunisationView />;
+    }
+    if (hasLtcParams) {
+      return <LongTermConditionView />;
+    }
+    if (hasMedicationParams) {
+      return <ResourceView />;
     }
 
     switch (contentType) {
