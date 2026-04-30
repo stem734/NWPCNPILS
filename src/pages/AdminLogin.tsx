@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert } from 'lucide-react';
 import { resolvePath } from '../subdomainUtils';
 import LoginForm from '../components/LoginForm';
 
@@ -81,7 +80,7 @@ const AdminLogin: React.FC = () => {
     <LoginForm
       title="Admin Login"
       subtitle="MyMedInfo Administration"
-      icon={<ShieldAlert size={48} color="var(--nhs-blue)" />}
+      icon={null}
       email={email}
       password={password}
       error={error}

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
-import { LogOut, Home, FlaskConical, Settings } from 'lucide-react';
 import { getSubdomain, resolvePath } from '../subdomainUtils';
 
 type UserRole = 'admin' | 'practice' | null;
@@ -54,14 +53,14 @@ const HeaderNav: React.FC = () => {
             className={`header-nav-link ${['/admin/dashboard', '/dashboard'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
             title="Go to Admin Dashboard"
           >
-            <Settings size={16} /> Dashboard
+            Dashboard
           </button>
           <button
             onClick={() => navigate(resolvePath('/admin/card-builder'))}
             className={`header-nav-link ${['/admin/drug-builder', '/drug-builder', '/admin/card-builder', '/card-builder'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
             title="Go to Card Builder"
           >
-            <FlaskConical size={16} /> Card Builder
+            Card Builder
           </button>
         </>
       )}
@@ -72,7 +71,7 @@ const HeaderNav: React.FC = () => {
           className={`header-nav-link ${['/practice/dashboard', '/dashboard'].includes(location.pathname) ? 'header-nav-link--active' : ''}`}
           title="Go to Practice Dashboard"
         >
-          <Settings size={16} /> Dashboard
+          Dashboard
         </button>
       )}
 
@@ -81,7 +80,7 @@ const HeaderNav: React.FC = () => {
         className={`header-nav-link ${location.pathname === '/' ? 'header-nav-link--active' : ''}`}
         title="Go to home page"
       >
-        <Home size={16} /> Home
+        Home
       </button>
 
       <button
@@ -89,7 +88,7 @@ const HeaderNav: React.FC = () => {
         className="header-nav-link header-nav-link--signout"
         title="Sign out"
       >
-        <LogOut size={16} /> Sign Out
+        Sign Out
       </button>
     </nav>
   );

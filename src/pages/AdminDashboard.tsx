@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShieldAlert, CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, Edit2, ChevronDown, ChevronRight, FlaskConical } from 'lucide-react';
+import { CheckCircle, XCircle, Trash2, RefreshCw, Plus, X, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PracticeUserManagement from '../components/PracticeUserManagement';
 import { useToast } from '../components/toastContext';
@@ -754,9 +754,7 @@ const AdminDashboard: React.FC = () => {
     <div className="dashboard-shell">
       <div className="dashboard-header">
         <div className="dashboard-header-copy">
-          <h1>
-            <ShieldAlert size={22} color="#005eb8" /> Admin Dashboard
-          </h1>
+          <h1>Admin Dashboard</h1>
           <p>Manage practices, users, administrators, and patient-facing outputs from one place.</p>
         </div>
       </div>
@@ -1598,35 +1596,35 @@ const AdminDashboard: React.FC = () => {
               className="action-button"
               style={{ backgroundColor: '#005eb8' }}
             >
-              <FlaskConical size={16} /> Medication
+              Medication
             </button>
             <button
               onClick={() => navigate(buildDemoPatientUrlForType('healthcheck'))}
               className="action-button"
               style={{ backgroundColor: '#4c6272' }}
             >
-              <ShieldAlert size={16} /> Health Check
+              Health Check
             </button>
             <button
               onClick={() => navigate(buildDemoPatientUrlForType('screening'))}
               className="action-button"
               style={{ backgroundColor: '#007f3b' }}
             >
-              <FlaskConical size={16} /> Screening
+              Screening
             </button>
             <button
               onClick={() => navigate(buildDemoPatientUrlForType('immunisation'))}
               className="action-button"
               style={{ backgroundColor: '#7a3db8' }}
             >
-              <ShieldAlert size={16} /> Immunisation
+              Immunisation
             </button>
             <button
               onClick={() => navigate(buildDemoPatientUrlForType('ltc'))}
               className="action-button"
               style={{ backgroundColor: '#212b32' }}
             >
-              <FlaskConical size={16} /> Long Term Condition
+              Long Term Condition
             </button>
           </div>
         </div>

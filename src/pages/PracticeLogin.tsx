@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
-import { FlaskConical } from 'lucide-react';
 import { resolvePath } from '../subdomainUtils';
 import LoginForm from '../components/LoginForm';
 
@@ -75,7 +74,7 @@ const PracticeLogin: React.FC = () => {
     <LoginForm
       title="Practice Portal"
       subtitle="MyMedInfo - Practice Portal"
-      icon={<FlaskConical size={48} color="var(--nhs-blue)" />}
+      icon={null}
       email={email}
       password={password}
       error={error}
