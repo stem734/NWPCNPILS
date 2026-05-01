@@ -154,6 +154,12 @@ const MEDICATION_DESCRIPTION_DUPLICATION_PATTERNS = [
   /^this guide will help you start treatment safely\b/i,
 ];
 
+const AUDIT_BUTTON_STYLE = {
+  backgroundColor: '#fff8e6',
+  color: '#8a5f00',
+  border: '1px solid #b27a00',
+} as const;
+
 const createDefaultHealthCheckBuilderState = (): Record<ClinicalDomainId, Record<string, HealthCheckBuilderVariant>> =>
   CLINICAL_DOMAIN_IDS.reduce((domainAcc, domainId) => {
     const domainConfig = PREVIEW_DOMAIN_CONFIGS[domainId];
@@ -1457,7 +1463,7 @@ const CardBuilder: React.FC = () => {
                 <button
                   onClick={() => loadTemplateHistory('medication', editingCode, title.trim() || medName.trim() || editingCode)}
                   className="action-button"
-                  style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                  style={AUDIT_BUTTON_STYLE}
                 >
                   Audit
                 </button>
@@ -1729,7 +1735,7 @@ const CardBuilder: React.FC = () => {
                     title="View medication audit history"
                     className="action-button-sm"
                     style={{
-                      background: '#f3f0ff', border: '1px solid #5f3dc4', color: '#5f3dc4',
+                      background: '#fff8e6', border: '1px solid #b27a00', color: '#8a5f00',
                       borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
                       justifyContent: 'center'
@@ -2289,7 +2295,7 @@ const CardBuilder: React.FC = () => {
                   <button
                     onClick={() => loadTemplateHistory('screening', screeningType, selectedScreeningTemplate.label)}
                     className="action-button"
-                    style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                    style={AUDIT_BUTTON_STYLE}
                   >
                     Audit
                   </button>
@@ -2396,7 +2402,7 @@ const CardBuilder: React.FC = () => {
                   <button
                     onClick={() => loadTemplateHistory('immunisation', selectedImmunisationTemplate.id, selectedImmunisationTemplate.label)}
                     className="action-button"
-                    style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                    style={AUDIT_BUTTON_STYLE}
                   >
                     Audit
                   </button>
@@ -2450,7 +2456,7 @@ const CardBuilder: React.FC = () => {
                   <button
                     onClick={() => loadTemplateHistory('ltc', selectedLongTermCondition, selectedLongTermConditionTemplate.label)}
                     className="action-button"
-                    style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                    style={AUDIT_BUTTON_STYLE}
                   >
                     Audit
                   </button>
