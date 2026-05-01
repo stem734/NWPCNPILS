@@ -150,10 +150,6 @@ const Landing: React.FC = () => {
             </span>
           </button>
         </div>
-
-        <p style={{ fontSize: '0.9rem', color: '#4c6272', marginTop: '3rem', marginBottom: 0 }}>
-          This MVP demonstrates the MyMedInfo patient medication portal with manual medication entry management.
-        </p>
       </div>
     </div>
   );
