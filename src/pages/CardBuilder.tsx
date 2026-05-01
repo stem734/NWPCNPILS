@@ -2,7 +2,7 @@ import React, { useMemo, useReducer, useState, useEffect } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Copy, ExternalLink, Link, Eye, Edit2, CopyPlus, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Copy, ExternalLink, Link, Eye, Edit2, CopyPlus } from 'lucide-react';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import { resolvePath } from '../subdomainUtils';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -1887,7 +1887,7 @@ const CardBuilder: React.FC = () => {
           </div>
 
           {healthCheckEditorOpen && (
-            <Modal isOpen={healthCheckEditorOpen} onClose={() => setHealthCheckEditorOpen(false)} size="xl">
+            <Modal isOpen={healthCheckEditorOpen} onClose={() => setHealthCheckEditorOpen(false)} size="xl" closeOnOverlayClick={false}>
               <div style={{
                 width: '100%',
                 display: 'flex',
@@ -1901,20 +1901,32 @@ const CardBuilder: React.FC = () => {
                       {selectedHealthCheckMetric.label} - {resolvedSelectedHealthCheckVariantCode}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => loadTemplateHistory('healthcheck', selectedHealthCheckDomain, HEALTH_CHECK_CARD_LABELS[(selectedHealthCheckDomain === 'ldl' ? 'chol' : selectedHealthCheckDomain) as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[selectedHealthCheckDomain].heading)}
                       className="action-button"
-                      style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                      style={AUDIT_BUTTON_STYLE}
                     >
                       Audit
                     </button>
-                  <button
-                    onClick={() => setHealthCheckEditorOpen(false)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <X size={24} />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setHealthCheckEditorOpen(false)}
+                      className="action-button"
+                      style={{ backgroundColor: '#4c6272' }}
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void saveHealthCheckTemplate(selectedHealthCheckDomain);
+                      }}
+                      className="action-button"
+                      style={{ backgroundColor: '#007f3b' }}
+                    >
+                      <Save size={16} /> Save
+                    </button>
                   </div>
                 </div>
 
@@ -2086,43 +2098,6 @@ const CardBuilder: React.FC = () => {
                   </div>
                   </div>
                 </div>
-
-                <div style={{ padding: '1.5rem', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => setHealthCheckEditorOpen(false)}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: '#4c6272',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void saveHealthCheckTemplate(selectedHealthCheckDomain);
-                    }}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: '#007f3b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Save Changes
-                  </button>
-                </div>
               </div>
             </Modal>
           )}
@@ -2284,7 +2259,7 @@ const CardBuilder: React.FC = () => {
       )}
 
       {screeningEditorOpen && (
-        <Modal isOpen={screeningEditorOpen} onClose={() => setScreeningEditorOpen(false)} size="xl">
+        <Modal isOpen={screeningEditorOpen} onClose={() => setScreeningEditorOpen(false)} size="xl" closeOnOverlayClick={false}>
           <div style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
@@ -2391,7 +2366,7 @@ const CardBuilder: React.FC = () => {
       )}
 
       {immunisationEditorOpen && (
-        <Modal isOpen={immunisationEditorOpen} onClose={() => setImmunisationEditorOpen(false)} size="xl">
+        <Modal isOpen={immunisationEditorOpen} onClose={() => setImmunisationEditorOpen(false)} size="xl" closeOnOverlayClick={false}>
           <div style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
@@ -2445,7 +2420,7 @@ const CardBuilder: React.FC = () => {
       )}
 
       {ltcEditorOpen && (
-        <Modal isOpen={ltcEditorOpen} onClose={() => setLtcEditorOpen(false)} size="xl">
+        <Modal isOpen={ltcEditorOpen} onClose={() => setLtcEditorOpen(false)} size="xl" closeOnOverlayClick={false}>
           <div style={{ width: 'min(1040px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
