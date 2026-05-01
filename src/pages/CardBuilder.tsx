@@ -230,6 +230,52 @@ const cloneLongTermConditionTemplate = (template: LongTermConditionTemplate): Lo
   additionalSections: template.additionalSections?.map((section) => ({ ...section, points: [...section.points] })),
 });
 
+const formatRevisionPreview = (builderType: CardTemplateBuilderType, payload: unknown) => {
+  if (!payload || typeof payload !== 'object') {
+    return 'No preview available for this revision.';
+  }
+
+  if (builderType === 'medication') {
+    const medication = payload as Record<string, unknown>;
+    const sections = [
+      `Title: ${String(medication.title || '')}`,
+      `Description: ${String(medication.description || '')}`,
+      `Badge: ${String(medication.badge || '')}`,
+      `Category: ${String(medication.category || '')}`,
+      `Do: ${Array.isArray(medication.do_key_info) ? medication.do_key_info.join(' | ') : ''}`,
+      `Don't: ${Array.isArray(medication.dont_key_info) ? medication.dont_key_info.join(' | ') : ''}`,
+      `General: ${Array.isArray(medication.general_key_info) ? medication.general_key_info.join(' | ') : ''}`,
+      `NHS link: ${String(medication.nhs_link || '')}`,
+    ];
+    return sections.join('\n');
+  }
+
+  if (builderType === 'screening' || builderType === 'immunisation' || builderType === 'ltc') {
+    const template = payload as Record<string, unknown>;
+    const sections = [
+      `Label: ${String(template.label || '')}`,
+      `Headline: ${String(template.headline || '')}`,
+      `Explanation: ${String(template.explanation || '')}`,
+      `Guidance: ${Array.isArray(template.guidance) ? template.guidance.join(' | ') : ''}`,
+    ];
+
+    if (builderType === 'screening') {
+      sections.push(`Don't: ${Array.isArray(template.dontGuidance) ? template.dontGuidance.join(' | ') : ''}`);
+    }
+
+    return sections.join('\n');
+  }
+
+  const healthCheck = payload as Record<string, unknown>;
+  const variants = healthCheck.variants && typeof healthCheck.variants === 'object'
+    ? Object.entries(healthCheck.variants as Record<string, Record<string, unknown>>)
+      .map(([code, variant]) => `${code}: ${String(variant.resultsMessage || '')}`)
+      .join('\n')
+    : '';
+
+  return variants || JSON.stringify(payload, null, 2);
+};
+
 const createDefaultScreeningState = (): Record<string, ScreeningTemplate> =>
   Object.fromEntries(Object.entries(SCREENING_TEMPLATES).map(([key, template]) => [key, cloneScreeningTemplate(template)]));
 
@@ -2572,6 +2618,9 @@ const CardBuilder: React.FC = () => {
               <div>
                 <h3 style={{ margin: 0, color: '#003087' }}>Template Audit History</h3>
                 <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{historyState.label}</p>
+                <p style={{ margin: '0.35rem 0 0', color: '#4c6272', fontSize: '0.9rem' }}>
+                  {historyState.revisions.length} change event{historyState.revisions.length === 1 ? '' : 's'} recorded. Only the latest 3 previous versions can be restored.
+                </p>
               </div>
               <button onClick={() => setHistoryState(null)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
                 Close
@@ -2583,24 +2632,36 @@ const CardBuilder: React.FC = () => {
               <p style={{ color: '#4c6272' }}>No saved revisions yet.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {historyState.revisions.map((revision) => (
-                  <div key={revision.id} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd', display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#1d2a33' }}>Version {revision.version} • {revision.action}</div>
-                      <div style={{ color: '#4c6272', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                        {new Date(revision.created_at).toLocaleString('en-GB')}
+                {historyState.revisions.map((revision, index) => {
+                  const canRestore = index > 0 && index <= 3;
+                  return (
+                    <div key={revision.id} style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '1rem', background: '#f8fbfd' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#1d2a33' }}>Version {revision.version} • {revision.action}</div>
+                          <div style={{ color: '#4c6272', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                            {new Date(revision.created_at).toLocaleString('en-GB')}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => restoreTemplateRevision(revision)}
+                          disabled={!canRestore || templateActionKey === `${historyState.builderType}:${historyState.templateId}:restore:${revision.id}`}
+                          className="action-button-sm"
+                          style={{ background: canRestore ? '#f3f8f1' : '#f0f4f5', border: `1px solid ${canRestore ? '#007f3b' : '#d8dde0'}`, color: canRestore ? '#007f3b' : '#6b7b88', borderRadius: '6px', padding: '0.55rem 0.75rem' }}
+                          title={canRestore ? 'Restore this version' : index === 0 ? 'This is the current version' : 'Only the latest 3 previous versions can be restored'}
+                        >
+                          Restore
+                        </button>
                       </div>
+                      <details style={{ marginTop: '0.75rem' }}>
+                        <summary style={{ cursor: 'pointer', color: '#005eb8', fontWeight: 600 }}>View content</summary>
+                        <pre style={{ margin: '0.75rem 0 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: '#ffffff', border: '1px solid #d8dde0', borderRadius: '8px', padding: '0.85rem', fontSize: '0.85rem', color: '#1d2a33' }}>
+                          {formatRevisionPreview(historyState.builderType, revision.payload)}
+                        </pre>
+                      </details>
                     </div>
-                    <button
-                      onClick={() => restoreTemplateRevision(revision)}
-                      disabled={templateActionKey === `${historyState.builderType}:${historyState.templateId}:restore:${revision.id}`}
-                      className="action-button-sm"
-                      style={{ background: '#f3f8f1', border: '1px solid #007f3b', color: '#007f3b', borderRadius: '6px', padding: '0.55rem 0.75rem' }}
-                    >
-                      Restore
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

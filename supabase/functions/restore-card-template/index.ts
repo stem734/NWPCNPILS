@@ -46,6 +46,22 @@ serve(async (req) => {
       return errorResponse('Revision not found', 404);
     }
 
+    const { data: latestRevisions, error: latestRevisionsError } = await supabase
+      .from('card_template_revisions')
+      .select('id')
+      .eq('template_key', templateKey)
+      .order('created_at', { ascending: false })
+      .limit(4);
+
+    if (latestRevisionsError) {
+      return errorResponse(`Failed to validate restore window: ${latestRevisionsError.message}`, 500);
+    }
+
+    const restorableRevisionIds = (latestRevisions || []).slice(1, 4).map((item) => item.id);
+    if (!restorableRevisionIds.includes(revisionId)) {
+      return errorResponse('Only the latest 3 previous versions can be restored', 400);
+    }
+
     const { data: existingTemplate, error: existingError } = await supabase
       .from('card_templates')
       .select('*')
