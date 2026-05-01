@@ -16,6 +16,7 @@ import {
 } from '../patientTemplateCatalog';
 import WarningCallout from '../components/WarningCallout';
 import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
+import SickDayRulesModal from '../components/SickDayRulesModal';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -122,6 +123,7 @@ const CombinedPatientView: React.FC = () => {
   const [isResolvingContents, setIsResolvingContents] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [screeningError, setScreeningError] = useState<string | null>(null);
+  const [sickDayModalOpen, setSickDayModalOpen] = useState(false);
   const loggedAccessKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -447,6 +449,7 @@ const CombinedPatientView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view patient-page-shell">
+      <SickDayRulesModal isOpen={sickDayModalOpen} onClose={() => setSickDayModalOpen(false)} />
       {isDemoMode && !isExactDemo && (
         <div className="patient-demo-banner no-print" role="note" aria-live="polite">
           {getDemoNoticeText()}
@@ -575,11 +578,10 @@ const CombinedPatientView: React.FC = () => {
                         <WarningCallout title="Important: Sick day rules apply">
                           <p style={{ marginBottom: '0.75rem', color: '#212b32' }}>
                             If you become unwell and are unable to eat or drink normally, you may need to pause this medication.
-                            Click the resources below to learn about &quot;Sick Day Rules&quot;.
                           </p>
-                          <a href="https://trenddiabetes.online/wp-content/uploads/2025/08/A5_T2Illness_TREND.pdf" target="_blank" rel="noopener noreferrer" className="action-button">
-                            View Sick Day Guide <ExternalLink size={18} />
-                          </a>
+                          <button type="button" onClick={() => setSickDayModalOpen(true)} className="action-button">
+                            View Sick Day Rules
+                          </button>
                         </WarningCallout>
                       )}
 
