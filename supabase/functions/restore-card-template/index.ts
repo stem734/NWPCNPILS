@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { assertAdmin } from '../_shared/assert-admin.ts';
 import { createServiceClient, corsHeaders, errorResponse, jsonResponse } from '../_shared/supabase-client.ts';
 
-const VALID_BUILDER_TYPES = ['healthcheck', 'screening', 'immunisation', 'ltc'] as const;
+const VALID_BUILDER_TYPES = ['healthcheck', 'screening', 'immunisation', 'ltc', 'medication'] as const;
 type BuilderType = typeof VALID_BUILDER_TYPES[number];
 
 serve(async (req) => {
@@ -58,6 +58,47 @@ serve(async (req) => {
 
     const now = new Date().toISOString();
     const version = (existingTemplate?.version || 0) + 1;
+
+    if (builderType === 'medication') {
+      const payload = revision.payload as Record<string, unknown>;
+      const medicationCode = typeof payload.code === 'string' && payload.code.trim()
+        ? payload.code.trim()
+        : templateId;
+
+      const medicationRecord = {
+        code: medicationCode,
+        title: payload.title,
+        description: payload.description,
+        badge: payload.badge,
+        category: payload.category,
+        key_info_mode: payload.key_info_mode ?? null,
+        key_info: Array.isArray(payload.key_info) ? payload.key_info : [],
+        do_key_info: Array.isArray(payload.do_key_info) ? payload.do_key_info : [],
+        dont_key_info: Array.isArray(payload.dont_key_info) ? payload.dont_key_info : [],
+        general_key_info: Array.isArray(payload.general_key_info) ? payload.general_key_info : [],
+        nhs_link: typeof payload.nhs_link === 'string' ? payload.nhs_link : '',
+        trend_links: Array.isArray(payload.trend_links) ? payload.trend_links : [],
+        sick_days_needed: Boolean(payload.sick_days_needed),
+        review_months: typeof payload.review_months === 'number' ? payload.review_months : 12,
+        content_review_date: typeof payload.content_review_date === 'string' ? payload.content_review_date : '',
+        is_deleted: Boolean(payload.is_deleted),
+        deleted_at: payload.is_deleted ? (typeof payload.deleted_at === 'string' ? payload.deleted_at : now) : null,
+        deleted_by: payload.is_deleted ? (typeof payload.deleted_by === 'string' ? payload.deleted_by : userId) : null,
+        updated_at: now,
+        updated_by: userId,
+        created_at: typeof payload.created_at === 'string' ? payload.created_at : now,
+        created_by: typeof payload.created_by === 'string' ? payload.created_by : userId,
+      };
+
+      const { error: medicationUpsertError } = await supabase
+        .from('medications')
+        .upsert(medicationRecord, { onConflict: 'code' });
+
+      if (medicationUpsertError) {
+        return errorResponse(`Failed to restore medication: ${medicationUpsertError.message}`, 500);
+      }
+    }
+
     const templateRecord = {
       template_key: templateKey,
       builder_type: builderType,

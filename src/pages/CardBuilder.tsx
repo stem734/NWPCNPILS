@@ -1664,6 +1664,19 @@ const CardBuilder: React.FC = () => {
                 </div>
                 <div className="dashboard-list-actions">
                   <button
+                    onClick={() => loadTemplateHistory('medication', med.code, med.title)}
+                    title="View medication audit history"
+                    className="action-button-sm"
+                    style={{
+                      background: '#f3f0ff', border: '1px solid #5f3dc4', color: '#5f3dc4',
+                      borderRadius: '6px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    Audit
+                  </button>
+                  <button
                     onClick={() => setPreviewMed(med)}
                     title="Preview patient view"
                     className="action-button-sm"
