@@ -1443,9 +1443,46 @@ const CardBuilder: React.FC = () => {
       {/* Step 2: Editor */}
       {hasContent && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
-          <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
-            2. {editingCode ? `Edit Medication Card ${editingCode}` : 'Edit Medication Card Content'}
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
+                2. {editingCode ? `Edit Medication Card ${editingCode}` : 'Edit Medication Card Content'}
+              </h2>
+              <p style={{ margin: '0.35rem 0 0', color: '#4c6272', fontSize: '0.9rem' }}>
+                {title.trim() || medName.trim() || 'Medication card'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {editingCode && (
+                <button
+                  onClick={() => loadTemplateHistory('medication', editingCode, title.trim() || medName.trim() || editingCode)}
+                  className="action-button"
+                  style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                >
+                  Audit
+                </button>
+              )}
+              <button
+                onClick={() => previewDraft && setPreviewMed(previewDraft)}
+                disabled={!previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0}
+                className="action-button"
+                style={{ backgroundColor: '#005eb8', opacity: !previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0 ? 0.6 : 1 }}
+              >
+                <Eye size={16} /> Preview
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="action-button"
+                style={{ backgroundColor: '#007f3b', opacity: saving ? 0.6 : 1 }}
+              >
+                <Save size={16} /> {saving ? 'Saving...' : editingCode ? 'Save Changes' : 'Save'}
+              </button>
+              <button onClick={resetForm} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                {saveCompleted ? 'Close' : editingCode ? 'Cancel Edit' : 'Reset'}
+              </button>
+            </div>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
@@ -1635,28 +1672,6 @@ const CardBuilder: React.FC = () => {
               {saveError}
             </div>
           )}
-
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => previewDraft && setPreviewMed(previewDraft)}
-              disabled={!previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0}
-              className="action-button"
-              style={{ flex: '1 1 auto', justifyContent: 'center', backgroundColor: '#005eb8', opacity: !previewDraft || !previewDraft.description || previewDraft.keyInfo.length === 0 ? 0.6 : 1 }}
-            >
-              <Eye size={16} /> Preview
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="action-button"
-              style={{ flex: '1 1 auto', justifyContent: 'center', backgroundColor: '#007f3b', opacity: saving ? 0.6 : 1 }}
-            >
-              <Save size={16} /> {saving ? 'Saving...' : editingCode ? 'Save Changes' : 'Save'}
-            </button>
-            <button onClick={resetForm} className="action-button" style={{ flex: '1 1 auto', justifyContent: 'center', backgroundColor: '#4c6272' }}>
-              {saveCompleted ? 'Close' : editingCode ? 'Cancel Edit' : 'Reset'}
-            </button>
-          </div>
         </div>
       )}
 
