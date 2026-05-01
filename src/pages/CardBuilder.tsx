@@ -1880,12 +1880,21 @@ const CardBuilder: React.FC = () => {
                       {selectedHealthCheckMetric.label} - {resolvedSelectedHealthCheckVariantCode}
                     </p>
                   </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <button
+                      onClick={() => loadTemplateHistory('healthcheck', selectedHealthCheckDomain, HEALTH_CHECK_CARD_LABELS[(selectedHealthCheckDomain === 'ldl' ? 'chol' : selectedHealthCheckDomain) as HealthCheckCodeFamily] || PREVIEW_DOMAIN_CONFIGS[selectedHealthCheckDomain].heading)}
+                      className="action-button"
+                      style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                    >
+                      Audit
+                    </button>
                   <button
                     onClick={() => setHealthCheckEditorOpen(false)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4c6272', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <X size={24} />
                   </button>
+                  </div>
                 </div>
 
                 <div style={{ padding: '1.5rem' }}>
@@ -2256,17 +2265,24 @@ const CardBuilder: React.FC = () => {
       {screeningEditorOpen && (
         <Modal isOpen={screeningEditorOpen} onClose={() => setScreeningEditorOpen(false)} size="xl">
           <div style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <h3 style={{ margin: 0, color: '#003087' }}>Edit Screening Card</h3>
-                <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedScreeningTemplate.label}</p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => saveScreeningTemplate(screeningType)} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                  <Save size={16} /> Save
-                </button>
-                <button onClick={() => setScreeningEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                  Close
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#003087' }}>Edit Screening Card</h3>
+                  <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedScreeningTemplate.label}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => loadTemplateHistory('screening', screeningType, selectedScreeningTemplate.label)}
+                    className="action-button"
+                    style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                  >
+                    Audit
+                  </button>
+                  <button onClick={() => saveScreeningTemplate(screeningType)} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                    <Save size={16} /> Save
+                  </button>
+                  <button onClick={() => setScreeningEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                    Close
                 </button>
               </div>
             </div>
@@ -2356,17 +2372,24 @@ const CardBuilder: React.FC = () => {
       {immunisationEditorOpen && (
         <Modal isOpen={immunisationEditorOpen} onClose={() => setImmunisationEditorOpen(false)} size="xl">
           <div style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <h3 style={{ margin: 0, color: '#003087' }}>Edit Immunisation Card</h3>
-                <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedImmunisationTemplate.label}</p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => saveImmunisationTemplate(immunisationSelections[0] || 'flu')} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                  <Save size={16} /> Save
-                </button>
-                <button onClick={() => setImmunisationEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                  Close
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#003087' }}>Edit Immunisation Card</h3>
+                  <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedImmunisationTemplate.label}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => loadTemplateHistory('immunisation', selectedImmunisationTemplate.id, selectedImmunisationTemplate.label)}
+                    className="action-button"
+                    style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                  >
+                    Audit
+                  </button>
+                  <button onClick={() => saveImmunisationTemplate(immunisationSelections[0] || 'flu')} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                    <Save size={16} /> Save
+                  </button>
+                  <button onClick={() => setImmunisationEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                    Close
                 </button>
               </div>
             </div>
@@ -2403,17 +2426,24 @@ const CardBuilder: React.FC = () => {
       {ltcEditorOpen && (
         <Modal isOpen={ltcEditorOpen} onClose={() => setLtcEditorOpen(false)} size="xl">
           <div style={{ width: 'min(1040px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <h3 style={{ margin: 0, color: '#003087' }}>Edit Long Term Condition Card</h3>
-                <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedLongTermConditionTemplate.label}</p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => saveLtcTemplate(selectedLongTermCondition)} className="action-button" style={{ backgroundColor: '#007f3b' }}>
-                  <Save size={16} /> Save
-                </button>
-                <button onClick={() => setLtcEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                  Close
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#003087' }}>Edit Long Term Condition Card</h3>
+                  <p style={{ margin: '0.35rem 0 0', color: '#4c6272' }}>{selectedLongTermConditionTemplate.label}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => loadTemplateHistory('ltc', selectedLongTermCondition, selectedLongTermConditionTemplate.label)}
+                    className="action-button"
+                    style={{ backgroundColor: '#fff8e6', color: '#8a5f00', border: '1px solid #b27a00' }}
+                  >
+                    Audit
+                  </button>
+                  <button onClick={() => saveLtcTemplate(selectedLongTermCondition)} className="action-button" style={{ backgroundColor: '#007f3b' }}>
+                    <Save size={16} /> Save
+                  </button>
+                  <button onClick={() => setLtcEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
+                    Close
                 </button>
               </div>
             </div>
