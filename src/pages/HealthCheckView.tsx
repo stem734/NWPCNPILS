@@ -9,6 +9,7 @@ import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
+import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 
 // ─── Helpers (ported from NHSHealthCheck/App.tsx) ─────────────────────────────
 
@@ -104,7 +105,9 @@ const buildPreviewMetrics = (domainId: ClinicalDomainId): ParsedMetric[] => {
 
 const HealthCheckView: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const org = searchParams.get('org') || '';
+  const practiceLookup = getPracticeLookupFromSearchParams(searchParams);
+  const org = practiceLookup.orgName;
+  const practiceIdentifier = practiceLookup.lookupValue;
   const isDemoMode = searchParams.get('demo') === '1';
   const previewOnly = searchParams.get('previewOnly') === '1';
   const previewDomain = (searchParams.get('previewDomain') || '').trim() as ClinicalDomainId | '';
@@ -122,7 +125,7 @@ const HealthCheckView: React.FC = () => {
   }, [previewDomain, previewOnly, searchParams]);
   const hasData = metrics.length > 0;
   const [templateOverrides, setTemplateOverrides] = useState<Record<string, HealthCheckTemplatePayload>>({});
-  const access = usePracticeContentAccess(org, 'healthcheck_enabled', { skip: previewOnly || isDemoMode });
+  const access = usePracticeContentAccess(practiceIdentifier, 'healthcheck_enabled', { skip: previewOnly || isDemoMode });
   const templateIds = useMemo(
     () => Array.from(new Set(metrics.map((metric) => metricIdToTemplateId(metric.id)))),
     [metrics],
@@ -156,7 +159,7 @@ const HealthCheckView: React.FC = () => {
     }
     const loadOverrides = async () => {
       try {
-        const practiceRows = await fetchPatientPracticeCardTemplates<HealthCheckTemplatePayload>(org, 'healthcheck', templateIds);
+        const practiceRows = await fetchPatientPracticeCardTemplates<HealthCheckTemplatePayload>(practiceIdentifier, 'healthcheck', templateIds);
         const practiceMap = Object.fromEntries(practiceRows.map((row) => [row.template_id, row.payload]));
         const rows = await fetchCardTemplates<HealthCheckTemplatePayload>('healthcheck', templateIds);
         setTemplateOverrides({
@@ -169,7 +172,7 @@ const HealthCheckView: React.FC = () => {
       }
     };
     loadOverrides();
-  }, [isDemoMode, org, templateIds]);
+  }, [isDemoMode, practiceIdentifier, templateIds]);
 
   const displayMetrics = useMemo(() => {
     const baseMetrics = previewOnly && previewDomain ? metrics : getDisplayMetrics(metrics);

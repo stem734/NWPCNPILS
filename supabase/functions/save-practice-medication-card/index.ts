@@ -8,6 +8,11 @@ type TrendLink = {
   url?: string;
 };
 
+const normaliseStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+    : [];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -21,7 +26,11 @@ serve(async (req) => {
       description?: string;
       badge?: string;
       category?: string;
+      keyInfoMode?: string;
       keyInfo?: string[];
+      doKeyInfo?: string[];
+      dontKeyInfo?: string[];
+      generalKeyInfo?: string[];
       nhsLink?: string;
       trendLinks?: TrendLink[];
       sickDaysNeeded?: boolean;
@@ -43,6 +52,11 @@ serve(async (req) => {
     }
 
     const badge = body.badge === 'REAUTH' || body.badge === 'GENERAL' ? body.badge : 'NEW';
+    const keyInfoMode = body.keyInfoMode === 'dont' ? 'dont' : 'do';
+    const keyInfo = normaliseStringArray(body.keyInfo);
+    const doKeyInfo = normaliseStringArray(body.doKeyInfo);
+    const dontKeyInfo = normaliseStringArray(body.dontKeyInfo);
+    const generalKeyInfo = normaliseStringArray(body.generalKeyInfo);
     const { userId } = await assertPracticeAccess(req.headers.get('Authorization'), body.practiceId);
     const supabase = createServiceClient();
 
@@ -73,9 +87,11 @@ serve(async (req) => {
       description: body.description.trim(),
       badge,
       category: body.category.trim(),
-      key_info: Array.isArray(body.keyInfo)
-        ? body.keyInfo.map((item) => item.trim()).filter(Boolean)
-        : [],
+      key_info_mode: keyInfoMode,
+      key_info: keyInfo,
+      do_key_info: doKeyInfo.length > 0 ? doKeyInfo : keyInfoMode === 'do' ? keyInfo : [],
+      dont_key_info: dontKeyInfo.length > 0 ? dontKeyInfo : keyInfoMode === 'dont' ? keyInfo : [],
+      general_key_info: generalKeyInfo,
       nhs_link: typeof body.nhsLink === 'string' ? body.nhsLink.trim() : '',
       trend_links: Array.isArray(body.trendLinks)
         ? body.trendLinks

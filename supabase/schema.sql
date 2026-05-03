@@ -32,6 +32,8 @@ CREATE TABLE practices (
 );
 
 CREATE INDEX idx_practices_name_lowercase ON practices (name_lowercase);
+CREATE INDEX idx_practices_ods_code_upper ON practices (upper(btrim(ods_code)))
+  WHERE ods_code IS NOT NULL AND btrim(ods_code) <> '';
 CREATE INDEX idx_practices_auth_uid ON practices (auth_uid);
 
 -- ===================
@@ -157,7 +159,11 @@ CREATE TABLE practice_medication_cards (
   description          text,
   badge                text CHECK (badge IN ('NEW', 'REAUTH', 'GENERAL')),
   category             text,
+  key_info_mode        text CHECK (key_info_mode IN ('do','dont')),
   key_info             text[] DEFAULT '{}',
+  do_key_info          text[] DEFAULT '{}',
+  dont_key_info        text[] DEFAULT '{}',
+  general_key_info     text[] DEFAULT '{}',
   nhs_link             text DEFAULT '',
   trend_links          jsonb DEFAULT '[]',
   sick_days_needed     boolean DEFAULT false,

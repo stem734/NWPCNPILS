@@ -11,6 +11,7 @@ import WarningCallout from '../components/WarningCallout';
 import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
+import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const VALIDATION_CACHE_VERSION = 'v2';
@@ -72,11 +73,32 @@ const sortMedicationGroups = <
     return Number.parseInt(left.id, 10) - Number.parseInt(right.id, 10);
   });
 
+type PatientMedicationContent = {
+  state: 'global' | 'custom' | 'placeholder';
+  code: string;
+  badge: 'NEW' | 'REAUTH' | 'GENERAL';
+  title: string;
+  description: string;
+  category: string;
+  keyInfoMode?: 'do' | 'dont';
+  doKeyInfo?: string[];
+  dontKeyInfo?: string[];
+  generalKeyInfo?: string[];
+  keyInfo: string[];
+  nhsLink?: string;
+  trendLinks: { title: string; url: string }[];
+  sickDaysNeeded?: boolean;
+  reviewMonths?: number;
+  contentReviewDate?: string;
+};
+
 const ResourceView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
-  const orgParam = searchParams.get('org');
-  const orgName = orgParam?.trim() || '';
+  const practiceLookup = getPracticeLookupFromSearchParams(searchParams);
+  const orgName = practiceLookup.orgName;
+  const practiceIdentifier = practiceLookup.lookupValue;
+  const hasPracticeIdentifier = practiceLookup.hasIdentifier;
   const codesParam = searchParams.get('codes');
   const dateParam = searchParams.get('date');
   const isDemoMode = searchParams.get('demo') === '1';
@@ -92,22 +114,7 @@ const ResourceView: React.FC = () => {
   const [practiceFeatures, setPracticeFeatures] = useState<PracticeFeatureSettings>(DEFAULT_PRACTICE_FEATURE_SETTINGS);
   const [validationNonce, setValidationNonce] = useState(0);
   const { medicationMap: allMeds } = useMedicationCatalog();
-  const [resolvedContents, setResolvedContents] = useState<Array<{
-    state: 'global' | 'custom' | 'placeholder';
-    code: string;
-    badge: 'NEW' | 'REAUTH' | 'GENERAL';
-    title: string;
-    description: string;
-    category: string;
-    doKeyInfo?: string[];
-    dontKeyInfo?: string[];
-    generalKeyInfo?: string[];
-    keyInfo: string[];
-    nhsLink?: string;
-    trendLinks: { title: string; url: string }[];
-    sickDaysNeeded?: boolean;
-    reviewMonths?: number;
-  }>>([]);
+  const [resolvedContents, setResolvedContents] = useState<PatientMedicationContent[]>([]);
   const [isResolvingContents, setIsResolvingContents] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const loggedAccessKeyRef = useRef<string | null>(null);
@@ -118,24 +125,9 @@ const ResourceView: React.FC = () => {
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [sickDayModalOpen, setSickDayModalOpen] = useState(false);
 
-  const previewContents = useMemo(() => {
+  const previewContents = useMemo<PatientMedicationContent[]>(() => {
     if (!previewOnly || !previewToken || typeof window === 'undefined') {
-      return [] as Array<{
-        state: 'global' | 'custom' | 'placeholder';
-        code: string;
-        badge: 'NEW' | 'REAUTH' | 'GENERAL';
-        title: string;
-        description: string;
-        category: string;
-        doKeyInfo?: string[];
-        dontKeyInfo?: string[];
-        generalKeyInfo?: string[];
-        keyInfo: string[];
-        nhsLink?: string;
-        trendLinks: { title: string; url: string }[];
-        sickDaysNeeded?: boolean;
-        reviewMonths?: number;
-      }>;
+      return [] as PatientMedicationContent[];
     }
 
     try {
@@ -148,6 +140,7 @@ const ResourceView: React.FC = () => {
         title?: string;
         description?: string;
         category?: string;
+        keyInfoMode?: 'do' | 'dont';
         doKeyInfo?: string[];
         dontKeyInfo?: string[];
         generalKeyInfo?: string[];
@@ -172,6 +165,7 @@ const ResourceView: React.FC = () => {
         title: card.title as string,
         description: card.description as string,
         category: card.category as string,
+        keyInfoMode: card.keyInfoMode === 'dont' ? 'dont' as const : 'do' as const,
         doKeyInfo: Array.isArray(card.doKeyInfo) ? card.doKeyInfo : [],
         dontKeyInfo: Array.isArray(card.dontKeyInfo) ? card.dontKeyInfo : [],
         generalKeyInfo: Array.isArray(card.generalKeyInfo) ? card.generalKeyInfo : [],
@@ -187,13 +181,13 @@ const ResourceView: React.FC = () => {
   }, [previewOnly, previewToken]);
 
   const handleRating = async (value: number) => {
-    if (hasRated || !orgName) return;
+    if (hasRated || !practiceIdentifier) return;
     setRating(value);
     setRatingError(null);
     setIsSubmittingRating(true);
     try {
       const { data, error } = await supabase.rpc('submit_patient_rating', {
-        org_name: orgName,
+        org_name: practiceIdentifier,
         rating_value: value,
       });
       if (error) {
@@ -233,7 +227,7 @@ const ResourceView: React.FC = () => {
     let loadingTimer: number | undefined;
 
     const validate = async () => {
-      if (!orgName) {
+      if (!hasPracticeIdentifier) {
         if (!cancelled) {
           setIsAuthorised(null);
           setAuthError(null);
@@ -242,7 +236,7 @@ const ResourceView: React.FC = () => {
         return;
       }
 
-      const cacheKey = getValidationCacheKey(orgName);
+      const cacheKey = getValidationCacheKey(practiceLookup.cacheKey);
       const cached = window.sessionStorage.getItem(cacheKey);
       if (cached) {
         try {
@@ -273,7 +267,7 @@ const ResourceView: React.FC = () => {
         }
       }, 150);
 
-      const result = await validateOrganisation(orgName);
+      const result = await validateOrganisation(practiceIdentifier);
       if (cancelled) return;
 
       if (loadingTimer !== undefined) {
@@ -303,7 +297,7 @@ const ResourceView: React.FC = () => {
         window.clearTimeout(loadingTimer);
       }
     };
-  }, [isDemoMode, orgName, previewOnly, validationNonce]);
+  }, [hasPracticeIdentifier, isDemoMode, practiceIdentifier, practiceLookup.cacheKey, previewOnly, validationNonce]);
 
   useEffect(() => {
     if (isDemoMode || previewOnly) {
@@ -311,28 +305,28 @@ const ResourceView: React.FC = () => {
       return;
     }
 
-    if (!orgName || isAuthorised !== true) {
+    if (!practiceIdentifier || isAuthorised !== true) {
       loggedAccessKeyRef.current = null;
       return;
     }
 
-    const accessKey = `${orgName.toLowerCase()}|${codesParam || rawCode || ''}`;
+    const accessKey = `${practiceIdentifier.toLowerCase()}|${codesParam || rawCode || ''}`;
     if (loggedAccessKeyRef.current === accessKey) {
       return;
     }
 
     loggedAccessKeyRef.current = accessKey;
     void (async () => {
-      const result = await recordPatientAccess(orgName);
+      const result = await recordPatientAccess(practiceIdentifier);
       if (!result.ok) {
-        clearValidationCache(orgName);
+        clearValidationCache(practiceLookup.cacheKey);
         loggedAccessKeyRef.current = null;
         setIsAuthorised(null);
         setAuthError(null);
         setValidationNonce((n) => n + 1);
       }
     })();
-  }, [codesParam, isAuthorised, isDemoMode, orgName, previewOnly, rawCode]);
+  }, [codesParam, isAuthorised, isDemoMode, practiceIdentifier, practiceLookup.cacheKey, previewOnly, rawCode]);
 
   const requestedCodes = useMemo(() => {
     if (codesParam) {
@@ -374,7 +368,7 @@ const ResourceView: React.FC = () => {
         return;
       }
 
-      if (isDemoMode || !orgName) {
+      if (isDemoMode || !hasPracticeIdentifier) {
         if (!cancelled) {
           setResolvedContents(
             requestedCodes
@@ -402,7 +396,7 @@ const ResourceView: React.FC = () => {
       setIsResolvingContents(true);
 
       try {
-        const result = await resolveOrganisationMedicationCards(orgName, requestedCodes);
+        const result = await resolveOrganisationMedicationCards(practiceIdentifier, requestedCodes);
         if (!cancelled) {
           if (result.ok) {
             setResolvedContents(result.cards);
@@ -424,7 +418,7 @@ const ResourceView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [allMeds, isAuthorised, isDemoMode, orgName, practiceFeatures.medication_enabled, previewContents, previewOnly, requestedCodes]);
+  }, [allMeds, hasPracticeIdentifier, isAuthorised, isDemoMode, practiceFeatures.medication_enabled, practiceIdentifier, previewContents, previewOnly, requestedCodes]);
 
   const contents = useMemo(() => {
     if (previewOnly) {
@@ -436,7 +430,7 @@ const ResourceView: React.FC = () => {
       );
     }
 
-    if (isDemoMode || !orgName) {
+    if (isDemoMode || !hasPracticeIdentifier) {
       return sortMedicationGroups(
         requestedCodes
           .map((code) => (allMeds[code] ? { id: code, state: 'global' as const, ...allMeds[code] } : null))
@@ -444,7 +438,7 @@ const ResourceView: React.FC = () => {
       );
     }
 
-    if (orgName) {
+    if (hasPracticeIdentifier) {
       if (isAuthorised !== true) {
         return [];
       }
@@ -462,7 +456,7 @@ const ResourceView: React.FC = () => {
         .map((code) => (allMeds[code] ? { id: code, state: 'global' as const, ...allMeds[code] } : null))
         .filter((item): item is NonNullable<typeof item> => item !== null && !!item.title),
     );
-  }, [allMeds, isAuthorised, isDemoMode, orgName, previewContents, previewOnly, requestedCodes, resolvedContents]);
+  }, [allMeds, hasPracticeIdentifier, isAuthorised, isDemoMode, previewContents, previewOnly, requestedCodes, resolvedContents]);
 
   const groupedContents = useMemo(() => {
     const groups = new Map<'NEW' | 'REAUTH' | 'GENERAL', typeof contents>();
@@ -491,7 +485,7 @@ const ResourceView: React.FC = () => {
 
   const guidanceNoticeText = `This information has been prepared and checked by the clinical pharmacists at ${guidanceOrganisationName}.`;
 
-  if ((isValidating || isResolvingContents) && orgName && !previewOnly) {
+  if ((isValidating || isResolvingContents) && hasPracticeIdentifier && !previewOnly) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '1rem' }}>
@@ -504,7 +498,7 @@ const ResourceView: React.FC = () => {
     );
   }
 
-  if (orgName && isAuthorised === false && !previewOnly) {
+  if (hasPracticeIdentifier && isAuthorised === false && !previewOnly) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
@@ -517,7 +511,7 @@ const ResourceView: React.FC = () => {
     );
   }
 
-  if (orgName && isAuthorised === true && !practiceFeatures.medication_enabled && !previewOnly) {
+  if (hasPracticeIdentifier && isAuthorised === true && !practiceFeatures.medication_enabled && !previewOnly) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
@@ -530,7 +524,7 @@ const ResourceView: React.FC = () => {
     );
   }
 
-  if (resolveError && orgName && requestedCodes.length > 0) {
+  if (resolveError && hasPracticeIdentifier && requestedCodes.length > 0) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
@@ -565,7 +559,7 @@ const ResourceView: React.FC = () => {
         <h1>MyMedInfo</h1>
         <p style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '1rem' }}>Clear, trusted medication information</p>
         <p>Please use the link provided by your GP or scan the QR code to find information about your specific medication.</p>
-        {!orgName && (
+        {!hasPracticeIdentifier && (
           <div className="patient-empty-grid">
             {Object.entries(allMeds).map(([key, item]) => (
               <a key={key} href={`?code=${key}`} className="resource-card patient-empty-card" style={{ textAlign: 'center' }}>
@@ -645,7 +639,7 @@ const ResourceView: React.FC = () => {
                     </div>
                   )}
 
-                  {(content.state !== 'placeholder' && ((content.doKeyInfo && content.doKeyInfo.length > 0) || content.keyInfo.length > 0)) && (
+                  {(content.state !== 'placeholder' && ((content.doKeyInfo && content.doKeyInfo.length > 0) || (content.keyInfoMode !== 'dont' && content.keyInfo.length > 0))) && (
                     <div className="patient-info-section">
                       <h2 className="patient-section-title patient-section-title--small">Do</h2>
                       <ul className="patient-info-list">
@@ -661,11 +655,11 @@ const ResourceView: React.FC = () => {
                     </div>
                   )}
 
-                  {content.state !== 'placeholder' && content.dontKeyInfo && content.dontKeyInfo.length > 0 && (
+                  {content.state !== 'placeholder' && ((content.dontKeyInfo && content.dontKeyInfo.length > 0) || (content.keyInfoMode === 'dont' && content.keyInfo.length > 0)) && (
                     <div className="patient-info-section">
                       <h2 className="patient-section-title patient-section-title--small">Don't</h2>
                       <ul className="patient-info-list">
-                        {content.dontKeyInfo.map((info, i) => (
+                        {(content.dontKeyInfo?.length ? content.dontKeyInfo : content.keyInfo).map((info, i) => (
                           <li key={`dont-${i}`} className="patient-info-item">
                             <div className="patient-info-icon">
                               <NhsCross size={22} aria-hidden="true" />
@@ -727,7 +721,7 @@ const ResourceView: React.FC = () => {
         </section>
       ))}
 
-      {orgName && isAuthorised && contents.length > 0 && (
+      {hasPracticeIdentifier && isAuthorised && contents.length > 0 && (
         <div className="card hc-rating" style={{ marginTop: '2rem', textAlign: 'center', padding: '2rem 1rem' }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#212b32' }}>Did you find this information useful?</h2>
           {hasRated ? (
@@ -793,7 +787,7 @@ const ResourceView: React.FC = () => {
         </div>
       )}
 
-      {orgName && isAuthorised && contents.length > 0 && (
+      {hasPracticeIdentifier && isAuthorised && contents.length > 0 && (
         <div className="hc-rating__notice">
           <PatientGuidanceNotice text={guidanceNoticeText} />
         </div>

@@ -18,6 +18,7 @@ import WarningCallout from '../components/WarningCallout';
 import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
+import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const VALIDATION_CACHE_VERSION = 'v2';
@@ -77,7 +78,10 @@ const CombinedPatientView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
   const codesParam = searchParams.get('codes') || '';
-  const orgName = (searchParams.get('org') || '').trim();
+  const practiceLookup = getPracticeLookupFromSearchParams(searchParams);
+  const orgName = practiceLookup.orgName;
+  const practiceIdentifier = practiceLookup.lookupValue;
+  const hasPracticeIdentifier = practiceLookup.hasIdentifier;
   const screenParam = searchParams.get('screen') || searchParams.get('screening') || '';
   const isDemoMode = searchParams.get('demo') === '1';
   const isExactDemo = searchParams.get('exactDemo') === '1';
@@ -111,6 +115,7 @@ const CombinedPatientView: React.FC = () => {
     title: string;
     description: string;
     category: string;
+    keyInfoMode?: 'do' | 'dont';
     doKeyInfo?: string[];
     dontKeyInfo?: string[];
     generalKeyInfo?: string[];
@@ -139,7 +144,7 @@ const CombinedPatientView: React.FC = () => {
     let loadingTimer: number | undefined;
 
     const validate = async () => {
-      if (!orgName) {
+      if (!hasPracticeIdentifier) {
         if (!cancelled) {
           setIsAuthorised(null);
           setAuthError(null);
@@ -148,7 +153,7 @@ const CombinedPatientView: React.FC = () => {
         return;
       }
 
-      const cacheKey = getValidationCacheKey(orgName);
+      const cacheKey = getValidationCacheKey(practiceLookup.cacheKey);
       const cached = window.sessionStorage.getItem(cacheKey);
       if (cached) {
         try {
@@ -180,7 +185,7 @@ const CombinedPatientView: React.FC = () => {
         }
       }, 150);
 
-      const result = await validateOrganisation(orgName);
+      const result = await validateOrganisation(practiceIdentifier);
       if (cancelled) return;
 
       if (loadingTimer !== undefined) {
@@ -211,7 +216,7 @@ const CombinedPatientView: React.FC = () => {
         window.clearTimeout(loadingTimer);
       }
     };
-  }, [isDemoMode, orgName, validationNonce]);
+  }, [hasPracticeIdentifier, isDemoMode, practiceIdentifier, practiceLookup.cacheKey, validationNonce]);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -219,19 +224,19 @@ const CombinedPatientView: React.FC = () => {
       return;
     }
 
-    if (!orgName || isAuthorised !== true) {
+    if (!practiceIdentifier || isAuthorised !== true) {
       loggedAccessKeyRef.current = null;
       return;
     }
 
-    const accessKey = `${orgName.toLowerCase()}|${requestedCodes.join(',')}|${requestedScreenings.join(',')}`;
+    const accessKey = `${practiceIdentifier.toLowerCase()}|${requestedCodes.join(',')}|${requestedScreenings.join(',')}`;
     if (loggedAccessKeyRef.current === accessKey) {
       return;
     }
 
     loggedAccessKeyRef.current = accessKey;
     void (async () => {
-      const result = await recordPatientAccess(orgName);
+      const result = await recordPatientAccess(practiceIdentifier);
       if (!result.ok) {
         loggedAccessKeyRef.current = null;
         setIsAuthorised(null);
@@ -239,7 +244,7 @@ const CombinedPatientView: React.FC = () => {
         setValidationNonce((n) => n + 1);
       }
     })();
-  }, [isAuthorised, isDemoMode, orgName, requestedCodes, requestedScreenings]);
+  }, [isAuthorised, isDemoMode, practiceIdentifier, requestedCodes, requestedScreenings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +259,7 @@ const CombinedPatientView: React.FC = () => {
         return;
       }
 
-      if (isDemoMode || !orgName) {
+      if (isDemoMode || !hasPracticeIdentifier) {
         if (!cancelled) {
           setResolvedContents(
             requestedCodes
@@ -281,7 +286,7 @@ const CombinedPatientView: React.FC = () => {
 
       setIsResolvingContents(true);
       try {
-        const result = await resolveOrganisationMedicationCards(orgName, requestedCodes);
+        const result = await resolveOrganisationMedicationCards(practiceIdentifier, requestedCodes);
         if (cancelled) return;
         if (result.ok) {
           setResolvedContents(result.cards);
@@ -302,7 +307,7 @@ const CombinedPatientView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [allMeds, isAuthorised, isDemoMode, orgName, practiceFeatures.medication_enabled, requestedCodes]);
+  }, [allMeds, hasPracticeIdentifier, isAuthorised, isDemoMode, practiceFeatures.medication_enabled, practiceIdentifier, requestedCodes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,8 +331,8 @@ const CombinedPatientView: React.FC = () => {
 
       try {
         const [practiceRows, globalRows] = await Promise.all([
-          orgName
-            ? fetchPatientPracticeCardTemplates<ScreeningTemplate>(orgName, 'screening', builtInScreeningIds)
+          practiceIdentifier
+            ? fetchPatientPracticeCardTemplates<ScreeningTemplate>(practiceIdentifier, 'screening', builtInScreeningIds)
             : Promise.resolve([]),
           fetchCardTemplates<ScreeningTemplate>('screening'),
         ]);
@@ -363,10 +368,10 @@ const CombinedPatientView: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [builtInScreeningIds, builtInScreeningTemplates, isAuthorised, isDemoMode, orgName, practiceFeatures.screening_enabled, requestedScreenings]);
+  }, [builtInScreeningIds, builtInScreeningTemplates, isAuthorised, isDemoMode, practiceFeatures.screening_enabled, practiceIdentifier, requestedScreenings]);
 
   const medicationContents = useMemo(() => {
-    if (isDemoMode || !orgName) {
+    if (isDemoMode || !hasPracticeIdentifier) {
       return sortMedicationGroups(
         requestedCodes
           .map((code) => (allMeds[code] ? { id: code, state: 'global' as const, ...allMeds[code] } : null))
@@ -374,7 +379,7 @@ const CombinedPatientView: React.FC = () => {
       );
     }
 
-    if (orgName && isAuthorised !== true) {
+    if (hasPracticeIdentifier && isAuthorised !== true) {
       return [];
     }
 
@@ -384,7 +389,7 @@ const CombinedPatientView: React.FC = () => {
         ...card,
       })),
     );
-  }, [allMeds, isAuthorised, isDemoMode, orgName, requestedCodes, resolvedContents]);
+  }, [allMeds, hasPracticeIdentifier, isAuthorised, isDemoMode, requestedCodes, resolvedContents]);
 
   const groupedMedicationContents = useMemo(() => {
     const groups = new Map<'NEW' | 'REAUTH' | 'GENERAL', typeof medicationContents>();
@@ -421,7 +426,7 @@ const CombinedPatientView: React.FC = () => {
     ? `${summaryParts.join(' and ')} ready to review.`
     : 'Your GP practice has shared information for you to review.';
 
-  if ((isValidating || isResolvingContents) && orgName && !isDemoMode) {
+  if ((isValidating || isResolvingContents) && hasPracticeIdentifier && !isDemoMode) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: '1rem' }}>
@@ -434,7 +439,7 @@ const CombinedPatientView: React.FC = () => {
     );
   }
 
-  if (orgName && isAuthorised === false && !isDemoMode) {
+  if (hasPracticeIdentifier && isAuthorised === false && !isDemoMode) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }} role="alert" aria-live="assertive">
         <AlertCircle size={64} color="#d5281b" style={{ marginBottom: '1rem' }} aria-hidden="true" />
@@ -490,7 +495,7 @@ const CombinedPatientView: React.FC = () => {
         </button>
       </div>
 
-      {requestedCodes.length > 0 && !practiceFeatures.medication_enabled && orgName && isAuthorised === true && !isDemoMode && (
+      {requestedCodes.length > 0 && !practiceFeatures.medication_enabled && hasPracticeIdentifier && isAuthorised === true && !isDemoMode && (
         <div className="card patient-state-card" role="alert" aria-live="assertive">
           <h2 className="patient-section-title">Medication cards unavailable</h2>
           <p className="patient-section-copy" style={{ marginBottom: 0 }}>Medication cards are not enabled for this practice yet.</p>
@@ -542,7 +547,7 @@ const CombinedPatientView: React.FC = () => {
                         </div>
                       )}
 
-                      {(content.state !== 'placeholder' && ((content.doKeyInfo && content.doKeyInfo.length > 0) || content.keyInfo.length > 0)) && (
+                      {(content.state !== 'placeholder' && ((content.doKeyInfo && content.doKeyInfo.length > 0) || (content.keyInfoMode !== 'dont' && content.keyInfo.length > 0))) && (
                         <div className="patient-info-section">
                           <h2 className="patient-section-title patient-section-title--small">Do</h2>
                           <ul className="patient-info-list">
@@ -558,11 +563,11 @@ const CombinedPatientView: React.FC = () => {
                         </div>
                       )}
 
-                      {content.state !== 'placeholder' && content.dontKeyInfo && content.dontKeyInfo.length > 0 && (
+                      {content.state !== 'placeholder' && ((content.dontKeyInfo && content.dontKeyInfo.length > 0) || (content.keyInfoMode === 'dont' && content.keyInfo.length > 0)) && (
                         <div className="patient-info-section">
                           <h2 className="patient-section-title patient-section-title--small">Don&apos;t</h2>
                           <ul className="patient-info-list">
-                            {content.dontKeyInfo.map((info, i) => (
+                            {(content.dontKeyInfo?.length ? content.dontKeyInfo : content.keyInfo).map((info, i) => (
                               <li key={`dont-${i}`} className="patient-info-item">
                                 <div className="patient-info-icon">
                                   <NhsCross size={22} aria-hidden="true" />
@@ -626,7 +631,7 @@ const CombinedPatientView: React.FC = () => {
         </section>
       )}
 
-      {requestedScreenings.length > 0 && !practiceFeatures.screening_enabled && orgName && isAuthorised === true && !isDemoMode && (
+      {requestedScreenings.length > 0 && !practiceFeatures.screening_enabled && hasPracticeIdentifier && isAuthorised === true && !isDemoMode && (
         <div className="card patient-state-card" role="alert" aria-live="assertive">
           <h2 className="patient-section-title">Screening information unavailable</h2>
           <p className="patient-section-copy" style={{ marginBottom: 0 }}>Screening information is not enabled for this practice yet.</p>

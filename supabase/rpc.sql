@@ -4,6 +4,16 @@
 -- Run this AFTER schema.sql and rls.sql in the Supabase SQL Editor.
 -- =============================================================================
 
+CREATE INDEX IF NOT EXISTS idx_practices_ods_code_upper
+  ON public.practices (upper(btrim(ods_code)))
+  WHERE ods_code IS NOT NULL AND btrim(ods_code) <> '';
+
+ALTER TABLE public.practice_medication_cards
+  ADD COLUMN IF NOT EXISTS key_info_mode text CHECK (key_info_mode IN ('do','dont')),
+  ADD COLUMN IF NOT EXISTS do_key_info text[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS dont_key_info text[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS general_key_info text[] DEFAULT '{}';
+
 -- ===================
 -- validate_practice(org_name text)
 -- Called by anonymous patients to check if a practice is registered and active.
@@ -25,6 +35,9 @@ BEGIN
   INTO practice_record
   FROM public.practices
   WHERE name_lowercase = lower(trim(org_name))
+    OR upper(btrim(COALESCE(ods_code, ''))) = upper(btrim(org_name))
+  ORDER BY
+    CASE WHEN name_lowercase = lower(trim(org_name)) THEN 0 ELSE 1 END
   LIMIT 1;
 
   IF NOT FOUND THEN
@@ -64,11 +77,22 @@ BEGIN
     RETURN jsonb_build_object('success', false);
   END IF;
 
+  WITH target_practice AS (
+    SELECT id
+    FROM public.practices
+    WHERE (
+        name_lowercase = lower(trim(org_name))
+        OR upper(btrim(COALESCE(ods_code, ''))) = upper(btrim(org_name))
+      )
+      AND is_active = true
+    ORDER BY
+      CASE WHEN name_lowercase = lower(trim(org_name)) THEN 0 ELSE 1 END
+    LIMIT 1
+  )
   UPDATE public.practices
   SET last_accessed = now(),
       link_visit_count = link_visit_count + 1
-  WHERE name_lowercase = lower(trim(org_name))
-    AND is_active = true;
+  WHERE id = (SELECT id FROM target_practice);
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('success', false);
@@ -131,8 +155,13 @@ BEGIN
 
   SELECT id INTO target_practice_id
   FROM public.practices
-  WHERE name_lowercase = lower(trim(org_name))
+  WHERE (
+      name_lowercase = lower(trim(org_name))
+      OR upper(btrim(COALESCE(ods_code, ''))) = upper(btrim(org_name))
+    )
     AND is_active = true
+  ORDER BY
+    CASE WHEN name_lowercase = lower(trim(org_name)) THEN 0 ELSE 1 END
   LIMIT 1;
 
   IF target_practice_id IS NULL THEN
@@ -199,8 +228,13 @@ BEGIN
   SELECT *
   INTO practice_record
   FROM public.practices
-  WHERE name_lowercase = lower(trim(org_name))
+  WHERE (
+      name_lowercase = lower(trim(org_name))
+      OR upper(btrim(COALESCE(ods_code, ''))) = upper(btrim(org_name))
+    )
     AND is_active = true
+  ORDER BY
+    CASE WHEN name_lowercase = lower(trim(org_name)) THEN 0 ELSE 1 END
   LIMIT 1;
 
   IF NOT FOUND THEN
@@ -255,10 +289,65 @@ BEGIN
           WHEN cards.source_type = 'global' THEN COALESCE(medications.description, placeholder_message)
           ELSE placeholder_message
         END,
+        'category',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.category, medications.category, 'Medication Information')
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.category, 'Medication Information')
+          WHEN medications.code IS NOT NULL THEN COALESCE(medications.category, 'Medication Information')
+          ELSE 'Medication Information'
+        END,
+        'keyInfoMode',
+        CASE
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.key_info_mode, medications.key_info_mode, 'do')
+          WHEN cards.source_type = 'global' THEN COALESCE(medications.key_info_mode, 'do')
+          ELSE 'do'
+        END,
         'keyInfo',
         CASE
           WHEN cards.source_type = 'custom' THEN to_jsonb(COALESCE(cards.key_info, ARRAY[]::text[]))
           WHEN cards.source_type = 'global' THEN to_jsonb(COALESCE(medications.key_info, ARRAY[]::text[]))
+          ELSE '[]'::jsonb
+        END,
+        'doKeyInfo',
+        CASE
+          WHEN cards.source_type = 'custom' THEN to_jsonb(
+            CASE
+              WHEN COALESCE(array_length(cards.do_key_info, 1), 0) > 0 THEN cards.do_key_info
+              WHEN COALESCE(cards.key_info_mode, 'do') = 'do' THEN COALESCE(cards.key_info, ARRAY[]::text[])
+              ELSE ARRAY[]::text[]
+            END
+          )
+          WHEN cards.source_type = 'global' THEN to_jsonb(
+            CASE
+              WHEN COALESCE(array_length(medications.do_key_info, 1), 0) > 0 THEN medications.do_key_info
+              WHEN COALESCE(medications.key_info_mode, 'do') = 'do' THEN COALESCE(medications.key_info, ARRAY[]::text[])
+              ELSE ARRAY[]::text[]
+            END
+          )
+          ELSE '[]'::jsonb
+        END,
+        'dontKeyInfo',
+        CASE
+          WHEN cards.source_type = 'custom' THEN to_jsonb(
+            CASE
+              WHEN COALESCE(array_length(cards.dont_key_info, 1), 0) > 0 THEN cards.dont_key_info
+              WHEN cards.key_info_mode = 'dont' THEN COALESCE(cards.key_info, ARRAY[]::text[])
+              ELSE ARRAY[]::text[]
+            END
+          )
+          WHEN cards.source_type = 'global' THEN to_jsonb(
+            CASE
+              WHEN COALESCE(array_length(medications.dont_key_info, 1), 0) > 0 THEN medications.dont_key_info
+              WHEN medications.key_info_mode = 'dont' THEN COALESCE(medications.key_info, ARRAY[]::text[])
+              ELSE ARRAY[]::text[]
+            END
+          )
+          ELSE '[]'::jsonb
+        END,
+        'generalKeyInfo',
+        CASE
+          WHEN cards.source_type = 'custom' THEN to_jsonb(COALESCE(cards.general_key_info, ARRAY[]::text[]))
+          WHEN cards.source_type = 'global' THEN to_jsonb(COALESCE(medications.general_key_info, ARRAY[]::text[]))
           ELSE '[]'::jsonb
         END,
         'nhsLink',
@@ -285,6 +374,13 @@ BEGIN
           WHEN cards.source_type = 'global' THEN to_jsonb(medications.review_months)
           WHEN medications.code IS NOT NULL THEN to_jsonb(medications.review_months)
           ELSE 'null'::jsonb
+        END,
+        'contentReviewDate',
+        CASE
+          WHEN cards.source_type = 'custom' THEN cards.content_review_date
+          WHEN cards.source_type = 'global' THEN medications.content_review_date
+          WHEN medications.code IS NOT NULL THEN medications.content_review_date
+          ELSE NULL
         END
       )
       ORDER BY ordered_codes.ord
