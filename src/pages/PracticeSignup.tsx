@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { FlaskConical, CheckCircle } from 'lucide-react';
 import PracticeForm from '../components/PracticeForm';
 import { validatePracticeContactEmail } from '../practiceValidation';
+import { getFunctionErrorMessage } from '../supabaseFunctionError';
 
 const PracticeSignup: React.FC = () => {
   const [name, setName] = useState('');
@@ -26,21 +27,23 @@ const PracticeSignup: React.FC = () => {
     }
 
     try {
-
-      const { error: insertError } = await supabase.from('practices').insert({
-        name: name.trim(),
-        ods_code: odsCode.trim().toUpperCase(),
-        contact_email: contactEmail.trim(),
-        contact_name: contactName.trim(),
-        is_active: false, // Requires admin approval
-        link_visit_count: 0,
+      const { data, error: signupError } = await supabase.functions.invoke('submit-practice-signup', {
+        body: {
+          name: name.trim(),
+          odsCode: odsCode.trim().toUpperCase(),
+          contactEmail: contactEmail.trim().toLowerCase(),
+          contactName: contactName.trim(),
+        },
       });
-      if (insertError) throw insertError;
+      if (signupError) throw signupError;
+      if (data?.success === false) {
+        throw new Error(data.error || 'Registration was not submitted');
+      }
 
       setSubmitted(true);
     } catch (err) {
       console.error('Signup error:', err);
-      setError('There was a problem submitting your registration. Please try again.');
+      setError(await getFunctionErrorMessage(err, 'There was a problem submitting your registration. Please try again.'));
     }
     setLoading(false);
   };
