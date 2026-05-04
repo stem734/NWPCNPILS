@@ -1072,9 +1072,18 @@ const PracticeDashboard: React.FC = () => {
 
           <div className="dashboard-service-grid">
             {serviceSummaries.map((service) => (
-              <div
+              <button
                 key={service.id}
+                onClick={() => {
+                  if (service.isActive) {
+                    setActiveDomain(service.id);
+                    setDraft(null);
+                    setTemplateDraft(null);
+                  }
+                }}
                 className={`dashboard-service-card${activeDomain === service.id && service.isActive ? ' dashboard-service-card--active' : ''}${!service.isActive ? ' dashboard-service-card--inactive' : ''}`}
+                disabled={!service.isActive}
+                style={{ cursor: service.isActive ? 'pointer' : 'default' }}
               >
                 <span className={`dashboard-badge ${service.isActive ? 'dashboard-badge--green' : 'dashboard-badge--muted'}`}>
                   {service.isActive ? 'ACTIVE' : 'NOT ACTIVE'}
@@ -1083,7 +1092,7 @@ const PracticeDashboard: React.FC = () => {
                 <span>
                   {service.practiceVersionCount} practice version{service.practiceVersionCount === 1 ? '' : 's'} / {service.totalTemplateCount} template{service.totalTemplateCount === 1 ? '' : 's'}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
 
