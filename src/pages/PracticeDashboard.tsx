@@ -420,7 +420,15 @@ const PracticeDashboard: React.FC = () => {
 
     void hydrate();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      // Token refreshes happen periodically (and can be triggered by same-origin
+      // iframes opening, e.g. the medication patient preview). Reloading
+      // memberships on every refresh flips loadingPortal and unmounts any open
+      // modal, which causes the preview iframe to remount in a loop.
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+        return;
+      }
+
       if (session?.user) {
         await loadMemberships();
       } else {
