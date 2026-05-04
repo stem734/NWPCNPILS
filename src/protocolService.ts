@@ -3,16 +3,16 @@ import { supabase } from './supabase';
 import { resolvePatientMedicationCards, type ResolvedMedicationCard } from './practicePortal';
 
 /**
- * Validate organisation name against signed-up practices in Supabase
- * via PostgreSQL RPC function.
+ * Validate a practice identifier against signed-up practices in Supabase
+ * via PostgreSQL RPC function. The identifier may be a practice name or ODS code.
  */
-export async function validateOrganisation(orgName: string): Promise<{
+export async function validateOrganisation(practiceIdentifier: string): Promise<{
   valid: boolean;
   error?: string;
   practiceFeatures: PracticeFeatureSettings;
 }> {
   try {
-    const { data, error } = await supabase.rpc('validate_practice', { org_name: orgName });
+    const { data, error } = await supabase.rpc('validate_practice', { org_name: practiceIdentifier });
 
     if (error) {
       console.error('Organisation validation error:', error);
@@ -50,11 +50,11 @@ export async function validateOrganisation(orgName: string): Promise<{
  * valid. The server returns `null`/an error when the practice has been
  * deactivated so the caller can invalidate any cached validation.
  */
-export async function recordPatientAccess(orgName: string): Promise<{ ok: boolean }> {
-  if (!orgName.trim()) return { ok: true };
+export async function recordPatientAccess(practiceIdentifier: string): Promise<{ ok: boolean }> {
+  if (!practiceIdentifier.trim()) return { ok: true };
 
   try {
-    const { error } = await supabase.rpc('record_patient_access', { org_name: orgName });
+    const { error } = await supabase.rpc('record_patient_access', { org_name: practiceIdentifier });
     if (error) {
       console.error('Patient access logging error:', error);
       return { ok: false };
@@ -84,15 +84,15 @@ export type MedicationResolutionResult =
   | { ok: false; error: string };
 
 export async function resolveOrganisationMedicationCards(
-  orgName: string,
+  practiceIdentifier: string,
   codes: string[],
 ): Promise<MedicationResolutionResult> {
-  if (!orgName.trim() || codes.length === 0) {
+  if (!practiceIdentifier.trim() || codes.length === 0) {
     return { ok: true, cards: [] };
   }
 
   try {
-    const cards = await resolvePatientMedicationCards(orgName, codes);
+    const cards = await resolvePatientMedicationCards(practiceIdentifier, codes);
     return { ok: true, cards };
   } catch (error) {
     console.error('Medication resolution error:', error);

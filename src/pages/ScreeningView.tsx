@@ -12,6 +12,7 @@ import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
+import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 
 /**
  * ScreeningView — renders screening invitation / result info.
@@ -25,13 +26,15 @@ import { NhsCross, NhsTick } from '../components/NhsIcons';
  */
 const ScreeningView: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const org = searchParams.get('org') || '';
+  const practiceLookup = getPracticeLookupFromSearchParams(searchParams);
+  const org = practiceLookup.orgName;
+  const practiceIdentifier = practiceLookup.lookupValue;
   const isDemoMode = searchParams.get('demo') === '1';
   const previewOnly = searchParams.get('previewOnly') === '1';
   const previewToken = (searchParams.get('previewToken') || '').trim();
   const screenIdentifier = (searchParams.get('screen') || searchParams.get('screening') || '').trim();
   const [loadedTemplate, setLoadedTemplate] = useState<ScreeningTemplate | null>(null);
-  const access = usePracticeContentAccess(org, 'screening_enabled', { skip: isDemoMode || previewOnly });
+  const access = usePracticeContentAccess(practiceIdentifier, 'screening_enabled', { skip: isDemoMode || previewOnly });
   const knownTemplateIds = useMemo(() => Object.keys(SCREENING_TEMPLATES), []);
   const selectedTemplate = loadedTemplate;
 
@@ -54,9 +57,9 @@ const ScreeningView: React.FC = () => {
       }
 
       try {
-        const practiceRows = org
+        const practiceRows = practiceIdentifier
           ? await fetchPatientPracticeCardTemplates<ScreeningTemplate>(
-            org,
+            practiceIdentifier,
             'screening',
             knownTemplateIds,
           )
@@ -73,7 +76,7 @@ const ScreeningView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [isDemoMode, knownTemplateIds, org, previewOnly, previewToken, screenIdentifier]);
+  }, [isDemoMode, knownTemplateIds, practiceIdentifier, previewOnly, previewToken, screenIdentifier]);
 
   if (access.loading) {
     return (

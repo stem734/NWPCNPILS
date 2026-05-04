@@ -46,6 +46,9 @@ verify_jwt = false
 [functions.send-practice-password-reset]
 verify_jwt = false
 
+[functions.submit-practice-signup]
+verify_jwt = false
+
 [functions.update-admin-user]
 verify_jwt = false
 

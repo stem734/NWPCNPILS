@@ -5,6 +5,7 @@ import type { ImmunisationTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
+import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -18,7 +19,9 @@ import { usePracticeContentAccess } from '../usePracticeContentAccess';
  */
 const ImmunisationView: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const org = searchParams.get('org') || '';
+  const practiceLookup = getPracticeLookupFromSearchParams(searchParams);
+  const org = practiceLookup.orgName;
+  const practiceIdentifier = practiceLookup.lookupValue;
   const isDemoMode = searchParams.get('demo') === '1';
   const vaccines = (searchParams.get('vaccine') || searchParams.get('jab') || searchParams.get('imms') || '')
     .split(',')
@@ -31,7 +34,7 @@ const ImmunisationView: React.FC = () => {
   const requestedVaccines = useMemo(() => (vaccines.length > 0 ? vaccines : ['flu']), [vaccines]);
   const requestedVaccinesKey = requestedVaccines.join(',');
   const [loadedTemplateMap, setLoadedTemplateMap] = useState<Record<string, ImmunisationTemplate>>({});
-  const access = usePracticeContentAccess(org, 'immunisation_enabled', { skip: isDemoMode });
+  const access = usePracticeContentAccess(practiceIdentifier, 'immunisation_enabled', { skip: isDemoMode });
   const selectedVaccines = requestedVaccines
     .map((vaccineCode) => loadedTemplateMap[vaccineCode])
     .filter(Boolean);
@@ -39,8 +42,8 @@ const ImmunisationView: React.FC = () => {
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const practiceRows = org
-          ? await fetchPatientPracticeCardTemplates<ImmunisationTemplate>(org, 'immunisation', requestedVaccines)
+        const practiceRows = practiceIdentifier
+          ? await fetchPatientPracticeCardTemplates<ImmunisationTemplate>(practiceIdentifier, 'immunisation', requestedVaccines)
           : [];
         const practiceMap = Object.fromEntries(practiceRows.map((row) => [row.template_id, row.payload]));
         const rows = await fetchCardTemplates<ImmunisationTemplate>('immunisation', requestedVaccines);
@@ -54,7 +57,7 @@ const ImmunisationView: React.FC = () => {
       }
     };
     void loadTemplates();
-  }, [org, requestedVaccines, requestedVaccinesKey]);
+  }, [practiceIdentifier, requestedVaccines, requestedVaccinesKey]);
 
   if (access.loading) {
     return (

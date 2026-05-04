@@ -2,6 +2,10 @@
 -- Medication cards keep using practice_medication_cards because they have a
 -- richer schema and backwards-compatible patient resolver.
 
+CREATE INDEX IF NOT EXISTS idx_practices_ods_code_upper
+  ON public.practices (upper(btrim(ods_code)))
+  WHERE ods_code IS NOT NULL AND btrim(ods_code) <> '';
+
 CREATE TABLE IF NOT EXISTS practice_card_templates (
   practice_id         uuid NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
   builder_type        text NOT NULL CHECK (builder_type IN ('healthcheck', 'screening', 'immunisation', 'ltc')),
@@ -74,8 +78,13 @@ BEGIN
   SELECT *
   INTO practice_record
   FROM public.practices
-  WHERE name_lowercase = lower(trim(org_name))
+  WHERE (
+      name_lowercase = lower(trim(org_name))
+      OR upper(btrim(COALESCE(ods_code, ''))) = upper(btrim(org_name))
+    )
     AND is_active = true
+  ORDER BY
+    CASE WHEN name_lowercase = lower(trim(org_name)) THEN 0 ELSE 1 END
   LIMIT 1;
 
   IF NOT FOUND THEN

@@ -4,6 +4,10 @@
 -- Apply in the Supabase SQL Editor after the initial rpc.sql has been run.
 -- =============================================================================
 
+CREATE INDEX IF NOT EXISTS idx_practices_ods_code_upper
+  ON public.practices (upper(btrim(ods_code)))
+  WHERE ods_code IS NOT NULL AND btrim(ods_code) <> '';
+
 CREATE TABLE IF NOT EXISTS patient_rating_submissions (
   id bigserial PRIMARY KEY,
   practice_id uuid NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
@@ -43,8 +47,13 @@ BEGIN
 
   SELECT id INTO target_practice_id
   FROM public.practices
-  WHERE name_lowercase = lower(trim(org_name))
+  WHERE (
+      name_lowercase = lower(trim(org_name))
+      OR upper(btrim(COALESCE(ods_code, ''))) = upper(btrim(org_name))
+    )
     AND is_active = true
+  ORDER BY
+    CASE WHEN name_lowercase = lower(trim(org_name)) THEN 0 ELSE 1 END
   LIMIT 1;
 
   IF target_practice_id IS NULL THEN

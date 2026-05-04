@@ -105,21 +105,31 @@ export const coerceResolvedMedicationCard = (value: unknown): ResolvedMedication
     code: typeof row.code === 'string' ? row.code : '',
     badge: row.badge === 'NEW' || row.badge === 'REAUTH' ? row.badge : 'GENERAL',
     title: typeof row.title === 'string' ? row.title : 'Medication information unavailable',
-  description:
-    typeof row.description === 'string'
-      ? row.description
-      : 'No drug information available at your practice for this particular medication.',
+    description:
+      typeof row.description === 'string'
+        ? row.description
+        : 'No drug information available at your practice for this particular medication.',
     category: typeof row.category === 'string' ? row.category : 'Medication Information',
-    keyInfoMode: row.key_info_mode === 'dont' ? 'dont' : 'do',
-    keyInfo: toStringArray(row.keyInfo),
-    doKeyInfo: toStringArray(row.do_key_info),
-    dontKeyInfo: toStringArray(row.dont_key_info),
-    generalKeyInfo: toStringArray(row.general_key_info),
-    nhsLink: typeof row.nhsLink === 'string' ? row.nhsLink : '',
-    trendLinks: toTrendLinks(row.trendLinks),
-    sickDaysNeeded: Boolean(row.sickDaysNeeded),
-    reviewMonths: typeof row.reviewMonths === 'number' ? row.reviewMonths : undefined,
-    contentReviewDate: typeof row.contentReviewDate === 'string' ? row.contentReviewDate : undefined,
+    keyInfoMode: row.keyInfoMode === 'dont' || row.key_info_mode === 'dont' ? 'dont' : 'do',
+    keyInfo: toStringArray(row.keyInfo ?? row.key_info),
+    doKeyInfo: toStringArray(row.doKeyInfo ?? row.do_key_info),
+    dontKeyInfo: toStringArray(row.dontKeyInfo ?? row.dont_key_info),
+    generalKeyInfo: toStringArray(row.generalKeyInfo ?? row.general_key_info),
+    nhsLink: typeof row.nhsLink === 'string' ? row.nhsLink : typeof row.nhs_link === 'string' ? row.nhs_link : '',
+    trendLinks: toTrendLinks(row.trendLinks ?? row.trend_links),
+    sickDaysNeeded: Boolean(row.sickDaysNeeded ?? row.sick_days_needed),
+    reviewMonths:
+      typeof row.reviewMonths === 'number'
+        ? row.reviewMonths
+        : typeof row.review_months === 'number'
+          ? row.review_months
+          : undefined,
+    contentReviewDate:
+      typeof row.contentReviewDate === 'string'
+        ? row.contentReviewDate
+        : typeof row.content_review_date === 'string'
+          ? row.content_review_date
+          : undefined,
   };
 };
 
@@ -147,9 +157,9 @@ export const coercePracticeSummary = (value: unknown): PracticeSummary | null =>
   };
 };
 
-export async function resolvePatientMedicationCards(orgName: string, requestedCodes: string[]): Promise<ResolvedMedicationCard[]> {
+export async function resolvePatientMedicationCards(practiceIdentifier: string, requestedCodes: string[]): Promise<ResolvedMedicationCard[]> {
   const { data, error } = await supabase.rpc('resolve_patient_medication_cards', {
-    org_name: orgName,
+    org_name: practiceIdentifier,
     requested_codes: requestedCodes,
   });
 

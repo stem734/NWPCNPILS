@@ -5,21 +5,24 @@ import type { LongTermConditionTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
+import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const org = searchParams.get('org') || '';
+  const practiceLookup = getPracticeLookupFromSearchParams(searchParams);
+  const org = practiceLookup.orgName;
+  const practiceIdentifier = practiceLookup.lookupValue;
   const isDemoMode = searchParams.get('demo') === '1';
   const conditionType = (searchParams.get('ltc') || searchParams.get('condition') || '').trim().toLowerCase();
   const [loadedTemplate, setLoadedTemplate] = useState<LongTermConditionTemplate | null>(null);
-  const access = usePracticeContentAccess(org, 'ltc_enabled', { skip: isDemoMode });
+  const access = usePracticeContentAccess(practiceIdentifier, 'ltc_enabled', { skip: isDemoMode });
   const selectedTemplate = loadedTemplate;
 
   useEffect(() => {
     const loadTemplate = async () => {
       try {
-        const [practiceRow] = org
-          ? await fetchPatientPracticeCardTemplates<LongTermConditionTemplate>(org, 'ltc', [conditionType || 'asthma'])
+        const [practiceRow] = practiceIdentifier
+          ? await fetchPatientPracticeCardTemplates<LongTermConditionTemplate>(practiceIdentifier, 'ltc', [conditionType || 'asthma'])
           : [];
         if (practiceRow?.payload) {
           setLoadedTemplate(practiceRow.payload);
@@ -34,7 +37,7 @@ const LongTermConditionView: React.FC = () => {
       }
     };
     void loadTemplate();
-  }, [conditionType, org]);
+  }, [conditionType, practiceIdentifier]);
 
   if (access.loading) {
     return (

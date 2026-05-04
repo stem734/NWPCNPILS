@@ -602,14 +602,28 @@ const PracticeDashboard: React.FC = () => {
 
   const buildMedicationPreview = (medication: MedicationRecord, practiceCard?: PracticeMedicationCardRow): MedContent => {
     if (practiceCard?.source_type === 'custom') {
+      const keyInfoMode = practiceCard.key_info_mode === 'dont' ? 'dont' : medication.keyInfoMode || 'do';
+      const keyInfo = Array.isArray(practiceCard.key_info) ? practiceCard.key_info : medication.keyInfo;
+
       return {
         code: medication.code,
         title: practiceCard.title || medication.title,
         description: practiceCard.description || medication.description,
         badge: practiceCard.badge || medication.badge,
         category: practiceCard.category || medication.category,
-        keyInfoMode: practiceCard.key_info_mode === 'dont' ? 'dont' : medication.keyInfoMode || 'do',
-        keyInfo: Array.isArray(practiceCard.key_info) ? practiceCard.key_info : medication.keyInfo,
+        keyInfoMode,
+        keyInfo,
+        doKeyInfo: Array.isArray(practiceCard.do_key_info) && practiceCard.do_key_info.length > 0
+          ? practiceCard.do_key_info
+          : keyInfoMode === 'do'
+            ? keyInfo
+            : [],
+        dontKeyInfo: Array.isArray(practiceCard.dont_key_info) && practiceCard.dont_key_info.length > 0
+          ? practiceCard.dont_key_info
+          : keyInfoMode === 'dont'
+            ? keyInfo
+            : [],
+        generalKeyInfo: Array.isArray(practiceCard.general_key_info) ? practiceCard.general_key_info : [],
         nhsLink: typeof practiceCard.nhs_link === 'string' ? practiceCard.nhs_link : medication.nhsLink,
         trendLinks: Array.isArray(practiceCard.trend_links) ? practiceCard.trend_links : medication.trendLinks,
         sickDaysNeeded:
@@ -635,6 +649,9 @@ const PracticeDashboard: React.FC = () => {
       category: medication.category,
       keyInfoMode: medication.keyInfoMode || 'do',
       keyInfo: medication.keyInfo,
+      doKeyInfo: medication.doKeyInfo,
+      dontKeyInfo: medication.dontKeyInfo,
+      generalKeyInfo: medication.generalKeyInfo,
       nhsLink: medication.nhsLink,
       trendLinks: medication.trendLinks,
       sickDaysNeeded: medication.sickDaysNeeded,
@@ -1468,6 +1485,9 @@ const PracticeDashboard: React.FC = () => {
                     category: draft.category,
                     key_info_mode: draft.keyInfoMode,
                     key_info: draft.keyInfo,
+                    do_key_info: draft.keyInfoMode === 'do' ? draft.keyInfo.filter((item) => item.trim()) : [],
+                    dont_key_info: draft.keyInfoMode === 'dont' ? draft.keyInfo.filter((item) => item.trim()) : [],
+                    general_key_info: [],
                     nhs_link: draft.nhsLink,
                     trend_links: draft.trendLinks,
                     sick_days_needed: draft.sickDaysNeeded,
