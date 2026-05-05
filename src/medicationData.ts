@@ -203,6 +203,102 @@ export const MEDICATIONS: MedContent[] = [
       'May cause nausea or gastrointestinal side effects initially.',
       'Report any severe abdominal pain immediately.'
     ]
+  },
+  {
+    code: '601',
+    title: 'Bisphosphonates - Starting Treatment',
+    description: 'Bisphosphonates such as alendronate and risedronate help strengthen your bones and reduce the risk of fractures, particularly for osteoporosis.',
+    badge: 'NEW',
+    category: 'Bone Health',
+    keyInfoMode: 'do',
+    reviewMonths: 12,
+    nhsLink: 'https://www.nhs.uk/conditions/osteoporosis/treatment/',
+    trendLinks: [],
+    keyInfo: [
+      'Take on an empty stomach with a full glass of water.',
+      'Remain upright for at least 30 minutes after taking.',
+      'Report any persistent jaw, ear, or muscle pain.'
+    ]
+  },
+  {
+    code: '602',
+    title: 'Bisphosphonates - Reauthorisation',
+    description: 'Bisphosphonates such as alendronate and risedronate continue to strengthen your bones and reduce fracture risk when taken as prescribed.',
+    badge: 'REAUTH',
+    category: 'Bone Health',
+    keyInfoMode: 'do',
+    reviewMonths: 12,
+    nhsLink: 'https://www.nhs.uk/conditions/osteoporosis/treatment/',
+    trendLinks: [],
+    keyInfo: [
+      'Continue taking on an empty stomach with a full glass of water.',
+      'Remain upright for at least 30 minutes after taking.',
+      'Attend regular bone density checks as arranged.'
+    ]
+  },
+  {
+    code: '701',
+    title: 'Valproate - Starting Treatment',
+    description: 'Valproate (valproic acid) is used to treat epilepsy and help prevent seizures. It needs regular monitoring to ensure it is working safely.',
+    badge: 'NEW',
+    category: 'Neurological',
+    keyInfoMode: 'do',
+    reviewMonths: 12,
+    nhsLink: 'https://www.nhs.uk/medicines/valproic-acid/',
+    trendLinks: [],
+    keyInfo: [
+      'Take as prescribed, usually with food to reduce stomach upset.',
+      'Do not stop suddenly as this may increase seizure risk.',
+      'Attend all blood tests to monitor liver function and blood counts.'
+    ]
+  },
+  {
+    code: '702',
+    title: 'Valproate - Reauthorisation',
+    description: 'Valproate (valproic acid) continues to help control epilepsy and prevent seizures. Regular monitoring is essential for safe treatment.',
+    badge: 'REAUTH',
+    category: 'Neurological',
+    keyInfoMode: 'do',
+    reviewMonths: 12,
+    nhsLink: 'https://www.nhs.uk/medicines/valproic-acid/',
+    trendLinks: [],
+    keyInfo: [
+      'Continue taking as prescribed, usually with food.',
+      'Do not stop suddenly as this may increase seizure risk.',
+      'Continue attending blood tests to monitor liver function and blood counts.'
+    ]
+  },
+  {
+    code: '801',
+    title: 'Topiramate - Starting Treatment',
+    description: 'Topiramate is used to treat epilepsy to help prevent seizures, and may also be used for migraine prevention. Regular check-ups are important.',
+    badge: 'NEW',
+    category: 'Neurological',
+    keyInfoMode: 'do',
+    reviewMonths: 12,
+    nhsLink: 'https://www.nhs.uk/medicines/topiramate/',
+    trendLinks: [],
+    keyInfo: [
+      'Take as prescribed, usually once or twice daily.',
+      'Drink plenty of water to help prevent kidney stones.',
+      'Avoid sudden stopping as this may trigger seizures.'
+    ]
+  },
+  {
+    code: '802',
+    title: 'Topiramate - Reauthorisation',
+    description: 'Topiramate continues to help prevent seizures or migraines when taken as prescribed. Ongoing monitoring ensures the treatment remains safe and effective.',
+    badge: 'REAUTH',
+    category: 'Neurological',
+    keyInfoMode: 'do',
+    reviewMonths: 12,
+    nhsLink: 'https://www.nhs.uk/medicines/topiramate/',
+    trendLinks: [],
+    keyInfo: [
+      'Continue taking as prescribed, usually once or twice daily.',
+      'Continue drinking plenty of water to help prevent kidney stones.',
+      'Do not stop suddenly as this may trigger seizures or migraines.'
+    ]
   }
 ];
 
