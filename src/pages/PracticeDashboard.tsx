@@ -257,10 +257,17 @@ const PracticeDashboard: React.FC = () => {
   const { medications: allMedications, loading: loadingMedications } = useMedicationCatalog();
   const navigate = useNavigate();
   const isMountedRef = useRef(true);
+  const hasLoadedMembershipsRef = useRef(false);
 
   const loadMemberships = useCallback(async () => {
     if (!isMountedRef.current) return;
-    setLoadingPortal(true);
+    // Only show the full-page loading screen on the very first load. Subsequent
+    // refreshes (e.g. after an auth event fired by a same-origin iframe) must
+    // not unmount the dashboard, otherwise any open modal — including the
+    // medication patient preview — will remount in a loop.
+    if (!hasLoadedMembershipsRef.current) {
+      setLoadingPortal(true);
+    }
     setError('');
 
     try {
@@ -340,6 +347,7 @@ const PracticeDashboard: React.FC = () => {
       }
     } finally {
       if (isMountedRef.current) {
+        hasLoadedMembershipsRef.current = true;
         setLoadingPortal(false);
       }
     }
@@ -421,7 +429,15 @@ const PracticeDashboard: React.FC = () => {
 
     void hydrate();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      // Token refreshes happen periodically (and can be triggered by same-origin
+      // iframes opening, e.g. the medication patient preview). Reloading
+      // memberships on every refresh flips loadingPortal and unmounts any open
+      // modal, which causes the preview iframe to remount in a loop.
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+        return;
+      }
+
       if (session?.user) {
         await loadMemberships();
       } else {
@@ -976,8 +992,18 @@ const PracticeDashboard: React.FC = () => {
     });
   };
 
+  // Render the preview modal at the top level so it remains mounted across
+  // any transient loading-state flips. The medication preview iframe is
+  // same-origin and its Supabase client can fire auth events that trigger
+  // background refreshes; if those flip an early-return guard, the modal
+  // would unmount and the iframe would flash repeatedly.
+  const previewModal = previewMed
+    ? <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />
+    : null;
+
+  let bodyContent: React.ReactNode;
   if (loadingPortal || loadingMedications) {
-    return (
+    bodyContent = (
       <div style={{ maxWidth: '820px', margin: '2rem auto' }}>
         <div className="card" style={{ textAlign: 'center' }}>
           <FlaskConical size={48} color="#005eb8" style={{ marginBottom: '1rem' }} />
@@ -985,10 +1011,8 @@ const PracticeDashboard: React.FC = () => {
         </div>
       </div>
     );
-  }
-
-  if (!selectedPractice) {
-    return (
+  } else if (!selectedPractice) {
+    bodyContent = (
       <div style={{ maxWidth: '820px', margin: '2rem auto' }}>
         <div className="card" style={{ textAlign: 'center', borderLeft: '4px solid #d5281b' }}>
           <h1 style={{ fontSize: '1.25rem', color: '#d5281b' }}>Practice Access Error</h1>
@@ -996,11 +1020,9 @@ const PracticeDashboard: React.FC = () => {
         </div>
       </div>
     );
-  }
-
-  return (
-    <div className="dashboard-shell">
-      {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
+  } else {
+    bodyContent = (
+      <div className="dashboard-shell">
 
       {confirmDialog && (
         <ConfirmDialog
@@ -1616,6 +1638,14 @@ const PracticeDashboard: React.FC = () => {
         </>
       )}
     </div>
+    );
+  }
+
+  return (
+    <>
+      {previewModal}
+      {bodyContent}
+    </>
   );
 };
 

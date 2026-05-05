@@ -35,6 +35,7 @@ const SubdomainRoutes: React.FC = () => {
         <Route path="/dashboard" element={<AdminDashboard />} />
         <Route path="/drug-builder" element={<CardBuilder />} />
         <Route path="/card-builder" element={<CardBuilder />} />
+        <Route path="/patient" element={<PatientRouter />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     );
@@ -46,6 +47,7 @@ const SubdomainRoutes: React.FC = () => {
         <Route path="/" element={<PracticeLogin />} />
         <Route path="/dashboard" element={<PracticeDashboard />} />
         <Route path="/signup" element={<PracticeSignup />} />
+        <Route path="/patient" element={<PatientRouter />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     );

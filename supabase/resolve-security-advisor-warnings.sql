@@ -481,6 +481,35 @@ GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_practice_user() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_practice_member(uuid) TO authenticated;
 
+REVOKE EXECUTE ON FUNCTION public.validate_practice(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.record_patient_access(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.submit_patient_rating(text, integer) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.resolve_patient_medication_cards(text, text[]) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.resolve_practice_card_templates(text, text, text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.validate_practice(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_patient_access(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_patient_rating(text, integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_patient_medication_cards(text, text[]) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_practice_card_templates(text, text, text[]) TO anon, authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.is_practice_user() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.is_practice_member(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_practice_user() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_practice_member(uuid) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.set_local_resource_link_audit_fields() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_practice_medications_cache() FROM PUBLIC, anon, authenticated;
+
+DO $$
+BEGIN
+  IF to_regprocedure('public.can_bootstrap_admin(uuid,text)') IS NOT NULL THEN
+    REVOKE EXECUTE ON FUNCTION public.can_bootstrap_admin(uuid, text) FROM PUBLIC, anon;
+    GRANT EXECUTE ON FUNCTION public.can_bootstrap_admin(uuid, text) TO authenticated;
+  END IF;
+END $$;
+
 DROP POLICY IF EXISTS "practices_insert_anyone" ON public.practices;
 DROP POLICY IF EXISTS "practices_insert_admin" ON public.practices;
 DROP POLICY IF EXISTS "practices_insert_authenticated" ON public.practices;
