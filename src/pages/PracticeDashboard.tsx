@@ -17,6 +17,7 @@ import { resolvePath } from '../subdomainUtils';
 import MedicationPreviewModal from '../components/MedicationPreviewModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DisclaimerDialog from '../components/DisclaimerDialog';
+import Modal from '../components/Modal';
 import { type MedicationRecord, useMedicationCatalog } from '../medicationCatalog';
 import { getFunctionErrorMessage } from '../supabaseFunctionError';
 import { fetchCardTemplates } from '../cardTemplateStore';
@@ -1209,66 +1210,64 @@ const PracticeDashboard: React.FC = () => {
       )}
 
       {templateDraft && activeTemplateDomain && domainFeatureEnabled(selectedPractice, activeTemplateDomain) && (
-        <section className="dashboard-section">
-          <div className="dashboard-panel" style={{ borderLeft: '4px solid #007f3b' }}>
-            <div className="dashboard-panel-header">
-              <div>
-                <h2 className="dashboard-panel-title">Practice Template: {templateDraft.label}</h2>
-                <p className="dashboard-panel-subtitle">Personalise this template for {selectedPractice.name}.</p>
-              </div>
+        <Modal
+          isOpen={Boolean(templateDraft)}
+          onClose={() => setTemplateDraft(null)}
+          title={`Practice Template: ${templateDraft.label}`}
+          subtitle={`Personalise this template for ${selectedPractice.name}.`}
+          size="lg"
+          footer={
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button onClick={() => setTemplateDraft(null)} className="dashboard-pill-button dashboard-pill-button--muted">
                 Cancel
               </button>
-            </div>
-
-            {templateDraft.isJsonMode ? (
-              <div className="dashboard-field">
-                <label>Template JSON</label>
-                <textarea
-                  value={templateDraft.payloadJson}
-                  rows={18}
-                  onChange={(event) => setTemplateDraft((current) => current ? { ...current, payloadJson: event.target.value } : current)}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical', fontFamily: 'monospace' }}
-                />
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="dashboard-field">
-                  <label>Label</label>
-                  <input value={templateDraft.label} onChange={(event) => setTemplateDraft((current) => current ? { ...current, label: event.target.value } : current)} />
-                </div>
-                <div className="dashboard-field">
-                  <label>Headline</label>
-                  <input value={templateDraft.headline} onChange={(event) => setTemplateDraft((current) => current ? { ...current, headline: event.target.value } : current)} />
-                </div>
-                <div className="dashboard-field">
-                  <label>Explanation</label>
-                  <textarea value={templateDraft.explanation} rows={4} onChange={(event) => setTemplateDraft((current) => current ? { ...current, explanation: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
-                </div>
-                {templateDraft.builderType === 'ltc' && (
-                  <div className="dashboard-field">
-                    <label>Important message</label>
-                    <textarea value={templateDraft.importantMessage} rows={3} onChange={(event) => setTemplateDraft((current) => current ? { ...current, importantMessage: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
-                  </div>
-                )}
-                <div className="dashboard-field">
-                  <label>Guidance points (one per line)</label>
-                  <textarea value={templateDraft.guidanceText} rows={6} onChange={(event) => setTemplateDraft((current) => current ? { ...current, guidanceText: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
-                </div>
-                <div className="dashboard-field">
-                  <label>Resource links (title | url | description)</label>
-                  <textarea value={templateDraft.linksText} rows={6} onChange={(event) => setTemplateDraft((current) => current ? { ...current, linksText: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
-                </div>
-              </div>
-            )}
-
-            <div className="dashboard-inline-actions" style={{ marginTop: '1.25rem' }}>
               <button onClick={saveTemplateDraft} disabled={saving} className="action-button" style={{ backgroundColor: '#007f3b', opacity: saving ? 0.7 : 1 }}>
                 <Save size={16} /> {saving ? 'Saving...' : 'Save Practice Template'}
               </button>
             </div>
-          </div>
-        </section>
+          }
+        >
+          {templateDraft.isJsonMode ? (
+            <div className="dashboard-field">
+              <label>Template JSON</label>
+              <textarea
+                value={templateDraft.payloadJson}
+                rows={18}
+                onChange={(event) => setTemplateDraft((current) => current ? { ...current, payloadJson: event.target.value } : current)}
+                style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical', fontFamily: 'monospace' }}
+              />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="dashboard-field">
+                <label>Label</label>
+                <input value={templateDraft.label} onChange={(event) => setTemplateDraft((current) => current ? { ...current, label: event.target.value } : current)} />
+              </div>
+              <div className="dashboard-field">
+                <label>Headline</label>
+                <input value={templateDraft.headline} onChange={(event) => setTemplateDraft((current) => current ? { ...current, headline: event.target.value } : current)} />
+              </div>
+              <div className="dashboard-field">
+                <label>Explanation</label>
+                <textarea value={templateDraft.explanation} rows={4} onChange={(event) => setTemplateDraft((current) => current ? { ...current, explanation: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+              </div>
+              {templateDraft.builderType === 'ltc' && (
+                <div className="dashboard-field">
+                  <label>Important message</label>
+                  <textarea value={templateDraft.importantMessage} rows={3} onChange={(event) => setTemplateDraft((current) => current ? { ...current, importantMessage: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+                </div>
+              )}
+              <div className="dashboard-field">
+                <label>Guidance points (one per line)</label>
+                <textarea value={templateDraft.guidanceText} rows={6} onChange={(event) => setTemplateDraft((current) => current ? { ...current, guidanceText: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+              </div>
+              <div className="dashboard-field">
+                <label>Resource links (title | url | description)</label>
+                <textarea value={templateDraft.linksText} rows={6} onChange={(event) => setTemplateDraft((current) => current ? { ...current, linksText: event.target.value } : current)} style={{ width: '100%', padding: '0.75rem', border: '2px solid #d8dde0', borderRadius: '8px', resize: 'vertical' }} />
+              </div>
+            </div>
+          )}
+        </Modal>
       )}
 
       {activeDomain === 'medication' && domainFeatureEnabled(selectedPractice, 'medication') && (
@@ -1334,19 +1333,55 @@ const PracticeDashboard: React.FC = () => {
       )}
 
       {draft && (
-        <section className="dashboard-section">
-          <div className="dashboard-panel" style={{ borderLeft: '4px solid #007f3b' }}>
-            <div className="dashboard-panel-header">
-              <div>
-                <h2 className="dashboard-panel-title">Practice Version: {draft.code}</h2>
-                <p className="dashboard-panel-subtitle">Save a practice-specific medication card for this code.</p>
-              </div>
+        <Modal
+          isOpen={Boolean(draft)}
+          onClose={resetEditor}
+          title={`Practice Version: ${draft.code}`}
+          subtitle="Save a practice-specific medication card for this code."
+          size="xl"
+          footer={
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button onClick={resetEditor} className="dashboard-pill-button dashboard-pill-button--muted">
                 Cancel
               </button>
-            </div>
+              <button
+                onClick={() => {
+                  const baseMedication = allMedications.find((medication) => medication.code === draftCode);
+                  if (!baseMedication) return;
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  setPreviewMed(buildMedicationPreview(baseMedication, {
+                    practice_id: selectedPracticeId,
+                    code: draft.code,
+                    source_type: 'custom',
+                    title: draft.title,
+                    description: draft.description,
+                    badge: draft.badge,
+                    category: draft.category,
+                    key_info_mode: draft.keyInfoMode,
+                    key_info: draft.keyInfo,
+                    do_key_info: draft.keyInfoMode === 'do' ? draft.keyInfo.filter((item) => item.trim()) : [],
+                    dont_key_info: draft.keyInfoMode === 'dont' ? draft.keyInfo.filter((item) => item.trim()) : [],
+                    general_key_info: [],
+                    nhs_link: draft.nhsLink,
+                    trend_links: draft.trendLinks,
+                    sick_days_needed: draft.sickDaysNeeded,
+                    review_months: draft.reviewMonths,
+                    content_review_date: draft.contentReviewDate,
+                    disclaimer_version: '',
+                  }));
+                }}
+                className="action-button"
+                style={{ backgroundColor: '#005eb8' }}
+              >
+                <Eye size={16} /> Preview
+              </button>
+              <button onClick={saveCustomDraft} disabled={saving} className="action-button" style={{ backgroundColor: '#007f3b', opacity: saving ? 0.7 : 1 }}>
+                <Save size={16} /> {saving ? 'Saving...' : 'Save Practice Version'}
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="dashboard-field">
                 <label>Title *</label>
                 <input value={draft.title} onChange={(event) => updateDraft('title', event.target.value)} />
@@ -1468,45 +1503,7 @@ const PracticeDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            <div className="dashboard-inline-actions" style={{ marginTop: '1.25rem' }}>
-              <button
-                onClick={() => {
-                  const baseMedication = allMedications.find((medication) => medication.code === draftCode);
-                  if (!baseMedication) return;
-
-                  setPreviewMed(buildMedicationPreview(baseMedication, {
-                    practice_id: selectedPracticeId,
-                    code: draft.code,
-                    source_type: 'custom',
-                    title: draft.title,
-                    description: draft.description,
-                    badge: draft.badge,
-                    category: draft.category,
-                    key_info_mode: draft.keyInfoMode,
-                    key_info: draft.keyInfo,
-                    do_key_info: draft.keyInfoMode === 'do' ? draft.keyInfo.filter((item) => item.trim()) : [],
-                    dont_key_info: draft.keyInfoMode === 'dont' ? draft.keyInfo.filter((item) => item.trim()) : [],
-                    general_key_info: [],
-                    nhs_link: draft.nhsLink,
-                    trend_links: draft.trendLinks,
-                    sick_days_needed: draft.sickDaysNeeded,
-                    review_months: draft.reviewMonths,
-                    content_review_date: draft.contentReviewDate,
-                    disclaimer_version: '',
-                  }));
-                }}
-                className="action-button"
-                style={{ backgroundColor: '#005eb8' }}
-              >
-                <Eye size={16} /> Preview Practice Version
-              </button>
-              <button onClick={saveCustomDraft} disabled={saving} className="action-button" style={{ backgroundColor: '#007f3b', opacity: saving ? 0.7 : 1 }}>
-                <Save size={16} /> {saving ? 'Saving...' : 'Save Practice Version'}
-              </button>
-            </div>
-          </div>
-        </section>
+        </Modal>
       )}
 
       <section className="dashboard-section">
