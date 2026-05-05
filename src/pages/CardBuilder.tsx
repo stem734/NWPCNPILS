@@ -360,6 +360,7 @@ const CardBuilder: React.FC = () => {
   const [reviewMonths, setReviewMonths] = useState(12);
   const [contentReviewDate, setContentReviewDate] = useState('');
   const [hasContent, setHasContent] = useState(false);
+  const [medicationEditorOpen, setMedicationEditorOpen] = useState(false);
   const [editingCode, setEditingCode] = useState('');
   const [requestedCode, setRequestedCode] = useState('');
 
@@ -564,6 +565,7 @@ const CardBuilder: React.FC = () => {
     setEditingCode(medication.code);
     setRequestedCode(medication.code);
     setHasContent(true);
+    setMedicationEditorOpen(true);
     setSaveError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1037,6 +1039,7 @@ const CardBuilder: React.FC = () => {
     setReviewMonths(12);
     setContentReviewDate('');
     setHasContent(true);
+    setMedicationEditorOpen(true);
     setRequestedCode('');
     setSaveError('');
     setSaveCompleted(false);
@@ -1167,6 +1170,7 @@ const CardBuilder: React.FC = () => {
     setReviewMonths(12);
     setContentReviewDate('');
     setHasContent(false);
+    setMedicationEditorOpen(false);
     setEditingCode('');
     setRequestedCode('');
     setSaveError('');
@@ -1448,7 +1452,8 @@ const CardBuilder: React.FC = () => {
 
       {/* Step 2: Editor */}
       {hasContent && (
-        <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #007f3b' }}>
+        <Modal isOpen={medicationEditorOpen} onClose={() => setMedicationEditorOpen(false)} size="xl" closeOnOverlayClick={false}>
+          <div style={{ width: 'min(960px, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', boxShadow: '0 24px 60px rgba(15, 32, 45, 0.24)', padding: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
@@ -1678,7 +1683,8 @@ const CardBuilder: React.FC = () => {
               {saveError}
             </div>
           )}
-        </div>
+          </div>
+        </Modal>
       )}
 
       {/* Existing medications */}
