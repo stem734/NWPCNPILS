@@ -567,7 +567,6 @@ const CardBuilder: React.FC = () => {
     setHasContent(true);
     setMedicationEditorOpen(true);
     setSaveError('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const duplicateMedication = (medication: MedicationRecord) => {
@@ -1338,7 +1337,6 @@ const CardBuilder: React.FC = () => {
         />
       )}
       <div className="dashboard-shell">
-      {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
       {patientPreviewUrl && (
         <Modal
           isOpen
@@ -1686,6 +1684,8 @@ const CardBuilder: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {previewMed && <MedicationPreviewModal med={previewMed} onClose={() => setPreviewMed(null)} />}
 
       {/* Existing medications */}
       <div className="card">
