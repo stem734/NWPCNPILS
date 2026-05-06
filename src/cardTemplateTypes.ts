@@ -26,6 +26,8 @@ export type HealthCheckBuilderVariant = {
 
 export type HealthCheckTemplatePayload = {
   variants: Record<string, HealthCheckBuilderVariant>;
+  linkExpiryValue?: number;
+  linkExpiryUnit?: 'weeks' | 'months';
 };
 
 export type CardTemplateRecord<T = unknown> = {

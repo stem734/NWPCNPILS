@@ -13,6 +13,8 @@ export type ScreeningTemplate = {
   guidance: string[];
   dontGuidance?: string[];
   nhsLinks: PatientResourceLink[];
+  linkExpiryValue?: number;
+  linkExpiryUnit?: 'weeks' | 'months';
 };
 
 export type ImmunisationTemplate = {
@@ -22,6 +24,8 @@ export type ImmunisationTemplate = {
   explanation: string;
   guidance: string[];
   nhsLinks: PatientResourceLink[];
+  linkExpiryValue?: number;
+  linkExpiryUnit?: 'weeks' | 'months';
 };
 
 export type LongTermConditionTemplate = {
@@ -42,6 +46,8 @@ export type LongTermConditionTemplate = {
     points: string[];
   }>;
   nhsLinks: PatientResourceLink[];
+  linkExpiryValue?: number;
+  linkExpiryUnit?: 'weeks' | 'months';
 };
 
 export const SCREENING_TEMPLATES: Record<string, ScreeningTemplate> = {

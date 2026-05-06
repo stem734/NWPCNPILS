@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePatientDate, isIssuedDateStale } from './dateHelpers';
+import { parsePatientDate, isIssuedDateStale, parseSystmOneTimestamp, isUrlExpired } from './dateHelpers';
 
 describe('parsePatientDate', () => {
   it('returns null for empty / null / whitespace input', () => {
@@ -107,5 +107,61 @@ describe('isIssuedDateStale', () => {
   it('works with a DD-MMM-YYYY SystmOne export', () => {
     expect(isIssuedDateStale('01-Jan-2025', 6, reference)).toBe(true);
     expect(isIssuedDateStale('01-Mar-2026', 6, reference)).toBe(false);
+  });
+});
+
+describe('parseSystmOneTimestamp', () => {
+  it('parses DD/MMM/YYYY HH:MM as the last codes segment', () => {
+    const t = parseSystmOneTimestamp(',,?,,,,,,,06/May/2026 10:37');
+    expect(t).not.toBeNull();
+    expect(t!.getFullYear()).toBe(2026);
+    expect(t!.getMonth()).toBe(4);
+    expect(t!.getDate()).toBe(6);
+    expect(t!.getHours()).toBe(10);
+    expect(t!.getMinutes()).toBe(37);
+  });
+
+  it('returns null when no timestamp present', () => {
+    expect(parseSystmOneTimestamp('code1,code2,code3')).toBeNull();
+    expect(parseSystmOneTimestamp(null)).toBeNull();
+    expect(parseSystmOneTimestamp('')).toBeNull();
+  });
+
+  it('parses a bare timestamp with no leading codes', () => {
+    const t = parseSystmOneTimestamp('06/May/2026 10:37');
+    expect(t).not.toBeNull();
+    expect(t!.getHours()).toBe(10);
+  });
+});
+
+describe('isUrlExpired', () => {
+  it('returns true when timestamp is older than N weeks', () => {
+    const timestamp = new Date(2026, 0, 1); // 1 Jan 2026
+    const reference = new Date(2026, 0, 16); // 16 Jan 2026 (15 days later, > 2 weeks)
+    expect(isUrlExpired(timestamp, 2, 'weeks', reference)).toBe(true);
+  });
+
+  it('returns false when timestamp is within N weeks', () => {
+    const timestamp = new Date(2026, 0, 1);
+    const reference = new Date(2026, 0, 8); // 7 days — exactly 1 week, not > 2 weeks
+    expect(isUrlExpired(timestamp, 2, 'weeks', reference)).toBe(false);
+  });
+
+  it('returns true when timestamp is older than N months using calendar arithmetic', () => {
+    const timestamp = new Date(2026, 0, 15); // 15 Jan 2026
+    const reference = new Date(2026, 4, 1);  // 1 May 2026 (cutoff = 15 Apr, so clearly expired)
+    expect(isUrlExpired(timestamp, 3, 'months', reference)).toBe(true);
+  });
+
+  it('returns false when timestamp is within N months', () => {
+    const timestamp = new Date(2026, 0, 31); // 31 Jan 2026
+    const reference = new Date(2026, 3, 1);  // 1 Apr 2026 (< 3 months: cutoff = 30 Apr)
+    expect(isUrlExpired(timestamp, 3, 'months', reference)).toBe(false);
+  });
+
+  it('returns false exactly at the boundary', () => {
+    const timestamp = new Date(2026, 0, 6, 10, 37);
+    const reference = new Date(2026, 1, 6, 10, 37); // exactly 1 month later
+    expect(isUrlExpired(timestamp, 1, 'months', reference)).toBe(false);
   });
 });
