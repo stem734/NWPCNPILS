@@ -103,11 +103,11 @@ serve(async (req) => {
     if (requestedCode && requestedCode !== existingCode) {
       const { data: conflicting } = await supabase
         .from('medications')
-        .select('code')
+        .select('code, is_deleted')
         .eq('code', requestedCode)
         .single();
 
-      if (conflicting) {
+      if (conflicting && !conflicting.is_deleted) {
         return errorResponse(`Code ${requestedCode} is already in use`, 409);
       }
     }

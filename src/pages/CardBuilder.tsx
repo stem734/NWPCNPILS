@@ -322,6 +322,29 @@ const formatContentReviewLabel = (date?: string) => (
   date ? `Content review: ${date}` : 'No review set'
 );
 
+const formatReviewMonthsLabel = (reviewMonths?: number) => `Review: ${reviewMonths || 12}mo`;
+
+const editorFieldLabelStyle = {
+  display: 'block',
+  fontWeight: 600,
+  fontSize: '0.85rem',
+  marginBottom: '0.25rem',
+} satisfies React.CSSProperties;
+
+const editorInputStyle = {
+  width: '100%',
+  padding: '0.7rem',
+  border: '2px solid #d8dde0',
+  borderRadius: '8px',
+  boxSizing: 'border-box',
+} satisfies React.CSSProperties;
+
+const metadataGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  gap: '0.85rem',
+} satisfies React.CSSProperties;
+
 const linkExpiryFieldStyles = {
   wrapper: {
     display: 'grid',
@@ -1326,6 +1349,25 @@ const CardBuilder: React.FC = () => {
     </div>
   );
 
+  const renderMetadataBadges = (meta: {
+    reviewMonths?: number;
+    contentReviewDate?: string;
+    linkExpiryValue?: number;
+    linkExpiryUnit?: 'weeks' | 'months';
+  }) => (
+    <>
+      <span className={`dashboard-badge ${meta.linkExpiryValue && meta.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
+        {formatLinkExpiryLabel(meta.linkExpiryValue, meta.linkExpiryUnit)}
+      </span>
+      <span className="dashboard-badge dashboard-badge--blue">
+        {formatReviewMonthsLabel(meta.reviewMonths)}
+      </span>
+      <span className={`dashboard-badge ${contentReviewBadgeTone(meta.contentReviewDate)}`}>
+        {formatContentReviewLabel(meta.contentReviewDate)}
+      </span>
+    </>
+  );
+
   const persistCardTemplate = async (
     builderType: CardTemplateBuilderType,
     templateId: string,
@@ -2017,15 +2059,12 @@ const CardBuilder: React.FC = () => {
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>
                           {row.resultCodes.join(', ')}
                         </span>
-                      <span className={`dashboard-badge ${healthCheckLinkExpiry[row.domainId]?.value && healthCheckLinkExpiry[row.domainId]?.unit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
-                          {formatLinkExpiryLabel(healthCheckLinkExpiry[row.domainId]?.value, healthCheckLinkExpiry[row.domainId]?.unit)}
-                        </span>
-                        <span className="dashboard-badge dashboard-badge--blue">
-                          Review: {healthCheckReviewMeta[row.domainId]?.reviewMonths || 12}mo
-                        </span>
-                        <span className={`dashboard-badge ${contentReviewBadgeTone(healthCheckReviewMeta[row.domainId]?.contentReviewDate)}`}>
-                          {formatContentReviewLabel(healthCheckReviewMeta[row.domainId]?.contentReviewDate)}
-                        </span>
+                        {renderMetadataBadges({
+                          reviewMonths: healthCheckReviewMeta[row.domainId]?.reviewMonths,
+                          contentReviewDate: healthCheckReviewMeta[row.domainId]?.contentReviewDate,
+                          linkExpiryValue: healthCheckLinkExpiry[row.domainId]?.value,
+                          linkExpiryUnit: healthCheckLinkExpiry[row.domainId]?.unit,
+                        })}
                       </div>
                     </div>
                   <div className="dashboard-list-actions">
@@ -2354,15 +2393,12 @@ const CardBuilder: React.FC = () => {
                       <div className="dashboard-list-title">{template.label}</div>
                       <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
-                        <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
-                          {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
-                        </span>
-                        <span className="dashboard-badge dashboard-badge--blue">
-                          Review: {template.reviewMonths || 12}mo
-                        </span>
-                        <span className={`dashboard-badge ${contentReviewBadgeTone(template.contentReviewDate)}`}>
-                          {formatContentReviewLabel(template.contentReviewDate)}
-                        </span>
+                        {renderMetadataBadges({
+                          reviewMonths: template.reviewMonths,
+                          contentReviewDate: template.contentReviewDate,
+                          linkExpiryValue: template.linkExpiryValue,
+                          linkExpiryUnit: template.linkExpiryUnit,
+                        })}
                       </div>
                     </div>
                     <div className="dashboard-list-actions">
@@ -2413,15 +2449,12 @@ const CardBuilder: React.FC = () => {
                       <div className="dashboard-list-title">{template.label}</div>
                       <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
-                        <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
-                          {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
-                        </span>
-                        <span className="dashboard-badge dashboard-badge--blue">
-                          Review: {template.reviewMonths || 12}mo
-                        </span>
-                        <span className={`dashboard-badge ${contentReviewBadgeTone(template.contentReviewDate)}`}>
-                          {formatContentReviewLabel(template.contentReviewDate)}
-                        </span>
+                        {renderMetadataBadges({
+                          reviewMonths: template.reviewMonths,
+                          contentReviewDate: template.contentReviewDate,
+                          linkExpiryValue: template.linkExpiryValue,
+                          linkExpiryUnit: template.linkExpiryUnit,
+                        })}
                       </div>
                     </div>
                     <div className="dashboard-list-actions">
@@ -2476,15 +2509,12 @@ const CardBuilder: React.FC = () => {
                       <div className="dashboard-list-title">{template.label}</div>
                       <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
-                        <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
-                          {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
-                        </span>
-                        <span className="dashboard-badge dashboard-badge--blue">
-                          Review: {template.reviewMonths || 12}mo
-                        </span>
-                        <span className={`dashboard-badge ${contentReviewBadgeTone(template.contentReviewDate)}`}>
-                          {formatContentReviewLabel(template.contentReviewDate)}
-                        </span>
+                        {renderMetadataBadges({
+                          reviewMonths: template.reviewMonths,
+                          contentReviewDate: template.contentReviewDate,
+                          linkExpiryValue: template.linkExpiryValue,
+                          linkExpiryUnit: template.linkExpiryUnit,
+                        })}
                       </div>
                     </div>
                     <div className="dashboard-list-actions">
@@ -2538,27 +2568,27 @@ const CardBuilder: React.FC = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="dashboard-field">
-                <label>Title *</label>
-                <input type="text" value={selectedScreeningTemplate.label} onChange={(e) => updateScreeningTemplate(screeningType, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                <label style={editorFieldLabelStyle}>Title *</label>
+                <input type="text" value={selectedScreeningTemplate.label} onChange={(e) => updateScreeningTemplate(screeningType, { label: e.target.value })} style={editorInputStyle} />
               </div>
               <div className="dashboard-field">
-                <label>Description *</label>
-                <input type="text" value={selectedScreeningTemplate.headline} onChange={(e) => updateScreeningTemplate(screeningType, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                <label style={editorFieldLabelStyle}>Description *</label>
+                <input type="text" value={selectedScreeningTemplate.headline} onChange={(e) => updateScreeningTemplate(screeningType, { headline: e.target.value })} style={editorInputStyle} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(180px, 220px)', gap: '0.85rem' }}>
+              <div style={metadataGridStyle}>
                 <div className="dashboard-field">
-                  <label>Code</label>
+                  <label style={editorFieldLabelStyle}>Code</label>
                   <input
                     type="text"
                     value={selectedScreeningTemplate.code || getDefaultScreeningCode(selectedScreeningTemplate.id)}
                     onChange={(e) => updateScreeningTemplate(screeningType, {
                       code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
                     })}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                    style={{ ...editorInputStyle, fontFamily: 'monospace' }}
                   />
                 </div>
                 <div className="dashboard-field">
-                  <label>Link expiry</label>
+                  <label style={editorFieldLabelStyle}>Link expiry</label>
                   {renderLinkExpiryField(
                     selectedScreeningTemplate.linkExpiryValue,
                     selectedScreeningTemplate.linkExpiryUnit ?? 'months',
@@ -2569,31 +2599,29 @@ const CardBuilder: React.FC = () => {
                     (nextUnit) => updateScreeningTemplate(screeningType, { linkExpiryUnit: nextUnit }),
                   )}
                 </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
                 <div className="dashboard-field">
-                  <label>Review period (months)</label>
+                  <label style={editorFieldLabelStyle}>Review period (months)</label>
                   <input
                     type="number"
                     min={1}
                     value={selectedScreeningTemplate.reviewMonths ?? 12}
                     onChange={(e) => updateScreeningTemplate(screeningType, { reviewMonths: Math.max(1, Number(e.target.value) || 12) })}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    style={editorInputStyle}
                   />
                 </div>
                 <div className="dashboard-field">
-                  <label>Content review date</label>
+                  <label style={editorFieldLabelStyle}>Content review date</label>
                   <input
                     type="date"
                     value={selectedScreeningTemplate.contentReviewDate || ''}
                     onChange={(e) => updateScreeningTemplate(screeningType, { contentReviewDate: e.target.value })}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    style={editorInputStyle}
                   />
                 </div>
               </div>
               <div className="dashboard-field">
-                <label>Guidance *</label>
-                <textarea value={selectedScreeningTemplate.explanation} onChange={(e) => updateScreeningTemplate(screeningType, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+                <label style={editorFieldLabelStyle}>Guidance *</label>
+                <textarea value={selectedScreeningTemplate.explanation} onChange={(e) => updateScreeningTemplate(screeningType, { explanation: e.target.value })} rows={4} style={editorInputStyle} />
               </div>
               <div style={{ border: '1px solid #d8dde0', borderRadius: '10px', padding: '0.8rem 0.85rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
@@ -2677,41 +2705,50 @@ const CardBuilder: React.FC = () => {
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input type="text" value={selectedImmunisationTemplate.label} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <input type="text" value={selectedImmunisationTemplate.headline} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <textarea value={selectedImmunisationTemplate.explanation} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+              <div className="dashboard-field">
+                <label style={editorFieldLabelStyle}>Title *</label>
+                <input type="text" value={selectedImmunisationTemplate.label} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { label: e.target.value })} style={editorInputStyle} />
+              </div>
+              <div className="dashboard-field">
+                <label style={editorFieldLabelStyle}>Description *</label>
+                <input type="text" value={selectedImmunisationTemplate.headline} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { headline: e.target.value })} style={editorInputStyle} />
+              </div>
+              <div className="dashboard-field">
+                <label style={editorFieldLabelStyle}>Guidance *</label>
+                <textarea value={selectedImmunisationTemplate.explanation} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { explanation: e.target.value })} rows={4} style={editorInputStyle} />
+              </div>
+              <div style={metadataGridStyle}>
                 <div className="dashboard-field">
-                  <label>Review period (months)</label>
+                  <label style={editorFieldLabelStyle}>Review period (months)</label>
                   <input
                     type="number"
                     min={1}
                     value={selectedImmunisationTemplate.reviewMonths ?? 12}
                     onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { reviewMonths: Math.max(1, Number(e.target.value) || 12) })}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    style={editorInputStyle}
                   />
                 </div>
                 <div className="dashboard-field">
-                  <label>Content review date</label>
+                  <label style={editorFieldLabelStyle}>Content review date</label>
                   <input
                     type="date"
                     value={selectedImmunisationTemplate.contentReviewDate || ''}
                     onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { contentReviewDate: e.target.value })}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    style={editorInputStyle}
                   />
                 </div>
-              </div>
-              <div className="dashboard-field">
-                <label>Link expiry</label>
-                {renderLinkExpiryField(
-                  selectedImmunisationTemplate.linkExpiryValue,
-                  selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
-                  (nextValue) => updateImmunisationTemplate(selectedImmunisationTemplate.id, {
-                    linkExpiryValue: nextValue,
-                    linkExpiryUnit: selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
-                  }),
-                  (nextUnit) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { linkExpiryUnit: nextUnit }),
-                )}
+                <div className="dashboard-field">
+                  <label style={editorFieldLabelStyle}>Link expiry</label>
+                  {renderLinkExpiryField(
+                    selectedImmunisationTemplate.linkExpiryValue,
+                    selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
+                    (nextValue) => updateImmunisationTemplate(selectedImmunisationTemplate.id, {
+                      linkExpiryValue: nextValue,
+                      linkExpiryUnit: selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
+                    }),
+                    (nextUnit) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { linkExpiryUnit: nextUnit }),
+                  )}
+                </div>
               </div>
               <div>
                 <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
@@ -2764,42 +2801,54 @@ const CardBuilder: React.FC = () => {
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input type="text" value={selectedLongTermConditionTemplate.label} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <input type="text" value={selectedLongTermConditionTemplate.headline} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <textarea value={selectedLongTermConditionTemplate.explanation} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+              <div className="dashboard-field">
+                <label style={editorFieldLabelStyle}>Title *</label>
+                <input type="text" value={selectedLongTermConditionTemplate.label} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { label: e.target.value })} style={editorInputStyle} />
+              </div>
+              <div className="dashboard-field">
+                <label style={editorFieldLabelStyle}>Description *</label>
+                <input type="text" value={selectedLongTermConditionTemplate.headline} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { headline: e.target.value })} style={editorInputStyle} />
+              </div>
+              <div className="dashboard-field">
+                <label style={editorFieldLabelStyle}>Guidance *</label>
+                <textarea value={selectedLongTermConditionTemplate.explanation} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { explanation: e.target.value })} rows={4} style={editorInputStyle} />
+              </div>
+              <div style={metadataGridStyle}>
                 <div className="dashboard-field">
-                  <label>Review period (months)</label>
+                  <label style={editorFieldLabelStyle}>Review period (months)</label>
                   <input
                     type="number"
                     min={1}
                     value={selectedLongTermConditionTemplate.reviewMonths ?? 12}
                     onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { reviewMonths: Math.max(1, Number(e.target.value) || 12) })}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    style={editorInputStyle}
                   />
                 </div>
                 <div className="dashboard-field">
-                  <label>Content review date</label>
+                  <label style={editorFieldLabelStyle}>Content review date</label>
                   <input
                     type="date"
                     value={selectedLongTermConditionTemplate.contentReviewDate || ''}
                     onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { contentReviewDate: e.target.value })}
-                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    style={editorInputStyle}
                   />
                 </div>
+                <div className="dashboard-field">
+                  <label style={editorFieldLabelStyle}>Link expiry</label>
+                  {renderLinkExpiryField(
+                    selectedLongTermConditionTemplate.linkExpiryValue,
+                    selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
+                    (nextValue) => updateLongTermConditionTemplate(selectedLongTermCondition, {
+                      linkExpiryValue: nextValue,
+                      linkExpiryUnit: selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
+                    }),
+                    (nextUnit) => updateLongTermConditionTemplate(selectedLongTermCondition, { linkExpiryUnit: nextUnit }),
+                  )}
+                </div>
               </div>
-              <textarea value={selectedLongTermConditionTemplate.importantMessage || ''} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { importantMessage: e.target.value })} rows={3} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <div className="dashboard-field">
-                <label>Link expiry</label>
-                {renderLinkExpiryField(
-                  selectedLongTermConditionTemplate.linkExpiryValue,
-                  selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
-                  (nextValue) => updateLongTermConditionTemplate(selectedLongTermCondition, {
-                    linkExpiryValue: nextValue,
-                    linkExpiryUnit: selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
-                  }),
-                  (nextUnit) => updateLongTermConditionTemplate(selectedLongTermCondition, { linkExpiryUnit: nextUnit }),
-                )}
+                <label style={editorFieldLabelStyle}>Important message</label>
+                <textarea value={selectedLongTermConditionTemplate.importantMessage || ''} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { importantMessage: e.target.value })} rows={3} style={editorInputStyle} />
               </div>
               <div>
                 <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
