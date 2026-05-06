@@ -6,7 +6,7 @@ import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from 
 import { useMedicationCatalog } from '../medicationCatalog';
 import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
-import { isIssuedDateStale, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
+import { isIssuedDateStale, isUrlExpired, parsePatientDate, parseSystmOneTimestamp } from '../dateHelpers';
 import WarningCallout from '../components/WarningCallout';
 import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
@@ -112,6 +112,11 @@ const ResourceView: React.FC = () => {
   const [resolvedContents, setResolvedContents] = useState<PatientMedicationContent[]>([]);
 
   const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
+  const issuedDateDisplay = useMemo(() => {
+    const issuedDate = parsePatientDate(dateParam) || issuedAt;
+    if (!issuedDate) return '';
+    return issuedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  }, [dateParam, issuedAt]);
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -476,8 +481,8 @@ const ResourceView: React.FC = () => {
   }, [contents]);
 
   const patientGreeting = orgName
-    ? `Hi, ${orgName} has shared the information below about your medication.`
-    : 'Hi, your practice has shared the information below about your medication.';
+    ? `Hi, ${orgName} has shared the information below about your medication${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`
+    : `Hi, your practice has shared the information below about your medication${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`;
 
   const guidanceOrganisationName = useMemo(() => {
     if (resolvedContents.some((content) => content.state === 'custom') && orgName) {

@@ -19,7 +19,7 @@ import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
+import { isUrlExpired, parsePatientDate, parseSystmOneTimestamp } from '../dateHelpers';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const VALIDATION_CACHE_VERSION = 'v2';
@@ -79,6 +79,7 @@ const CombinedPatientView: React.FC = () => {
   const [searchParams] = useSearchParams();
   const rawCode = searchParams.get('code') || searchParams.get('med') || '';
   const codesParam = searchParams.get('codes') || '';
+  const dateParam = searchParams.get('date');
   const practiceLookup = getPracticeLookupFromSearchParams(searchParams);
   const orgName = practiceLookup.orgName;
   const practiceIdentifier = practiceLookup.lookupValue;
@@ -95,6 +96,11 @@ const CombinedPatientView: React.FC = () => {
   }, [codesParam, rawCode]);
   const requestedScreenings = useMemo(() => Array.from(new Set(parseRequestedScreenings(screenParam))), [screenParam]);
   const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
+  const issuedDateDisplay = useMemo(() => {
+    const issuedDate = parsePatientDate(dateParam) || issuedAt;
+    if (!issuedDate) return '';
+    return issuedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  }, [dateParam, issuedAt]);
   const builtInScreeningTemplates = useMemo(
     () => Object.values(SCREENING_TEMPLATES).map(withScreeningTemplateDefaults),
     [],
@@ -418,8 +424,8 @@ const CombinedPatientView: React.FC = () => {
   }, [medicationContents.length, selectedScreenings]);
 
   const patientGreeting = orgName
-    ? `Hi, ${orgName} has shared information about your medicines and screening below.`
-    : 'Hi, your practice has shared information about your medicines and screening below.';
+    ? `Hi, ${orgName} has shared the information below about your medication${selectedScreenings.length > 0 ? ' and screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`
+    : `Hi, your practice has shared the information below about your medication${selectedScreenings.length > 0 ? ' and screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`;
 
   const summaryParts = [
     medicationContents.length > 0 ? `${medicationContents.length} medication ${medicationContents.length === 1 ? 'update' : 'updates'}` : '',

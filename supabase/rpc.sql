@@ -203,8 +203,8 @@ GRANT EXECUTE ON FUNCTION submit_patient_rating TO authenticated;
 
 -- ===================
 -- resolve_patient_medication_cards(org_name text, requested_codes text[])
--- Resolves a patient request to the practice-specific card, accepted global card,
--- or placeholder state for each requested medication code.
+-- Resolves a patient request to the practice-specific card or the shared
+-- global medication card when no practice-specific override exists.
 -- ===================
 CREATE OR REPLACE FUNCTION resolve_patient_medication_cards(org_name text, requested_codes text[])
 RETURNS jsonb
@@ -215,7 +215,6 @@ AS $$
 DECLARE
   practice_record public.practices%ROWTYPE;
   resolved_cards jsonb;
-  placeholder_message constant text := 'No drug information available at your practice for this particular medication.';
 BEGIN
   IF org_name IS NULL OR trim(org_name) = '' THEN
     RETURN '[]'::jsonb;
@@ -265,7 +264,7 @@ BEGIN
         'state',
         CASE
           WHEN cards.source_type = 'custom' THEN 'custom'
-          WHEN cards.source_type = 'global' THEN 'global'
+          WHEN medications.code IS NOT NULL THEN 'global'
           ELSE 'placeholder'
         END,
         'code', ordered_codes.code,
@@ -285,9 +284,9 @@ BEGIN
         END,
         'description',
         CASE
-          WHEN cards.source_type = 'custom' THEN COALESCE(cards.description, placeholder_message)
-          WHEN cards.source_type = 'global' THEN COALESCE(medications.description, placeholder_message)
-          ELSE placeholder_message
+          WHEN cards.source_type = 'custom' THEN COALESCE(cards.description, medications.description, 'Medication information unavailable')
+          WHEN medications.code IS NOT NULL THEN COALESCE(medications.description, 'Medication information unavailable')
+          ELSE 'Medication information unavailable'
         END,
         'category',
         CASE
@@ -299,13 +298,13 @@ BEGIN
         'keyInfoMode',
         CASE
           WHEN cards.source_type = 'custom' THEN COALESCE(cards.key_info_mode, medications.key_info_mode, 'do')
-          WHEN cards.source_type = 'global' THEN COALESCE(medications.key_info_mode, 'do')
+          WHEN medications.code IS NOT NULL THEN COALESCE(medications.key_info_mode, 'do')
           ELSE 'do'
         END,
         'keyInfo',
         CASE
           WHEN cards.source_type = 'custom' THEN to_jsonb(COALESCE(cards.key_info, ARRAY[]::text[]))
-          WHEN cards.source_type = 'global' THEN to_jsonb(COALESCE(medications.key_info, ARRAY[]::text[]))
+          WHEN medications.code IS NOT NULL THEN to_jsonb(COALESCE(medications.key_info, ARRAY[]::text[]))
           ELSE '[]'::jsonb
         END,
         'doKeyInfo',
@@ -317,7 +316,7 @@ BEGIN
               ELSE ARRAY[]::text[]
             END
           )
-          WHEN cards.source_type = 'global' THEN to_jsonb(
+          WHEN medications.code IS NOT NULL THEN to_jsonb(
             CASE
               WHEN COALESCE(array_length(medications.do_key_info, 1), 0) > 0 THEN medications.do_key_info
               WHEN COALESCE(medications.key_info_mode, 'do') = 'do' THEN COALESCE(medications.key_info, ARRAY[]::text[])
@@ -335,7 +334,7 @@ BEGIN
               ELSE ARRAY[]::text[]
             END
           )
-          WHEN cards.source_type = 'global' THEN to_jsonb(
+          WHEN medications.code IS NOT NULL THEN to_jsonb(
             CASE
               WHEN COALESCE(array_length(medications.dont_key_info, 1), 0) > 0 THEN medications.dont_key_info
               WHEN medications.key_info_mode = 'dont' THEN COALESCE(medications.key_info, ARRAY[]::text[])
@@ -347,25 +346,25 @@ BEGIN
         'generalKeyInfo',
         CASE
           WHEN cards.source_type = 'custom' THEN to_jsonb(COALESCE(cards.general_key_info, ARRAY[]::text[]))
-          WHEN cards.source_type = 'global' THEN to_jsonb(COALESCE(medications.general_key_info, ARRAY[]::text[]))
+          WHEN medications.code IS NOT NULL THEN to_jsonb(COALESCE(medications.general_key_info, ARRAY[]::text[]))
           ELSE '[]'::jsonb
         END,
         'nhsLink',
         CASE
           WHEN cards.source_type = 'custom' THEN COALESCE(cards.nhs_link, '')
-          WHEN cards.source_type = 'global' THEN COALESCE(medications.nhs_link, '')
+          WHEN medications.code IS NOT NULL THEN COALESCE(medications.nhs_link, '')
           ELSE ''
         END,
         'trendLinks',
         CASE
           WHEN cards.source_type = 'custom' THEN COALESCE(cards.trend_links, '[]'::jsonb)
-          WHEN cards.source_type = 'global' THEN COALESCE(medications.trend_links, '[]'::jsonb)
+          WHEN medications.code IS NOT NULL THEN COALESCE(medications.trend_links, '[]'::jsonb)
           ELSE '[]'::jsonb
         END,
         'sickDaysNeeded',
         CASE
           WHEN cards.source_type = 'custom' THEN COALESCE(cards.sick_days_needed, false)
-          WHEN cards.source_type = 'global' THEN COALESCE(medications.sick_days_needed, false)
+          WHEN medications.code IS NOT NULL THEN COALESCE(medications.sick_days_needed, false)
           ELSE false
         END,
         'reviewMonths',
@@ -378,21 +377,18 @@ BEGIN
         'contentReviewDate',
         CASE
           WHEN cards.source_type = 'custom' THEN cards.content_review_date
-          WHEN cards.source_type = 'global' THEN medications.content_review_date
           WHEN medications.code IS NOT NULL THEN medications.content_review_date
           ELSE NULL
         END,
         'linkExpiryValue',
         CASE
           WHEN cards.source_type = 'custom' THEN to_jsonb(cards.link_expiry_value)
-          WHEN cards.source_type = 'global' THEN to_jsonb(medications.link_expiry_value)
           WHEN medications.code IS NOT NULL THEN to_jsonb(medications.link_expiry_value)
           ELSE 'null'::jsonb
         END,
         'linkExpiryUnit',
         CASE
           WHEN cards.source_type = 'custom' THEN to_jsonb(cards.link_expiry_unit)
-          WHEN cards.source_type = 'global' THEN to_jsonb(medications.link_expiry_unit)
           WHEN medications.code IS NOT NULL THEN to_jsonb(medications.link_expiry_unit)
           ELSE 'null'::jsonb
         END
