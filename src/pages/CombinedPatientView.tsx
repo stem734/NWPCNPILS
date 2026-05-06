@@ -539,7 +539,7 @@ const CombinedPatientView: React.FC = () => {
                         >
                           <AlertCircle size={20} style={{ flexShrink: 0 }} />
                           <span>
-                            You were sent this information more than {content.linkExpiryValue} {content.linkExpiryValue === 1 ? content.linkExpiryUnit.replace(/s$/, '') : content.linkExpiryUnit} ago, so it may be out of date.
+                            You were sent this information more than {content.linkExpiryValue} {content.linkExpiryValue === 1 ? content.linkExpiryUnit.replace(/s$/, '') : content.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
                           </span>
                         </div>
                       )}
@@ -672,7 +672,7 @@ const CombinedPatientView: React.FC = () => {
             <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
               <span>
-                You were sent this information more than {template.linkExpiryValue} {template.linkExpiryValue === 1 ? template.linkExpiryUnit.replace(/s$/, '') : template.linkExpiryUnit} ago, so it may be out of date.
+                You were sent this information more than {template.linkExpiryValue} {template.linkExpiryValue === 1 ? template.linkExpiryUnit.replace(/s$/, '') : template.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
               </span>
             </div>
           )}

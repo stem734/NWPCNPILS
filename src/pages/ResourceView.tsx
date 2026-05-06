@@ -630,7 +630,7 @@ const ResourceView: React.FC = () => {
                     >
                       <AlertCircle size={20} style={{ flexShrink: 0 }} />
                       <span>
-                        You were sent this information more than {content.linkExpiryValue} {content.linkExpiryValue === 1 ? content.linkExpiryUnit.replace(/s$/, '') : content.linkExpiryUnit} ago, so it may be out of date.
+                        You were sent this information more than {content.linkExpiryValue} {content.linkExpiryValue === 1 ? content.linkExpiryUnit.replace(/s$/, '') : content.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
                       </span>
                     </div>
                   )}

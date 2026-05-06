@@ -91,7 +91,7 @@ const LongTermConditionView: React.FC = () => {
           <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
             <AlertCircle size={20} style={{ flexShrink: 0 }} />
             <span>
-              You were sent this information more than {selectedTemplate.linkExpiryValue} {selectedTemplate.linkExpiryValue === 1 ? selectedTemplate.linkExpiryUnit.replace(/s$/, '') : selectedTemplate.linkExpiryUnit} ago, so it may be out of date.
+              You were sent this information more than {selectedTemplate.linkExpiryValue} {selectedTemplate.linkExpiryValue === 1 ? selectedTemplate.linkExpiryUnit.replace(/s$/, '') : selectedTemplate.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
             </span>
           </div>
         )}
