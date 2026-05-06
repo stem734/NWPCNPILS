@@ -381,6 +381,20 @@ BEGIN
           WHEN cards.source_type = 'global' THEN medications.content_review_date
           WHEN medications.code IS NOT NULL THEN medications.content_review_date
           ELSE NULL
+        END,
+        'linkExpiryValue',
+        CASE
+          WHEN cards.source_type = 'custom' THEN to_jsonb(cards.link_expiry_value)
+          WHEN cards.source_type = 'global' THEN to_jsonb(medications.link_expiry_value)
+          WHEN medications.code IS NOT NULL THEN to_jsonb(medications.link_expiry_value)
+          ELSE 'null'::jsonb
+        END,
+        'linkExpiryUnit',
+        CASE
+          WHEN cards.source_type = 'custom' THEN to_jsonb(cards.link_expiry_unit)
+          WHEN cards.source_type = 'global' THEN to_jsonb(medications.link_expiry_unit)
+          WHEN medications.code IS NOT NULL THEN to_jsonb(medications.link_expiry_unit)
+          ELSE 'null'::jsonb
         END
       )
       ORDER BY ordered_codes.ord

@@ -97,6 +97,10 @@ serve(async (req) => {
         sick_days_needed: Boolean(payload.sick_days_needed),
         review_months: typeof payload.review_months === 'number' ? payload.review_months : 12,
         content_review_date: typeof payload.content_review_date === 'string' ? payload.content_review_date : '',
+        link_expiry_value: typeof payload.link_expiry_value === 'number' ? payload.link_expiry_value : null,
+        link_expiry_unit: payload.link_expiry_unit === 'weeks' || payload.link_expiry_unit === 'months'
+          ? payload.link_expiry_unit
+          : null,
         is_deleted: Boolean(payload.is_deleted),
         deleted_at: payload.is_deleted ? (typeof payload.deleted_at === 'string' ? payload.deleted_at : now) : null,
         deleted_by: payload.is_deleted ? (typeof payload.deleted_by === 'string' ? payload.deleted_by : userId) : null,

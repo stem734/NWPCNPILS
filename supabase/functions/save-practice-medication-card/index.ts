@@ -36,6 +36,8 @@ serve(async (req) => {
       sickDaysNeeded?: boolean;
       reviewMonths?: number;
       contentReviewDate?: string;
+      linkExpiryValue?: number;
+      linkExpiryUnit?: 'weeks' | 'months';
       disclaimerAccepted?: boolean;
     };
 
@@ -104,6 +106,8 @@ serve(async (req) => {
       sick_days_needed: body.sickDaysNeeded === true,
       review_months: typeof body.reviewMonths === 'number' && body.reviewMonths > 0 ? body.reviewMonths : 12,
       content_review_date: typeof body.contentReviewDate === 'string' ? body.contentReviewDate : '',
+      link_expiry_value: typeof body.linkExpiryValue === 'number' && body.linkExpiryValue > 0 ? body.linkExpiryValue : null,
+      link_expiry_unit: body.linkExpiryUnit === 'weeks' || body.linkExpiryUnit === 'months' ? body.linkExpiryUnit : null,
       disclaimer_version: CUSTOM_CARD_DISCLAIMER_VERSION,
       accepted_at: now,
       accepted_by: userId,
