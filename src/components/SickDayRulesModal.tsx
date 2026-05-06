@@ -8,10 +8,10 @@ type SickDayRulesModalProps = {
 };
 
 const SICK_DAY_RULES = [
-  'STOP this medication if you are experiencing vomiting or diarrhoea for more than 24 hours',
-  'Whilst not taking your medication try to stay hydrated and eat plain foods until you are feeling better',
-  'RESTART your medication once you have been eating and drinking normally for 24-48 hours',
-  'Do NOT take extra doses to make up for what you have missed. Restart at your usual dose.',
+  'Stop this medicine if you have been sick (vomiting) or had diarrhoea for more than 24 hours.',
+  'While you are not taking this medicine, try to drink plenty of fluids and eat simple foods until you feel better.',
+  'Start taking your medicine again once you have been eating and drinking normally for 24-48 hours.',
+  'Do not take extra tablets to make up for missed doses. Restart at your normal dose.',
 ];
 
 const SickDayRulesModal: React.FC<SickDayRulesModalProps> = ({ isOpen, onClose }) => (

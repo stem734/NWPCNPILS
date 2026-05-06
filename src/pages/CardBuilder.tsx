@@ -322,8 +322,6 @@ const formatContentReviewLabel = (date?: string) => (
   date ? `Content review: ${date}` : 'No review set'
 );
 
-const formatReviewMonthsLabel = (reviewMonths?: number) => `Review: ${reviewMonths || 12}mo`;
-
 const editorFieldLabelStyle = {
   display: 'block',
   fontWeight: 600,
@@ -344,6 +342,8 @@ const metadataGridStyle = {
   gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
   gap: '0.85rem',
 } satisfies React.CSSProperties;
+
+const formatReviewMonthsLabel = (reviewMonths?: number) => `Review: ${reviewMonths || 12}mo`;
 
 const linkExpiryFieldStyles = {
   wrapper: {
@@ -432,14 +432,12 @@ const CardBuilder: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [badge, setBadge] = useState<'NEW' | 'REAUTH'>('NEW');
-  const [category, setCategory] = useState('');
   const [doKeyInfo, setDoKeyInfo] = useState<string[]>(['']);
   const [dontKeyInfo, setDontKeyInfo] = useState<string[]>(['']);
   const [generalKeyInfo, setGeneralKeyInfo] = useState<string[]>(['']);
   const [nhsLink, setNhsLink] = useState('');
   const [trendLinks, setTrendLinks] = useState<TrendLink[]>([]);
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
-  const [reviewMonths, setReviewMonths] = useState(12);
   const [contentReviewDate, setContentReviewDate] = useState('');
   const [medLinkExpiryValue, setMedLinkExpiryValue] = useState<number | undefined>(undefined);
   const [medLinkExpiryUnit, setMedLinkExpiryUnit] = useState<'weeks' | 'months'>('months');
@@ -625,7 +623,7 @@ const CardBuilder: React.FC = () => {
       title: title.trim() || medName.trim() || 'Medication Preview',
       description: description.trim(),
       badge,
-      category: category.trim(),
+      category: 'Medication Information',
       keyInfoMode: doKeyInfo.filter((item) => item.trim()).length > 0 ? 'do' : 'dont',
       doKeyInfo: doKeyInfo.filter((item) => item.trim()),
       dontKeyInfo: dontKeyInfo.filter((item) => item.trim()),
@@ -634,12 +632,11 @@ const CardBuilder: React.FC = () => {
       nhsLink: nhsLink.trim(),
       trendLinks: trendLinks.filter((item) => item.title.trim() && item.url.trim()),
       sickDaysNeeded,
-      reviewMonths,
       contentReviewDate,
       source: editingCode ? 'override' : 'custom',
       isBuiltIn: false,
     };
-  }, [badge, category, description, editingCode, hasContent, doKeyInfo, dontKeyInfo, generalKeyInfo, medName, nhsLink, reviewMonths, contentReviewDate, sickDaysNeeded, title, trendLinks]);
+  }, [badge, description, editingCode, hasContent, doKeyInfo, dontKeyInfo, generalKeyInfo, medName, nhsLink, contentReviewDate, sickDaysNeeded, title, trendLinks]);
 
   const descriptionNeedsDeduping = useMemo(
     () => MEDICATION_DESCRIPTION_DUPLICATION_PATTERNS.some((pattern) => pattern.test(description.trim())),
@@ -665,14 +662,12 @@ const CardBuilder: React.FC = () => {
     setTitle(medication.title);
     setDescription(medication.description);
     setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
-    setCategory(medication.category);
     setDoKeyInfo(medication.doKeyInfo?.length ? [...medication.doKeyInfo] : medication.keyInfo.length > 0 ? [...medication.keyInfo] : ['']);
     setDontKeyInfo(medication.dontKeyInfo?.length ? [...medication.dontKeyInfo] : ['']);
     setGeneralKeyInfo(medication.generalKeyInfo?.length ? [...medication.generalKeyInfo] : ['']);
     setNhsLink(medication.nhsLink || '');
     setTrendLinks(medication.trendLinks.map((link) => ({ ...link })));
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
-    setReviewMonths(medication.reviewMonths || 12);
     setContentReviewDate(medication.contentReviewDate || '');
     setMedLinkExpiryValue(medication.linkExpiryValue ?? undefined);
     setMedLinkExpiryUnit(medication.linkExpiryUnit ?? 'months');
@@ -1137,14 +1132,12 @@ const CardBuilder: React.FC = () => {
     setTitle(trimmedName);
     setDescription('');
     setBadge(medType);
-    setCategory('');
     setDoKeyInfo(['']);
     setDontKeyInfo(['']);
     setGeneralKeyInfo(['']);
     setNhsLink('');
     setTrendLinks([]);
     setSickDaysNeeded(false);
-    setReviewMonths(12);
     setContentReviewDate('');
     setMedLinkExpiryValue(undefined);
     setMedLinkExpiryUnit('months');
@@ -1156,8 +1149,8 @@ const CardBuilder: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!title.trim() || !description.trim() || !category.trim()) {
-      setSaveError('Title, description, and category are required.');
+    if (!title.trim() || !description.trim() || !badge || !(requestedCode.trim() || editingCode) || !contentReviewDate || !medLinkExpiryValue) {
+      setSaveError('Title, description, type, code, review date, and expiry value are required.');
       return;
     }
     setSaving(true);
@@ -1172,7 +1165,7 @@ const CardBuilder: React.FC = () => {
           title: title.trim(),
           description: description.trim(),
           badge,
-          category: category.trim(),
+          category: 'Medication Information',
           keyInfo: [...doKeyInfo, ...dontKeyInfo].filter(k => k.trim()),
           doKeyInfo: doKeyInfo.filter(k => k.trim()),
           dontKeyInfo: dontKeyInfo.filter(k => k.trim()),
@@ -1180,7 +1173,6 @@ const CardBuilder: React.FC = () => {
           nhsLink: nhsLink.trim(),
           trendLinks: trendLinks.filter(l => l.title.trim() && l.url.trim()),
           sickDaysNeeded,
-          reviewMonths,
           contentReviewDate,
           linkExpiryValue: medLinkExpiryValue,
           linkExpiryUnit: medLinkExpiryUnit,
@@ -1266,14 +1258,12 @@ const CardBuilder: React.FC = () => {
     setTitle('');
     setDescription('');
     setBadge('NEW');
-    setCategory('');
     setDoKeyInfo(['']);
     setDontKeyInfo(['']);
     setGeneralKeyInfo(['']);
     setNhsLink('');
     setTrendLinks([]);
     setSickDaysNeeded(false);
-    setReviewMonths(12);
     setContentReviewDate('');
     setMedLinkExpiryValue(undefined);
     setMedLinkExpiryUnit('months');
@@ -1359,9 +1349,11 @@ const CardBuilder: React.FC = () => {
       <span className={`dashboard-badge ${meta.linkExpiryValue && meta.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
         {formatLinkExpiryLabel(meta.linkExpiryValue, meta.linkExpiryUnit)}
       </span>
-      <span className="dashboard-badge dashboard-badge--blue">
-        {formatReviewMonthsLabel(meta.reviewMonths)}
-      </span>
+      {typeof meta.reviewMonths === 'number' && (
+        <span className="dashboard-badge dashboard-badge--blue">
+          {formatReviewMonthsLabel(meta.reviewMonths)}
+        </span>
+      )}
       <span className={`dashboard-badge ${contentReviewBadgeTone(meta.contentReviewDate)}`}>
         {formatContentReviewLabel(meta.contentReviewDate)}
       </span>
@@ -1723,14 +1715,6 @@ const CardBuilder: React.FC = () => {
 
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Category *</label>
-                <input
-                  type="text" value={category} onChange={e => setCategory(e.target.value)}
-                  placeholder="e.g. Diabetes, Cardiovascular"
-                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Type</label>
                 <select
                   value={badge} onChange={e => setBadge(e.target.value as 'NEW' | 'REAUTH')}
@@ -1751,19 +1735,7 @@ const CardBuilder: React.FC = () => {
                 />
               </div>
               <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Review Period (months)</label>
-                <input
-                  type="number"
-                  value={reviewMonths}
-                  onChange={e => setReviewMonths(Math.max(1, parseInt(e.target.value) || 12))}
-                  min="1"
-                  max="60"
-                  placeholder="e.g. 12"
-                  style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Content Review Date</label>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Review date *</label>
                 <input
                   type="date"
                   value={contentReviewDate}
@@ -1772,7 +1744,7 @@ const CardBuilder: React.FC = () => {
                 />
               </div>
               <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Link expiry</label>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Link expiry *</label>
                 {renderLinkExpiryField(
                   medLinkExpiryValue,
                   medLinkExpiryUnit,
@@ -1922,7 +1894,6 @@ const CardBuilder: React.FC = () => {
                 <div className="dashboard-list-main">
                   <div className="dashboard-list-title">{med.title}</div>
                   <div className="dashboard-meta" style={{ marginTop: '0.15rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#4c6272' }}>{med.category}</span>
                     <span style={{
                       padding: '0 0.4rem', borderRadius: '3px', fontSize: '0.7rem', fontWeight: 700,
                       background: med.badge === 'NEW' ? '#005eb8' : med.badge === 'REAUTH' ? '#007f3b' : '#4c6272',
@@ -1932,9 +1903,6 @@ const CardBuilder: React.FC = () => {
                     </span>
                     <span className={`dashboard-badge ${med.source === 'custom' ? 'dashboard-badge--amber' : med.source === 'override' ? 'dashboard-badge--purple' : 'dashboard-badge--muted'}`}>
                       {sourceLabel(med)}
-                    </span>
-                    <span className="dashboard-badge dashboard-badge--blue">
-                      Review: {med.reviewMonths || 12}mo
                     </span>
                     <span className={`dashboard-badge ${
                       !med.contentReviewDate ? 'dashboard-badge--muted' :

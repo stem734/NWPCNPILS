@@ -28,19 +28,18 @@ serve(async (req) => {
       title: string;
       description: string;
       badge: string;
-      category: string;
+      category?: string;
       keyInfo: string[];
       nhsLink: string;
       trendLinks: { title: string; url: string }[];
       sickDaysNeeded: boolean;
-      reviewMonths?: number;
       contentReviewDate?: string;
       linkExpiryValue?: number;
       linkExpiryUnit?: 'weeks' | 'months';
     };
 
-    if (!data.title || !data.description || !data.category) {
-      return errorResponse('Title, description, and category are required');
+    if (!data.title || !data.description || !data.badge || !data.contentReviewDate || typeof data.linkExpiryValue !== 'number') {
+      return errorResponse('Title, description, type, review date, and expiry value are required');
     }
 
     const supabase = createServiceClient();
@@ -128,7 +127,7 @@ serve(async (req) => {
       title: data.title,
       description: data.description,
       badge,
-      category: data.category,
+      category: typeof data.category === 'string' && data.category.trim() ? data.category : 'Medication Information',
       key_info_mode: data.keyInfoMode ?? null,
       key_info: data.keyInfo || [],
       do_key_info: data.doKeyInfo || [],
@@ -137,7 +136,7 @@ serve(async (req) => {
       nhs_link: data.nhsLink || '',
       trend_links: data.trendLinks || [],
       sick_days_needed: data.sickDaysNeeded || false,
-      review_months: typeof data.reviewMonths === 'number' ? data.reviewMonths : 12,
+      review_months: 12,
       content_review_date: data.contentReviewDate || '',
       link_expiry_value: typeof data.linkExpiryValue === 'number' ? data.linkExpiryValue : null,
       link_expiry_unit: data.linkExpiryUnit || null,
