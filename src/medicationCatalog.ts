@@ -28,6 +28,8 @@ type MedicationDbRow = {
   sick_days_needed?: boolean;
   review_months?: number;
   content_review_date?: string;
+  link_expiry_value?: number | null;
+  link_expiry_unit?: 'weeks' | 'months' | null;
   is_deleted?: boolean;
 };
 
@@ -81,6 +83,14 @@ export const mergeMedicationCatalog = (overrides: MedicationOverride[]): Medicat
           ? override.reviewMonths
           : base?.reviewMonths ?? 12,
       contentReviewDate: typeof override.contentReviewDate === 'string' ? override.contentReviewDate : base?.contentReviewDate,
+      linkExpiryValue:
+        typeof override.linkExpiryValue === 'number' && override.linkExpiryValue > 0
+          ? override.linkExpiryValue
+          : base?.linkExpiryValue,
+      linkExpiryUnit:
+        override.linkExpiryUnit === 'weeks' || override.linkExpiryUnit === 'months'
+          ? override.linkExpiryUnit
+          : base?.linkExpiryUnit,
       nhsLink: typeof override.nhsLink === 'string' ? override.nhsLink : base?.nhsLink,
       trendLinks: Array.isArray(override.trendLinks) ? override.trendLinks : base?.trendLinks ?? [],
       sickDaysNeeded: typeof override.sickDaysNeeded === 'boolean' ? override.sickDaysNeeded : base?.sickDaysNeeded,
@@ -119,6 +129,8 @@ export const loadMedicationCatalog = async (): Promise<MedicationRecord[]> => {
     sickDaysNeeded: row.sick_days_needed,
     reviewMonths: row.review_months,
     contentReviewDate: row.content_review_date,
+    linkExpiryValue: row.link_expiry_value ?? undefined,
+    linkExpiryUnit: row.link_expiry_unit ?? undefined,
     is_deleted: row.is_deleted,
   }));
 

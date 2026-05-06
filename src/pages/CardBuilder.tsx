@@ -303,16 +303,23 @@ const localResourceHref = (resource: LocalResourceLink) => {
   return '';
 };
 
+const formatLinkExpiryLabel = (value?: number, unit?: 'weeks' | 'months') => {
+  if (!value || !unit) return 'No expiry';
+  const singular = unit === 'weeks' ? 'week' : 'month';
+  return `Link expiry: ${value} ${value === 1 ? singular : unit}`;
+};
+
 const linkExpiryFieldStyles = {
   wrapper: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(120px, 140px) minmax(140px, 1fr) auto',
+    gridTemplateColumns: 'minmax(96px, 120px) minmax(120px, 1fr) auto',
     gap: '0.5rem',
     alignItems: 'stretch',
   } satisfies React.CSSProperties,
   number: {
     width: '100%',
-    padding: '0.7rem',
+    minWidth: 0,
+    padding: '0.7rem 0.6rem',
     border: '2px solid #d8dde0',
     borderRadius: '8px',
     boxSizing: 'border-box',
@@ -320,7 +327,8 @@ const linkExpiryFieldStyles = {
   } satisfies React.CSSProperties,
   select: {
     width: '100%',
-    padding: '0.7rem',
+    minWidth: 0,
+    padding: '0.7rem 0.75rem',
     border: '2px solid #d8dde0',
     borderRadius: '8px',
     background: '#ffffff',
@@ -1258,7 +1266,7 @@ const CardBuilder: React.FC = () => {
           min={1}
           inputMode="numeric"
           value={value ?? ''}
-          placeholder="None"
+          placeholder="e.g. 6"
           aria-label="Link expiry value"
           onChange={(e) => onValueChange(e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)))}
           style={linkExpiryFieldStyles.number}
@@ -1849,6 +1857,9 @@ const CardBuilder: React.FC = () => {
                       'dashboard-badge--green'
                     }`}>
                       {med.contentReviewDate ? `Content review: ${med.contentReviewDate}` : 'No review set'}
+                    </span>
+                    <span className={`dashboard-badge ${med.linkExpiryValue && med.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
+                      {formatLinkExpiryLabel(med.linkExpiryValue, med.linkExpiryUnit)}
                     </span>
                   </div>
                 </div>
