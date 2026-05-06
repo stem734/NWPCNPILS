@@ -309,6 +309,19 @@ const formatLinkExpiryLabel = (value?: number, unit?: 'weeks' | 'months') => {
   return `Link expiry: ${value} ${value === 1 ? singular : unit}`;
 };
 
+const contentReviewBadgeTone = (date?: string) => {
+  if (!date) return 'dashboard-badge--muted';
+  const value = new Date(`${date}T00:00:00`).getTime();
+  if (Number.isNaN(value)) return 'dashboard-badge--muted';
+  if (value < Date.now()) return 'dashboard-badge--red';
+  if (value < Date.now() + 30 * 24 * 60 * 60 * 1000) return 'dashboard-badge--amber';
+  return 'dashboard-badge--green';
+};
+
+const formatContentReviewLabel = (date?: string) => (
+  date ? `Content review: ${date}` : 'No review set'
+);
+
 const linkExpiryFieldStyles = {
   wrapper: {
     display: 'grid',
@@ -429,6 +442,7 @@ const CardBuilder: React.FC = () => {
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
   const [templateActionKey, setTemplateActionKey] = useState('');
   const [healthCheckLinkExpiry, setHealthCheckLinkExpiry] = useState<Record<string, { value: number; unit: 'weeks' | 'months' } | undefined>>({});
+  const [healthCheckReviewMeta, setHealthCheckReviewMeta] = useState<Record<string, { reviewMonths?: number; contentReviewDate?: string }>>({});
   const [localResources, setLocalResources] = useState<LocalResourceLink[]>([]);
   const [healthCheckLibraryModalOpen, setHealthCheckLibraryModalOpen] = useState(false);
   const [resourcePickerTarget, setResourcePickerTarget] = useState<ResourcePickerTarget>(null);
@@ -473,6 +487,7 @@ const CardBuilder: React.FC = () => {
         if (healthcheckRows.length > 0) {
           const next = createDefaultHealthCheckBuilderState();
           const expiryNext: Record<string, { value: number; unit: 'weeks' | 'months' } | undefined> = {};
+          const reviewNext: Record<string, { reviewMonths?: number; contentReviewDate?: string }> = {};
           healthcheckRows.forEach((row) => {
             const domainId = row.template_id as ClinicalDomainId;
             if (next[domainId]) {
@@ -484,10 +499,15 @@ const CardBuilder: React.FC = () => {
               expiryNext[domainId] = p?.linkExpiryValue && p?.linkExpiryUnit
                 ? { value: p.linkExpiryValue, unit: p.linkExpiryUnit }
                 : undefined;
+              reviewNext[domainId] = {
+                reviewMonths: typeof p?.reviewMonths === 'number' ? p.reviewMonths : undefined,
+                contentReviewDate: typeof p?.contentReviewDate === 'string' ? p.contentReviewDate : undefined,
+              };
             }
           });
           setHealthCheckBuilderConfigs(next);
           setHealthCheckLinkExpiry(expiryNext);
+          setHealthCheckReviewMeta(reviewNext);
         }
 
         if (screeningRows.length > 0) {
@@ -602,28 +622,43 @@ const CardBuilder: React.FC = () => {
     return baseTitle.trim();
   };
 
-  const startEditingMedication = (medication: MedicationRecord) => {
+  const populateMedicationEditor = (
+    medication: MedicationRecord,
+    overrides?: {
+      medName?: string;
+      title?: string;
+      editingCode?: string;
+      requestedCode?: string;
+    },
+  ) => {
     setMedName(getFriendlyMedicationName(medication));
     setMedType(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
     setTitle(medication.title);
     setDescription(medication.description);
     setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
     setCategory(medication.category);
-    setDoKeyInfo(medication.doKeyInfo?.length ? medication.doKeyInfo : medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
-    setDontKeyInfo(medication.dontKeyInfo?.length ? medication.dontKeyInfo : ['']);
-    setGeneralKeyInfo(medication.generalKeyInfo?.length ? medication.generalKeyInfo : ['']);
+    setDoKeyInfo(medication.doKeyInfo?.length ? [...medication.doKeyInfo] : medication.keyInfo.length > 0 ? [...medication.keyInfo] : ['']);
+    setDontKeyInfo(medication.dontKeyInfo?.length ? [...medication.dontKeyInfo] : ['']);
+    setGeneralKeyInfo(medication.generalKeyInfo?.length ? [...medication.generalKeyInfo] : ['']);
     setNhsLink(medication.nhsLink || '');
-    setTrendLinks(medication.trendLinks);
+    setTrendLinks(medication.trendLinks.map((link) => ({ ...link })));
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
     setReviewMonths(medication.reviewMonths || 12);
     setContentReviewDate(medication.contentReviewDate || '');
     setMedLinkExpiryValue(medication.linkExpiryValue ?? undefined);
     setMedLinkExpiryUnit(medication.linkExpiryUnit ?? 'months');
-    setEditingCode(medication.code);
-    setRequestedCode(medication.code);
+    setEditingCode(overrides?.editingCode ?? medication.code);
+    setRequestedCode(overrides?.requestedCode ?? medication.code);
+    setMedName(overrides?.medName ?? getFriendlyMedicationName(medication));
+    setTitle(overrides?.title ?? medication.title);
     setHasContent(true);
     setMedicationEditorOpen(true);
     setSaveError('');
+    setSaveCompleted(false);
+  };
+
+  const startEditingMedication = (medication: MedicationRecord) => {
+    populateMedicationEditor(medication);
   };
 
   const duplicateMedication = (medication: MedicationRecord) => {
@@ -632,32 +667,18 @@ const CardBuilder: React.FC = () => {
       ? medication.title.replace(friendlyName, `${friendlyName} Copy`)
       : `${medication.title} Copy`;
 
-    setMedName(`${friendlyName} Copy`);
-    setMedType(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
-    setTitle(duplicateTitle);
-    setDescription(medication.description);
-    setBadge(medication.badge === 'REAUTH' ? 'REAUTH' : 'NEW');
-    setCategory(medication.category);
-    setDoKeyInfo(medication.doKeyInfo?.length ? medication.doKeyInfo : medication.keyInfo.length > 0 ? medication.keyInfo : ['']);
-    setDontKeyInfo(medication.dontKeyInfo?.length ? medication.dontKeyInfo : ['']);
-    setGeneralKeyInfo(medication.generalKeyInfo?.length ? medication.generalKeyInfo : ['']);
-    setNhsLink(medication.nhsLink || '');
-    setTrendLinks(medication.trendLinks);
-    setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
-    setReviewMonths(medication.reviewMonths || 12);
-    setContentReviewDate(medication.contentReviewDate || '');
-    setMedLinkExpiryValue(medication.linkExpiryValue ?? undefined);
-    setMedLinkExpiryUnit(medication.linkExpiryUnit ?? 'months');
-    setEditingCode('');
-    setRequestedCode('');
-    setHasContent(true);
-    setSaveError('');
+    populateMedicationEditor(medication, {
+      medName: `${friendlyName} Copy`,
+      title: duplicateTitle,
+      editingCode: '',
+      requestedCode: '',
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const sourceLabel = (medication: MedicationRecord) => {
     if (medication.source === 'built-in') return 'Built in';
-    if (medication.source === 'override') return 'Built-in override';
+    if (medication.source === 'override') return 'Edited global card';
     return 'Custom';
   };
 
@@ -1096,6 +1117,8 @@ const CardBuilder: React.FC = () => {
     setSickDaysNeeded(false);
     setReviewMonths(12);
     setContentReviewDate('');
+    setMedLinkExpiryValue(undefined);
+    setMedLinkExpiryUnit('months');
     setHasContent(true);
     setMedicationEditorOpen(true);
     setRequestedCode('');
@@ -1229,6 +1252,8 @@ const CardBuilder: React.FC = () => {
     setSickDaysNeeded(false);
     setReviewMonths(12);
     setContentReviewDate('');
+    setMedLinkExpiryValue(undefined);
+    setMedLinkExpiryUnit('months');
     setHasContent(false);
     setMedicationEditorOpen(false);
     setEditingCode('');
@@ -1358,6 +1383,13 @@ const CardBuilder: React.FC = () => {
           ? { value: templatePayload.linkExpiryValue, unit: templatePayload.linkExpiryUnit }
           : undefined,
       }));
+      setHealthCheckReviewMeta((current) => ({
+        ...current,
+        [domainId]: {
+          reviewMonths: typeof templatePayload?.reviewMonths === 'number' ? templatePayload.reviewMonths : undefined,
+          contentReviewDate: typeof templatePayload?.contentReviewDate === 'string' ? templatePayload.contentReviewDate : undefined,
+        },
+      }));
       return;
     }
     if (builderType === 'screening') {
@@ -1414,6 +1446,8 @@ const CardBuilder: React.FC = () => {
         domainId,
         healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId],
       ),
+      reviewMonths: healthCheckReviewMeta[domainId]?.reviewMonths,
+      contentReviewDate: healthCheckReviewMeta[domainId]?.contentReviewDate,
     };
     const hcExpiry = healthCheckLinkExpiry[domainId];
     if (hcExpiry) {
@@ -1983,8 +2017,14 @@ const CardBuilder: React.FC = () => {
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>
                           {row.resultCodes.join(', ')}
                         </span>
-                        <span className={`dashboard-badge ${healthCheckLinkExpiry[row.domainId]?.value && healthCheckLinkExpiry[row.domainId]?.unit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
+                      <span className={`dashboard-badge ${healthCheckLinkExpiry[row.domainId]?.value && healthCheckLinkExpiry[row.domainId]?.unit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
                           {formatLinkExpiryLabel(healthCheckLinkExpiry[row.domainId]?.value, healthCheckLinkExpiry[row.domainId]?.unit)}
+                        </span>
+                        <span className="dashboard-badge dashboard-badge--blue">
+                          Review: {healthCheckReviewMeta[row.domainId]?.reviewMonths || 12}mo
+                        </span>
+                        <span className={`dashboard-badge ${contentReviewBadgeTone(healthCheckReviewMeta[row.domainId]?.contentReviewDate)}`}>
+                          {formatContentReviewLabel(healthCheckReviewMeta[row.domainId]?.contentReviewDate)}
                         </span>
                       </div>
                     </div>
@@ -2120,6 +2160,37 @@ const CardBuilder: React.FC = () => {
                             }));
                           },
                         )}
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Review period (months)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={healthCheckReviewMeta[selectedHealthCheckDomain]?.reviewMonths ?? 12}
+                          onChange={(e) => setHealthCheckReviewMeta((prev) => ({
+                            ...prev,
+                            [selectedHealthCheckDomain]: {
+                              ...prev[selectedHealthCheckDomain],
+                              reviewMonths: Math.max(1, Number(e.target.value) || 12),
+                            },
+                          }))}
+                          style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Content review date</label>
+                        <input
+                          type="date"
+                          value={healthCheckReviewMeta[selectedHealthCheckDomain]?.contentReviewDate || ''}
+                          onChange={(e) => setHealthCheckReviewMeta((prev) => ({
+                            ...prev,
+                            [selectedHealthCheckDomain]: {
+                              ...prev[selectedHealthCheckDomain],
+                              contentReviewDate: e.target.value,
+                            },
+                          }))}
+                          style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                        />
                       </div>
                     </div>
 
@@ -2286,6 +2357,12 @@ const CardBuilder: React.FC = () => {
                         <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
                           {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
                         </span>
+                        <span className="dashboard-badge dashboard-badge--blue">
+                          Review: {template.reviewMonths || 12}mo
+                        </span>
+                        <span className={`dashboard-badge ${contentReviewBadgeTone(template.contentReviewDate)}`}>
+                          {formatContentReviewLabel(template.contentReviewDate)}
+                        </span>
                       </div>
                     </div>
                     <div className="dashboard-list-actions">
@@ -2338,6 +2415,12 @@ const CardBuilder: React.FC = () => {
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
                         <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
                           {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
+                        </span>
+                        <span className="dashboard-badge dashboard-badge--blue">
+                          Review: {template.reviewMonths || 12}mo
+                        </span>
+                        <span className={`dashboard-badge ${contentReviewBadgeTone(template.contentReviewDate)}`}>
+                          {formatContentReviewLabel(template.contentReviewDate)}
                         </span>
                       </div>
                     </div>
@@ -2395,6 +2478,12 @@ const CardBuilder: React.FC = () => {
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
                         <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
                           {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
+                        </span>
+                        <span className="dashboard-badge dashboard-badge--blue">
+                          Review: {template.reviewMonths || 12}mo
+                        </span>
+                        <span className={`dashboard-badge ${contentReviewBadgeTone(template.contentReviewDate)}`}>
+                          {formatContentReviewLabel(template.contentReviewDate)}
                         </span>
                       </div>
                     </div>
@@ -2479,6 +2568,27 @@ const CardBuilder: React.FC = () => {
                     }),
                     (nextUnit) => updateScreeningTemplate(screeningType, { linkExpiryUnit: nextUnit }),
                   )}
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+                <div className="dashboard-field">
+                  <label>Review period (months)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={selectedScreeningTemplate.reviewMonths ?? 12}
+                    onChange={(e) => updateScreeningTemplate(screeningType, { reviewMonths: Math.max(1, Number(e.target.value) || 12) })}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div className="dashboard-field">
+                  <label>Content review date</label>
+                  <input
+                    type="date"
+                    value={selectedScreeningTemplate.contentReviewDate || ''}
+                    onChange={(e) => updateScreeningTemplate(screeningType, { contentReviewDate: e.target.value })}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
                 </div>
               </div>
               <div className="dashboard-field">
@@ -2570,6 +2680,27 @@ const CardBuilder: React.FC = () => {
               <input type="text" value={selectedImmunisationTemplate.label} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <input type="text" value={selectedImmunisationTemplate.headline} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <textarea value={selectedImmunisationTemplate.explanation} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+                <div className="dashboard-field">
+                  <label>Review period (months)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={selectedImmunisationTemplate.reviewMonths ?? 12}
+                    onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { reviewMonths: Math.max(1, Number(e.target.value) || 12) })}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div className="dashboard-field">
+                  <label>Content review date</label>
+                  <input
+                    type="date"
+                    value={selectedImmunisationTemplate.contentReviewDate || ''}
+                    onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { contentReviewDate: e.target.value })}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
               <div className="dashboard-field">
                 <label>Link expiry</label>
                 {renderLinkExpiryField(
@@ -2636,6 +2767,27 @@ const CardBuilder: React.FC = () => {
               <input type="text" value={selectedLongTermConditionTemplate.label} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <input type="text" value={selectedLongTermConditionTemplate.headline} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <textarea value={selectedLongTermConditionTemplate.explanation} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+                <div className="dashboard-field">
+                  <label>Review period (months)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={selectedLongTermConditionTemplate.reviewMonths ?? 12}
+                    onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { reviewMonths: Math.max(1, Number(e.target.value) || 12) })}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div className="dashboard-field">
+                  <label>Content review date</label>
+                  <input
+                    type="date"
+                    value={selectedLongTermConditionTemplate.contentReviewDate || ''}
+                    onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { contentReviewDate: e.target.value })}
+                    style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
               <textarea value={selectedLongTermConditionTemplate.importantMessage || ''} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { importantMessage: e.target.value })} rows={3} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <div className="dashboard-field">
                 <label>Link expiry</label>

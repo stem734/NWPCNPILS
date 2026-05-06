@@ -26,6 +26,8 @@ export type HealthCheckBuilderVariant = {
 
 export type HealthCheckTemplatePayload = {
   variants: Record<string, HealthCheckBuilderVariant>;
+  reviewMonths?: number;
+  contentReviewDate?: string;
   linkExpiryValue?: number;
   linkExpiryUnit?: 'weeks' | 'months';
 };
