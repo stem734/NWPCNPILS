@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Search, ShieldCheck, ExternalLink, AlertCircle } from 'lucide-react';
 import {
   SCREENING_TEMPLATES,
   findScreeningTemplateByIdentifier,
@@ -13,7 +13,7 @@ import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore'
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { useUrlExpiry } from '../useUrlExpiry';
+import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 /**
  * ScreeningView — renders screening invitation / result info.
@@ -38,11 +38,7 @@ const ScreeningView: React.FC = () => {
   const access = usePracticeContentAccess(practiceIdentifier, 'screening_enabled', { skip: isDemoMode || previewOnly });
   const knownTemplateIds = useMemo(() => Object.keys(SCREENING_TEMPLATES), []);
   const selectedTemplate = loadedTemplate;
-  const isExpired = useUrlExpiry(
-    loadedTemplate?.linkExpiryValue && loadedTemplate.linkExpiryUnit
-      ? { value: loadedTemplate.linkExpiryValue, unit: loadedTemplate.linkExpiryUnit }
-      : undefined,
-  );
+  const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -108,18 +104,6 @@ const ScreeningView: React.FC = () => {
     );
   }
 
-  if (isExpired) {
-    return (
-      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
-        <Search size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
-        <h1>Link Expired</h1>
-        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
-          This link has expired. Please ask your GP practice to generate a new one.
-        </p>
-      </div>
-    );
-  }
-
   if (!selectedTemplate) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
@@ -143,6 +127,14 @@ const ScreeningView: React.FC = () => {
       </div>
 
       <div className="card patient-section-card">
+        {issuedAt && selectedTemplate.linkExpiryValue && selectedTemplate.linkExpiryUnit && isUrlExpired(issuedAt, selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit) && (
+          <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+            <AlertCircle size={20} style={{ flexShrink: 0 }} />
+            <span>
+              You were sent this information more than {selectedTemplate.linkExpiryValue} {selectedTemplate.linkExpiryValue === 1 ? selectedTemplate.linkExpiryUnit.replace(/s$/, '') : selectedTemplate.linkExpiryUnit} ago, so it may be out of date.
+            </span>
+          </div>
+        )}
         <h2 className="patient-section-title">{selectedTemplate.label}</h2>
         <p className="patient-section-copy">{selectedTemplate.headline}</p>
 

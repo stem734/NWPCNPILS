@@ -6,8 +6,7 @@ import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from 
 import { useMedicationCatalog } from '../medicationCatalog';
 import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
-import { isIssuedDateStale } from '../dateHelpers';
-import { useUrlExpiry } from '../useUrlExpiry';
+import { isIssuedDateStale, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 import WarningCallout from '../components/WarningCallout';
 import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
@@ -112,21 +111,7 @@ const ResourceView: React.FC = () => {
   const isOutOfDate = useMemo(() => isIssuedDateStale(dateParam, 6), [dateParam]);
   const [resolvedContents, setResolvedContents] = useState<PatientMedicationContent[]>([]);
 
-  // Use the shortest expiry across all resolved cards so the check fires as
-  // soon as any card on the page has expired.
-  const shortestMedExpiry = useMemo(() => {
-    return resolvedContents.reduce<{ value: number; unit: 'weeks' | 'months' } | undefined>(
-      (shortest, card) => {
-        if (!card.linkExpiryValue || !card.linkExpiryUnit) return shortest;
-        const days = card.linkExpiryUnit === 'weeks' ? card.linkExpiryValue * 7 : card.linkExpiryValue * 30;
-        if (!shortest) return { value: card.linkExpiryValue, unit: card.linkExpiryUnit };
-        const sDays = shortest.unit === 'weeks' ? shortest.value * 7 : shortest.value * 30;
-        return days < sDays ? { value: card.linkExpiryValue, unit: card.linkExpiryUnit } : shortest;
-      },
-      undefined,
-    );
-  }, [resolvedContents]);
-  const isExpired = useUrlExpiry(shortestMedExpiry);
+  const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -571,18 +556,6 @@ const ResourceView: React.FC = () => {
     );
   }
 
-  if (isExpired) {
-    return (
-      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
-        <FlaskConical size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
-        <h1>Link Expired</h1>
-        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
-          This link has expired. Please ask your GP practice to generate a new one.
-        </p>
-      </div>
-    );
-  }
-
   if (contents.length === 0) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
@@ -645,6 +618,17 @@ const ResourceView: React.FC = () => {
             {items.map((content) => (
               <article key={content.id} className="patient-content-panel">
                 <div className="card patient-card">
+                  {issuedAt && content.linkExpiryValue && content.linkExpiryUnit && isUrlExpired(issuedAt, content.linkExpiryValue, content.linkExpiryUnit) && (
+                    <div
+                      className="out-of-date-banner"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}
+                    >
+                      <AlertCircle size={20} style={{ flexShrink: 0 }} />
+                      <span>
+                        You were sent this information more than {content.linkExpiryValue} {content.linkExpiryValue === 1 ? content.linkExpiryUnit.replace(/s$/, '') : content.linkExpiryUnit} ago, so it may be out of date.
+                      </span>
+                    </div>
+                  )}
                   <div className="patient-card-meta">
                     <span className={`badge badge-${content.badge.toLowerCase()}`}>
                       {content.badge === 'NEW' ? 'START' : content.badge === 'REAUTH' ? 'REVIEW' : 'INFO'}

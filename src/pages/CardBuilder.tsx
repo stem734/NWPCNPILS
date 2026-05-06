@@ -1701,10 +1701,6 @@ const CardBuilder: React.FC = () => {
               </div>
             </div>
 
-            <p style={{ fontSize: '0.82rem', color: '#4c6272', margin: '-0.25rem 0 0' }}>
-              Leave the code blank to auto-pair with an existing family where possible, for example `601` and `602`. Enter a code manually if you need to override it.
-            </p>
-
             {/* Key Information */}
             <div style={{ display: 'grid', gap: '1rem' }}>
               {[
@@ -1980,15 +1976,18 @@ const CardBuilder: React.FC = () => {
                   }}>
                     {row.familyCode}
                   </div>
-                  <div className="dashboard-list-main">
-                    <div className="dashboard-list-title">{row.label}</div>
-                    <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
-                      <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{row.summary}</span>
-                      <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>
-                        {row.resultCodes.join(', ')}
-                      </span>
+                    <div className="dashboard-list-main">
+                      <div className="dashboard-list-title">{row.label}</div>
+                      <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{row.summary}</span>
+                        <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>
+                          {row.resultCodes.join(', ')}
+                        </span>
+                        <span className={`dashboard-badge ${healthCheckLinkExpiry[row.domainId]?.value && healthCheckLinkExpiry[row.domainId]?.unit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
+                          {formatLinkExpiryLabel(healthCheckLinkExpiry[row.domainId]?.value, healthCheckLinkExpiry[row.domainId]?.unit)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
                   <div className="dashboard-list-actions">
                     <button onClick={() => openPreview(row.previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                       <Eye size={14} /> Preview
@@ -2284,6 +2283,9 @@ const CardBuilder: React.FC = () => {
                       <div className="dashboard-list-title">{template.label}</div>
                       <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
+                        <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
+                          {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
+                        </span>
                       </div>
                     </div>
                     <div className="dashboard-list-actions">
@@ -2334,6 +2336,9 @@ const CardBuilder: React.FC = () => {
                       <div className="dashboard-list-title">{template.label}</div>
                       <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
+                        <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
+                          {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
+                        </span>
                       </div>
                     </div>
                     <div className="dashboard-list-actions">
@@ -2388,6 +2393,9 @@ const CardBuilder: React.FC = () => {
                       <div className="dashboard-list-title">{template.label}</div>
                       <div className="dashboard-meta" style={{ marginTop: '0.2rem' }}>
                         <span style={{ fontSize: '0.82rem', color: '#4c6272' }}>{template.headline}</span>
+                        <span className={`dashboard-badge ${template.linkExpiryValue && template.linkExpiryUnit ? 'dashboard-badge--blue' : 'dashboard-badge--muted'}`}>
+                          {formatLinkExpiryLabel(template.linkExpiryValue, template.linkExpiryUnit)}
+                        </span>
                       </div>
                     </div>
                     <div className="dashboard-list-actions">

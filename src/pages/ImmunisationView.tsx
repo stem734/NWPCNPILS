@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe } from 'lucide-react';
+import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe, AlertCircle } from 'lucide-react';
 import type { ImmunisationTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { useUrlExpiry } from '../useUrlExpiry';
+import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -32,6 +32,7 @@ const ImmunisationView: React.FC = () => {
   const localPhone = searchParams.get('localPhone') || '';
   const localEmail = searchParams.get('localEmail') || '';
   const localWebsite = searchParams.get('localWebsite') || '';
+  const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
   const requestedVaccines = useMemo(() => (vaccines.length > 0 ? vaccines : ['flu']), [vaccines]);
   const requestedVaccinesKey = requestedVaccines.join(',');
   const [loadedTemplateMap, setLoadedTemplateMap] = useState<Record<string, ImmunisationTemplate>>({});
@@ -39,18 +40,6 @@ const ImmunisationView: React.FC = () => {
   const selectedVaccines = requestedVaccines
     .map((vaccineCode) => loadedTemplateMap[vaccineCode])
     .filter(Boolean);
-  const shortestExpiry = selectedVaccines.reduce<{ value: number; unit: 'weeks' | 'months' } | undefined>(
-    (shortest, t) => {
-      if (!t.linkExpiryValue || !t.linkExpiryUnit) return shortest;
-      const tDays = t.linkExpiryUnit === 'weeks' ? t.linkExpiryValue * 7 : t.linkExpiryValue * 30;
-      if (!shortest) return { value: t.linkExpiryValue, unit: t.linkExpiryUnit };
-      const sDays = shortest.unit === 'weeks' ? shortest.value * 7 : shortest.value * 30;
-      return tDays < sDays ? { value: t.linkExpiryValue, unit: t.linkExpiryUnit } : shortest;
-    },
-    undefined,
-  );
-  const isExpired = useUrlExpiry(shortestExpiry);
-
   useEffect(() => {
     const loadTemplates = async () => {
       try {
@@ -95,18 +84,6 @@ const ImmunisationView: React.FC = () => {
     );
   }
 
-  if (isExpired) {
-    return (
-      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
-        <ShieldPlus size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
-        <h1>Link Expired</h1>
-        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
-          This link has expired. Please ask your GP practice to generate a new one.
-        </p>
-      </div>
-    );
-  }
-
   if (selectedVaccines.length === 0) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
@@ -131,6 +108,14 @@ const ImmunisationView: React.FC = () => {
 
       {selectedVaccines.map((template) => (
         <div key={template.id} className="card patient-section-card">
+          {issuedAt && template.linkExpiryValue && template.linkExpiryUnit && isUrlExpired(issuedAt, template.linkExpiryValue, template.linkExpiryUnit) && (
+            <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+              <AlertCircle size={20} style={{ flexShrink: 0 }} />
+              <span>
+                You were sent this information more than {template.linkExpiryValue} {template.linkExpiryValue === 1 ? template.linkExpiryUnit.replace(/s$/, '') : template.linkExpiryUnit} ago, so it may be out of date.
+              </span>
+            </div>
+          )}
           <h2 className="patient-section-title">{template.label}</h2>
           <p className="patient-section-copy">{template.headline}</p>
           <p className="patient-section-copy">{template.explanation}</p>

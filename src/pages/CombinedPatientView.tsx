@@ -19,6 +19,7 @@ import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
+import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const VALIDATION_CACHE_VERSION = 'v2';
@@ -93,6 +94,7 @@ const CombinedPatientView: React.FC = () => {
     return Array.from(new Set(matches));
   }, [codesParam, rawCode]);
   const requestedScreenings = useMemo(() => Array.from(new Set(parseRequestedScreenings(screenParam))), [screenParam]);
+  const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
   const builtInScreeningTemplates = useMemo(
     () => Object.values(SCREENING_TEMPLATES).map(withScreeningTemplateDefaults),
     [],
@@ -123,6 +125,8 @@ const CombinedPatientView: React.FC = () => {
     nhsLink?: string;
     trendLinks: { title: string; url: string }[];
     sickDaysNeeded?: boolean;
+    linkExpiryValue?: number;
+    linkExpiryUnit?: 'weeks' | 'months';
   }>>([]);
   const [selectedScreenings, setSelectedScreenings] = useState<ScreeningTemplate[]>([]);
   const [isResolvingContents, setIsResolvingContents] = useState(false);
@@ -522,6 +526,17 @@ const CombinedPatientView: React.FC = () => {
                 {items.map((content) => (
                   <article key={content.id} className="patient-content-panel">
                     <div className="card patient-card">
+                      {issuedAt && content.linkExpiryValue && content.linkExpiryUnit && isUrlExpired(issuedAt, content.linkExpiryValue, content.linkExpiryUnit) && (
+                        <div
+                          className="out-of-date-banner"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}
+                        >
+                          <AlertCircle size={20} style={{ flexShrink: 0 }} />
+                          <span>
+                            You were sent this information more than {content.linkExpiryValue} {content.linkExpiryValue === 1 ? content.linkExpiryUnit.replace(/s$/, '') : content.linkExpiryUnit} ago, so it may be out of date.
+                          </span>
+                        </div>
+                      )}
                       <div className="patient-card-meta">
                         <span className={`badge badge-${content.badge.toLowerCase()}`}>
                           {content.badge === 'NEW' ? 'START' : content.badge === 'REAUTH' ? 'REVIEW' : 'INFO'}
@@ -647,6 +662,14 @@ const CombinedPatientView: React.FC = () => {
 
       {selectedScreenings.map((template) => (
         <section key={template.id} id={`screening-${template.code.toLowerCase()}`} className="card patient-section-card patient-section-card--bundle">
+          {issuedAt && template.linkExpiryValue && template.linkExpiryUnit && isUrlExpired(issuedAt, template.linkExpiryValue, template.linkExpiryUnit) && (
+            <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+              <AlertCircle size={20} style={{ flexShrink: 0 }} />
+              <span>
+                You were sent this information more than {template.linkExpiryValue} {template.linkExpiryValue === 1 ? template.linkExpiryUnit.replace(/s$/, '') : template.linkExpiryUnit} ago, so it may be out of date.
+              </span>
+            </div>
+          )}
           <div className="patient-bundle-section-label">
             <Search size={16} />
             Screening reminder

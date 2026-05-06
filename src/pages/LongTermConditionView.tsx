@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ClipboardList, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
+import { ClipboardList, ShieldCheck, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react';
 import type { LongTermConditionTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { useUrlExpiry } from '../useUrlExpiry';
+import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -15,14 +15,10 @@ const LongTermConditionView: React.FC = () => {
   const practiceIdentifier = practiceLookup.lookupValue;
   const isDemoMode = searchParams.get('demo') === '1';
   const conditionType = (searchParams.get('ltc') || searchParams.get('condition') || '').trim().toLowerCase();
+  const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
   const [loadedTemplate, setLoadedTemplate] = useState<LongTermConditionTemplate | null>(null);
   const access = usePracticeContentAccess(practiceIdentifier, 'ltc_enabled', { skip: isDemoMode });
   const selectedTemplate = loadedTemplate;
-  const isExpired = useUrlExpiry(
-    loadedTemplate?.linkExpiryValue && loadedTemplate.linkExpiryUnit
-      ? { value: loadedTemplate.linkExpiryValue, unit: loadedTemplate.linkExpiryUnit }
-      : undefined,
-  );
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -69,18 +65,6 @@ const LongTermConditionView: React.FC = () => {
     );
   }
 
-  if (isExpired) {
-    return (
-      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
-        <ClipboardList size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
-        <h1>Link Expired</h1>
-        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
-          This link has expired. Please ask your GP practice to generate a new one.
-        </p>
-      </div>
-    );
-  }
-
   if (!selectedTemplate) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
@@ -103,6 +87,14 @@ const LongTermConditionView: React.FC = () => {
       </div>
 
       <div className="card patient-section-card">
+        {issuedAt && selectedTemplate.linkExpiryValue && selectedTemplate.linkExpiryUnit && isUrlExpired(issuedAt, selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit) && (
+          <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+            <AlertCircle size={20} style={{ flexShrink: 0 }} />
+            <span>
+              You were sent this information more than {selectedTemplate.linkExpiryValue} {selectedTemplate.linkExpiryValue === 1 ? selectedTemplate.linkExpiryUnit.replace(/s$/, '') : selectedTemplate.linkExpiryUnit} ago, so it may be out of date.
+            </span>
+          </div>
+        )}
         <h2 className="patient-section-title">{selectedTemplate.label}</h2>
         <p className="patient-section-copy">{selectedTemplate.headline}</p>
         <p className="patient-section-copy">{selectedTemplate.explanation}</p>

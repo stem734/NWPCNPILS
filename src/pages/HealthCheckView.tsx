@@ -10,7 +10,7 @@ import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore'
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { useUrlExpiry } from '../useUrlExpiry';
+import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 // ─── Helpers (ported from NHSHealthCheck/App.tsx) ─────────────────────────────
 
@@ -117,6 +117,7 @@ const HealthCheckView: React.FC = () => {
   const localSupportPhone = searchParams.get('localPhone') || '';
   const localSupportEmail = searchParams.get('localEmail') || '';
   const localSupportWebsite = searchParams.get('localWebsite') || '';
+  const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
 
   const metrics = useMemo(() => {
     if (previewOnly && previewDomain && PREVIEW_DOMAIN_CONFIGS[previewDomain]) {
@@ -153,20 +154,6 @@ const HealthCheckView: React.FC = () => {
     () => ({ ...effectiveTemplateOverrides, ...previewTemplateOverrides }),
     [effectiveTemplateOverrides, previewTemplateOverrides],
   );
-  const shortestHcExpiry = useMemo(() => {
-    return Object.values(mergedTemplateOverrides).reduce<{ value: number; unit: 'weeks' | 'months' } | undefined>(
-      (shortest, t) => {
-        if (!t.linkExpiryValue || !t.linkExpiryUnit) return shortest;
-        const tDays = t.linkExpiryUnit === 'weeks' ? t.linkExpiryValue * 7 : t.linkExpiryValue * 30;
-        if (!shortest) return { value: t.linkExpiryValue, unit: t.linkExpiryUnit };
-        const sDays = shortest.unit === 'weeks' ? shortest.value * 7 : shortest.value * 30;
-        return tDays < sDays ? { value: t.linkExpiryValue, unit: t.linkExpiryUnit } : shortest;
-      },
-      undefined,
-    );
-  }, [mergedTemplateOverrides]);
-  const isExpired = useUrlExpiry(shortestHcExpiry);
-
   useEffect(() => {
     if (templateIds.length === 0) {
       return;
@@ -309,18 +296,6 @@ const HealthCheckView: React.FC = () => {
     );
   }
 
-  if (isExpired) {
-    return (
-      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
-        <Activity size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
-        <h1>Link Expired</h1>
-        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
-          This link has expired. Please ask your GP practice to generate a new one.
-        </p>
-      </div>
-    );
-  }
-
   // ─── Empty state ────────────────────────────────────────────────────────────
   if (!hasData) {
     return (
@@ -406,6 +381,12 @@ const HealthCheckView: React.FC = () => {
               {group.items.map((metric) => {
                 const templatePayload = mergedTemplateOverrides[metricIdToTemplateId(metric.id)];
                 const variant = getHealthCheckVariant(templatePayload, metric.resultCode || '');
+                const metricExpired = Boolean(
+                  issuedAt &&
+                  templatePayload?.linkExpiryValue &&
+                  templatePayload?.linkExpiryUnit &&
+                  isUrlExpired(issuedAt, templatePayload.linkExpiryValue, templatePayload.linkExpiryUnit),
+                );
                 const cholBreakdown = metric.id === 'ldl' && metric.components ? [
                   { label: 'HDL',     value: metric.components.hdl || '', unit: 'mmol/L' },
                   { label: 'LDL',     value: metric.components.ldl || '', unit: 'mmol/L' },
@@ -419,6 +400,14 @@ const HealthCheckView: React.FC = () => {
 
                 return (
                   <div key={metric.id} id={`metric-${metric.id}`}>
+                    {metricExpired && (
+                      <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '0.75rem', fontWeight: 600 }}>
+                        <AlertTriangle size={20} style={{ flexShrink: 0 }} />
+                        <span>
+                          You were sent this information more than {templatePayload?.linkExpiryValue} {templatePayload?.linkExpiryValue === 1 ? templatePayload?.linkExpiryUnit?.replace(/s$/, '') : templatePayload?.linkExpiryUnit} ago, so it may be out of date.
+                        </span>
+                      </div>
+                    )}
                     <HealthCheckCard
                       metric={{
                         label:      patientLabelForMetric(metric),
