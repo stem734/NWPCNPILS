@@ -1250,13 +1250,20 @@ const CardBuilder: React.FC = () => {
     payload: unknown,
   ) => {
     if (builderType === 'healthcheck') {
+      const templatePayload = payload as HealthCheckTemplatePayload;
       const next = createDefaultHealthCheckBuilderState();
       const domainId = templateId as ClinicalDomainId;
       next[domainId] = withHealthCheckDomainWhatFields(domainId, {
         ...next[domainId],
-        ...((payload as HealthCheckTemplatePayload)?.variants || {}),
+        ...(templatePayload?.variants || {}),
       });
       setHealthCheckBuilderConfigs((current) => ({ ...current, [domainId]: next[domainId] }));
+      setHealthCheckLinkExpiry((current) => ({
+        ...current,
+        [domainId]: templatePayload?.linkExpiryValue && templatePayload?.linkExpiryUnit
+          ? { value: templatePayload.linkExpiryValue, unit: templatePayload.linkExpiryUnit }
+          : undefined,
+      }));
       return;
     }
     if (builderType === 'screening') {
