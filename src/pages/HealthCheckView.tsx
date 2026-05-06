@@ -10,6 +10,7 @@ import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore'
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
+import { useUrlExpiry } from '../useUrlExpiry';
 
 // ─── Helpers (ported from NHSHealthCheck/App.tsx) ─────────────────────────────
 
@@ -152,6 +153,19 @@ const HealthCheckView: React.FC = () => {
     () => ({ ...effectiveTemplateOverrides, ...previewTemplateOverrides }),
     [effectiveTemplateOverrides, previewTemplateOverrides],
   );
+  const shortestHcExpiry = useMemo(() => {
+    return Object.values(mergedTemplateOverrides).reduce<{ value: number; unit: 'weeks' | 'months' } | undefined>(
+      (shortest, t) => {
+        if (!t.linkExpiryValue || !t.linkExpiryUnit) return shortest;
+        const tDays = t.linkExpiryUnit === 'weeks' ? t.linkExpiryValue * 7 : t.linkExpiryValue * 30;
+        if (!shortest) return { value: t.linkExpiryValue, unit: t.linkExpiryUnit };
+        const sDays = shortest.unit === 'weeks' ? shortest.value * 7 : shortest.value * 30;
+        return tDays < sDays ? { value: t.linkExpiryValue, unit: t.linkExpiryUnit } : shortest;
+      },
+      undefined,
+    );
+  }, [mergedTemplateOverrides]);
+  const isExpired = useUrlExpiry(shortestHcExpiry);
 
   useEffect(() => {
     if (templateIds.length === 0) {
@@ -290,6 +304,18 @@ const HealthCheckView: React.FC = () => {
         <h1>NHS Health Check</h1>
         <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
           {access.error || 'This practice has not enabled health check information yet.'}
+        </p>
+      </div>
+    );
+  }
+
+  if (isExpired) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <Activity size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
+        <h1>Link Expired</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          This link has expired. Please ask your GP practice to generate a new one.
         </p>
       </div>
     );

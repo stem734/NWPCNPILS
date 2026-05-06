@@ -103,6 +103,51 @@ export function parsePatientDate(input: string | null | undefined): Date | null 
 }
 
 /**
+ * Parses the SystmOne timestamp appended to the `codes` URL parameter,
+ * format: "DD/MMM/YYYY HH:MM" (e.g. "06/May/2026 10:37").
+ * Returns null if the string is absent or doesn't match.
+ */
+export function parseSystmOneTimestamp(codesParam: string | null | undefined): Date | null {
+  if (!codesParam) return null;
+  const parts = codesParam.split(',');
+  const raw = parts[parts.length - 1].trim();
+  const m = raw.match(/^(\d{1,2})\/([A-Za-z]{3,})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const day = Number.parseInt(m[1], 10);
+  const monthIndex = MONTH_NAMES[m[2].toLowerCase()];
+  const year = Number.parseInt(m[3], 10);
+  const hours = Number.parseInt(m[4], 10);
+  const minutes = Number.parseInt(m[5], 10);
+  if (monthIndex === undefined) return null;
+  const date = new Date(year, monthIndex, day, hours, minutes, 0, 0);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== monthIndex ||
+    date.getDate() !== day
+  ) return null;
+  return date;
+}
+
+/**
+ * True if `timestamp` is older than the given expiry window relative to `referenceDate` (default: now).
+ * Uses calendar arithmetic for months so Jan+1month = Feb regardless of days in month.
+ */
+export function isUrlExpired(
+  timestamp: Date,
+  value: number,
+  unit: 'weeks' | 'months',
+  referenceDate: Date = new Date(),
+): boolean {
+  const cutoff = new Date(timestamp);
+  if (unit === 'months') {
+    cutoff.setMonth(cutoff.getMonth() + value);
+  } else {
+    cutoff.setDate(cutoff.getDate() + value * 7);
+  }
+  return referenceDate > cutoff;
+}
+
+/**
  * True if the issued date is more than `monthsThreshold` months before
  * `referenceDate` (default: now). Returns false when the input can't
  * be parsed — callers that want to distinguish "unknown" from "fresh"

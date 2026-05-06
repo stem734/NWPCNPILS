@@ -380,6 +380,7 @@ const CardBuilder: React.FC = () => {
   const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
   const [templateActionKey, setTemplateActionKey] = useState('');
+  const [healthCheckLinkExpiry, setHealthCheckLinkExpiry] = useState<Record<string, { value: number; unit: 'weeks' | 'months' } | undefined>>({});
   const [localResources, setLocalResources] = useState<LocalResourceLink[]>([]);
   const [healthCheckLibraryModalOpen, setHealthCheckLibraryModalOpen] = useState(false);
   const [resourcePickerTarget, setResourcePickerTarget] = useState<ResourcePickerTarget>(null);
@@ -423,6 +424,7 @@ const CardBuilder: React.FC = () => {
 
         if (healthcheckRows.length > 0) {
           const next = createDefaultHealthCheckBuilderState();
+          const expiryNext: Record<string, { value: number; unit: 'weeks' | 'months' } | undefined> = {};
           healthcheckRows.forEach((row) => {
             const domainId = row.template_id as ClinicalDomainId;
             if (next[domainId]) {
@@ -430,9 +432,14 @@ const CardBuilder: React.FC = () => {
                 ...next[domainId],
                 ...((row.payload as HealthCheckTemplatePayload)?.variants || {}),
               });
+              const p = row.payload as HealthCheckTemplatePayload;
+              expiryNext[domainId] = p?.linkExpiryValue && p?.linkExpiryUnit
+                ? { value: p.linkExpiryValue, unit: p.linkExpiryUnit }
+                : undefined;
             }
           });
           setHealthCheckBuilderConfigs(next);
+          setHealthCheckLinkExpiry(expiryNext);
         }
 
         if (screeningRows.length > 0) {
@@ -1293,18 +1300,18 @@ const CardBuilder: React.FC = () => {
   const saveHealthCheckTemplate = async (domainId = selectedHealthCheckDomain) => {
     const familyLabel = HEALTH_CHECK_CARD_LABELS[(domainId === 'ldl' ? 'chol' : domainId) as HealthCheckCodeFamily]
       || PREVIEW_DOMAIN_CONFIGS[domainId].heading;
-    await persistCardTemplate(
-      'healthcheck',
-      domainId,
-      familyLabel,
-      {
-        variants: withHealthCheckDomainWhatFields(
-          domainId,
-          healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId],
-        ),
-      },
-      `${familyLabel} template saved.`,
-    );
+    const payload: HealthCheckTemplatePayload = {
+      variants: withHealthCheckDomainWhatFields(
+        domainId,
+        healthCheckBuilderConfigs[domainId] || createDefaultHealthCheckBuilderState()[domainId],
+      ),
+    };
+    const hcExpiry = healthCheckLinkExpiry[domainId];
+    if (hcExpiry) {
+      payload.linkExpiryValue = hcExpiry.value;
+      payload.linkExpiryUnit = hcExpiry.unit;
+    }
+    await persistCardTemplate('healthcheck', domainId, familyLabel, payload, `${familyLabel} template saved.`);
   };
 
   const saveScreeningTemplate = async (templateId = screeningType) => {
@@ -1971,6 +1978,41 @@ const CardBuilder: React.FC = () => {
                           ))}
                         </select>
                       </div>
+                      <div>
+                        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Link expiry</label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input
+                            type="number"
+                            min={1}
+                            value={healthCheckLinkExpiry[selectedHealthCheckDomain]?.value ?? ''}
+                            placeholder="None"
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? undefined : Math.max(1, Number(e.target.value));
+                              setHealthCheckLinkExpiry((prev) => ({
+                                ...prev,
+                                [selectedHealthCheckDomain]: val === undefined ? undefined : { value: val, unit: prev[selectedHealthCheckDomain]?.unit ?? 'months' },
+                              }));
+                            }}
+                            style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                          />
+                          <select
+                            value={healthCheckLinkExpiry[selectedHealthCheckDomain]?.unit ?? 'months'}
+                            onChange={(e) => {
+                              const unit = e.target.value as 'weeks' | 'months';
+                              setHealthCheckLinkExpiry((prev) => ({
+                                ...prev,
+                                [selectedHealthCheckDomain]: prev[selectedHealthCheckDomain]
+                                  ? { ...prev[selectedHealthCheckDomain]!, unit }
+                                  : undefined,
+                              }));
+                            }}
+                            style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff' }}
+                          >
+                            <option value="weeks">weeks</option>
+                            <option value="months">months</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -2309,6 +2351,30 @@ const CardBuilder: React.FC = () => {
                     style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box', fontFamily: 'monospace' }}
                   />
                 </div>
+                <div className="dashboard-field">
+                  <label>Link expiry</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="number"
+                      min={1}
+                      value={selectedScreeningTemplate.linkExpiryValue ?? ''}
+                      placeholder="None"
+                      onChange={(e) => updateScreeningTemplate(screeningType, {
+                        linkExpiryValue: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)),
+                        linkExpiryUnit: selectedScreeningTemplate.linkExpiryUnit ?? 'months',
+                      })}
+                      style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    />
+                    <select
+                      value={selectedScreeningTemplate.linkExpiryUnit ?? 'months'}
+                      onChange={(e) => updateScreeningTemplate(screeningType, { linkExpiryUnit: e.target.value as 'weeks' | 'months' })}
+                      style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', background: '#ffffff' }}
+                    >
+                      <option value="weeks">weeks</option>
+                      <option value="months">months</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               <div className="dashboard-field">
                 <label>Guidance *</label>
@@ -2399,6 +2465,30 @@ const CardBuilder: React.FC = () => {
               <input type="text" value={selectedImmunisationTemplate.label} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { label: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <input type="text" value={selectedImmunisationTemplate.headline} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <textarea value={selectedImmunisationTemplate.explanation} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <div className="dashboard-field">
+                <label>Link expiry</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    value={selectedImmunisationTemplate.linkExpiryValue ?? ''}
+                    placeholder="None"
+                    onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, {
+                      linkExpiryValue: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)),
+                      linkExpiryUnit: selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
+                    })}
+                    style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
+                  <select
+                    value={selectedImmunisationTemplate.linkExpiryUnit ?? 'months'}
+                    onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { linkExpiryUnit: e.target.value as 'weeks' | 'months' })}
+                    style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', background: '#ffffff' }}
+                  >
+                    <option value="weeks">weeks</option>
+                    <option value="months">months</option>
+                  </select>
+                </div>
+              </div>
               <div>
                 <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
                 {selectedImmunisationTemplate.guidance.map((item, index) => (
@@ -2454,6 +2544,30 @@ const CardBuilder: React.FC = () => {
               <input type="text" value={selectedLongTermConditionTemplate.headline} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { headline: e.target.value })} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <textarea value={selectedLongTermConditionTemplate.explanation} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <textarea value={selectedLongTermConditionTemplate.importantMessage || ''} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { importantMessage: e.target.value })} rows={3} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
+              <div className="dashboard-field">
+                <label>Link expiry</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    value={selectedLongTermConditionTemplate.linkExpiryValue ?? ''}
+                    placeholder="None"
+                    onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, {
+                      linkExpiryValue: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)),
+                      linkExpiryUnit: selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
+                    })}
+                    style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  />
+                  <select
+                    value={selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months'}
+                    onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { linkExpiryUnit: e.target.value as 'weeks' | 'months' })}
+                    style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', background: '#ffffff' }}
+                  >
+                    <option value="weeks">weeks</option>
+                    <option value="months">months</option>
+                  </select>
+                </div>
+              </div>
               <div>
                 <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
                 {selectedLongTermConditionTemplate.guidance.map((item, index) => (

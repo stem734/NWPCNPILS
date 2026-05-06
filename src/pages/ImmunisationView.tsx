@@ -6,6 +6,7 @@ import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
+import { useUrlExpiry } from '../useUrlExpiry';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -38,6 +39,17 @@ const ImmunisationView: React.FC = () => {
   const selectedVaccines = requestedVaccines
     .map((vaccineCode) => loadedTemplateMap[vaccineCode])
     .filter(Boolean);
+  const shortestExpiry = selectedVaccines.reduce<{ value: number; unit: 'weeks' | 'months' } | undefined>(
+    (shortest, t) => {
+      if (!t.linkExpiryValue || !t.linkExpiryUnit) return shortest;
+      const tDays = t.linkExpiryUnit === 'weeks' ? t.linkExpiryValue * 7 : t.linkExpiryValue * 30;
+      if (!shortest) return { value: t.linkExpiryValue, unit: t.linkExpiryUnit };
+      const sDays = shortest.unit === 'weeks' ? shortest.value * 7 : shortest.value * 30;
+      return tDays < sDays ? { value: t.linkExpiryValue, unit: t.linkExpiryUnit } : shortest;
+    },
+    undefined,
+  );
+  const isExpired = useUrlExpiry(shortestExpiry);
 
   useEffect(() => {
     const loadTemplates = async () => {
@@ -78,6 +90,18 @@ const ImmunisationView: React.FC = () => {
         <h1>Immunisation Information</h1>
         <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
           {access.error || 'This practice has not enabled immunisation information yet.'}
+        </p>
+      </div>
+    );
+  }
+
+  if (isExpired) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <ShieldPlus size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
+        <h1>Link Expired</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          This link has expired. Please ask your GP practice to generate a new one.
         </p>
       </div>
     );
