@@ -303,6 +303,44 @@ const localResourceHref = (resource: LocalResourceLink) => {
   return '';
 };
 
+const linkExpiryFieldStyles = {
+  wrapper: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(120px, 140px) minmax(140px, 1fr) auto',
+    gap: '0.5rem',
+    alignItems: 'stretch',
+  } satisfies React.CSSProperties,
+  number: {
+    width: '100%',
+    padding: '0.7rem',
+    border: '2px solid #d8dde0',
+    borderRadius: '8px',
+    boxSizing: 'border-box',
+    textAlign: 'center',
+  } satisfies React.CSSProperties,
+  select: {
+    width: '100%',
+    padding: '0.7rem',
+    border: '2px solid #d8dde0',
+    borderRadius: '8px',
+    background: '#ffffff',
+  } satisfies React.CSSProperties,
+  button: {
+    padding: '0.7rem 0.85rem',
+    border: '1px solid #b1c4d4',
+    borderRadius: '8px',
+    background: '#f5f8fa',
+    color: '#35556c',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  } satisfies React.CSSProperties,
+  hint: {
+    margin: '0.35rem 0 0',
+    color: '#4c6272',
+    fontSize: '0.82rem',
+  } satisfies React.CSSProperties,
+};
+
 type ResourcePickerTarget = OutputBuilderType | null;
 
 const CardBuilder: React.FC = () => {
@@ -1207,6 +1245,54 @@ const CardBuilder: React.FC = () => {
     setPatientPreviewFooter(footerCopy);
   };
 
+  const renderLinkExpiryField = (
+    value: number | undefined,
+    unit: 'weeks' | 'months',
+    onValueChange: (value: number | undefined) => void,
+    onUnitChange: (unit: 'weeks' | 'months') => void,
+  ) => (
+    <div>
+      <div style={linkExpiryFieldStyles.wrapper}>
+        <input
+          type="number"
+          min={1}
+          inputMode="numeric"
+          value={value ?? ''}
+          placeholder="None"
+          aria-label="Link expiry value"
+          onChange={(e) => onValueChange(e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)))}
+          style={linkExpiryFieldStyles.number}
+        />
+        <select
+          value={unit}
+          aria-label="Link expiry unit"
+          onChange={(e) => onUnitChange(e.target.value as 'weeks' | 'months')}
+          disabled={!value}
+          style={{
+            ...linkExpiryFieldStyles.select,
+            opacity: value ? 1 : 0.65,
+          }}
+        >
+          <option value="weeks">weeks</option>
+          <option value="months">months</option>
+        </select>
+        <button
+          type="button"
+          onClick={() => onValueChange(undefined)}
+          disabled={!value}
+          style={{
+            ...linkExpiryFieldStyles.button,
+            opacity: value ? 1 : 0.55,
+            cursor: value ? 'pointer' : 'default',
+          }}
+        >
+          No expiry
+        </button>
+      </div>
+      <p style={linkExpiryFieldStyles.hint}>Set how long patient links for this card remain valid.</p>
+    </div>
+  );
+
   const persistCardTemplate = async (
     builderType: CardTemplateBuilderType,
     templateId: string,
@@ -1589,24 +1675,12 @@ const CardBuilder: React.FC = () => {
               </div>
               <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Link expiry</label>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                  <input
-                    type="number"
-                    min={1}
-                    value={medLinkExpiryValue ?? ''}
-                    placeholder="None"
-                    onChange={e => setMedLinkExpiryValue(e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)))}
-                    style={{ flex: 1, padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                  />
-                  <select
-                    value={medLinkExpiryUnit}
-                    onChange={e => setMedLinkExpiryUnit(e.target.value as 'weeks' | 'months')}
-                    style={{ padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', background: '#ffffff' }}
-                  >
-                    <option value="weeks">weeks</option>
-                    <option value="months">months</option>
-                  </select>
-                </div>
+                {renderLinkExpiryField(
+                  medLinkExpiryValue,
+                  medLinkExpiryUnit,
+                  setMedLinkExpiryValue,
+                  setMedLinkExpiryUnit,
+                )}
               </div>
               <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'end', paddingBottom: '0.2rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
@@ -2016,38 +2090,26 @@ const CardBuilder: React.FC = () => {
                       </div>
                       <div>
                         <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Link expiry</label>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <input
-                            type="number"
-                            min={1}
-                            value={healthCheckLinkExpiry[selectedHealthCheckDomain]?.value ?? ''}
-                            placeholder="None"
-                            onChange={(e) => {
-                              const val = e.target.value === '' ? undefined : Math.max(1, Number(e.target.value));
-                              setHealthCheckLinkExpiry((prev) => ({
-                                ...prev,
-                                [selectedHealthCheckDomain]: val === undefined ? undefined : { value: val, unit: prev[selectedHealthCheckDomain]?.unit ?? 'months' },
-                              }));
-                            }}
-                            style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', boxSizing: 'border-box' }}
-                          />
-                          <select
-                            value={healthCheckLinkExpiry[selectedHealthCheckDomain]?.unit ?? 'months'}
-                            onChange={(e) => {
-                              const unit = e.target.value as 'weeks' | 'months';
-                              setHealthCheckLinkExpiry((prev) => ({
-                                ...prev,
-                                [selectedHealthCheckDomain]: prev[selectedHealthCheckDomain]
-                                  ? { ...prev[selectedHealthCheckDomain]!, unit }
-                                  : undefined,
-                              }));
-                            }}
-                            style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', fontSize: '0.95rem', background: '#ffffff' }}
-                          >
-                            <option value="weeks">weeks</option>
-                            <option value="months">months</option>
-                          </select>
-                        </div>
+                        {renderLinkExpiryField(
+                          healthCheckLinkExpiry[selectedHealthCheckDomain]?.value,
+                          healthCheckLinkExpiry[selectedHealthCheckDomain]?.unit ?? 'months',
+                          (nextValue) => {
+                            setHealthCheckLinkExpiry((prev) => ({
+                              ...prev,
+                              [selectedHealthCheckDomain]: nextValue === undefined
+                                ? undefined
+                                : { value: nextValue, unit: prev[selectedHealthCheckDomain]?.unit ?? 'months' },
+                            }));
+                          },
+                          (nextUnit) => {
+                            setHealthCheckLinkExpiry((prev) => ({
+                              ...prev,
+                              [selectedHealthCheckDomain]: prev[selectedHealthCheckDomain]
+                                ? { ...prev[selectedHealthCheckDomain]!, unit: nextUnit }
+                                : undefined,
+                            }));
+                          },
+                        )}
                       </div>
                     </div>
 
@@ -2389,27 +2451,15 @@ const CardBuilder: React.FC = () => {
                 </div>
                 <div className="dashboard-field">
                   <label>Link expiry</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input
-                      type="number"
-                      min={1}
-                      value={selectedScreeningTemplate.linkExpiryValue ?? ''}
-                      placeholder="None"
-                      onChange={(e) => updateScreeningTemplate(screeningType, {
-                        linkExpiryValue: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)),
-                        linkExpiryUnit: selectedScreeningTemplate.linkExpiryUnit ?? 'months',
-                      })}
-                      style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
-                    />
-                    <select
-                      value={selectedScreeningTemplate.linkExpiryUnit ?? 'months'}
-                      onChange={(e) => updateScreeningTemplate(screeningType, { linkExpiryUnit: e.target.value as 'weeks' | 'months' })}
-                      style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', background: '#ffffff' }}
-                    >
-                      <option value="weeks">weeks</option>
-                      <option value="months">months</option>
-                    </select>
-                  </div>
+                  {renderLinkExpiryField(
+                    selectedScreeningTemplate.linkExpiryValue,
+                    selectedScreeningTemplate.linkExpiryUnit ?? 'months',
+                    (nextValue) => updateScreeningTemplate(screeningType, {
+                      linkExpiryValue: nextValue,
+                      linkExpiryUnit: selectedScreeningTemplate.linkExpiryUnit ?? 'months',
+                    }),
+                    (nextUnit) => updateScreeningTemplate(screeningType, { linkExpiryUnit: nextUnit }),
+                  )}
                 </div>
               </div>
               <div className="dashboard-field">
@@ -2503,27 +2553,15 @@ const CardBuilder: React.FC = () => {
               <textarea value={selectedImmunisationTemplate.explanation} onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { explanation: e.target.value })} rows={4} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <div className="dashboard-field">
                 <label>Link expiry</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
-                    type="number"
-                    min={1}
-                    value={selectedImmunisationTemplate.linkExpiryValue ?? ''}
-                    placeholder="None"
-                    onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, {
-                      linkExpiryValue: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)),
-                      linkExpiryUnit: selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
-                    })}
-                    style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
-                  />
-                  <select
-                    value={selectedImmunisationTemplate.linkExpiryUnit ?? 'months'}
-                    onChange={(e) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { linkExpiryUnit: e.target.value as 'weeks' | 'months' })}
-                    style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', background: '#ffffff' }}
-                  >
-                    <option value="weeks">weeks</option>
-                    <option value="months">months</option>
-                  </select>
-                </div>
+                {renderLinkExpiryField(
+                  selectedImmunisationTemplate.linkExpiryValue,
+                  selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
+                  (nextValue) => updateImmunisationTemplate(selectedImmunisationTemplate.id, {
+                    linkExpiryValue: nextValue,
+                    linkExpiryUnit: selectedImmunisationTemplate.linkExpiryUnit ?? 'months',
+                  }),
+                  (nextUnit) => updateImmunisationTemplate(selectedImmunisationTemplate.id, { linkExpiryUnit: nextUnit }),
+                )}
               </div>
               <div>
                 <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
@@ -2582,27 +2620,15 @@ const CardBuilder: React.FC = () => {
               <textarea value={selectedLongTermConditionTemplate.importantMessage || ''} onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { importantMessage: e.target.value })} rows={3} style={{ width: '100%', padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }} />
               <div className="dashboard-field">
                 <label>Link expiry</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
-                    type="number"
-                    min={1}
-                    value={selectedLongTermConditionTemplate.linkExpiryValue ?? ''}
-                    placeholder="None"
-                    onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, {
-                      linkExpiryValue: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)),
-                      linkExpiryUnit: selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
-                    })}
-                    style={{ flex: 1, padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', boxSizing: 'border-box' }}
-                  />
-                  <select
-                    value={selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months'}
-                    onChange={(e) => updateLongTermConditionTemplate(selectedLongTermCondition, { linkExpiryUnit: e.target.value as 'weeks' | 'months' })}
-                    style={{ padding: '0.7rem', border: '2px solid #d8dde0', borderRadius: '8px', background: '#ffffff' }}
-                  >
-                    <option value="weeks">weeks</option>
-                    <option value="months">months</option>
-                  </select>
-                </div>
+                {renderLinkExpiryField(
+                  selectedLongTermConditionTemplate.linkExpiryValue,
+                  selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
+                  (nextValue) => updateLongTermConditionTemplate(selectedLongTermCondition, {
+                    linkExpiryValue: nextValue,
+                    linkExpiryUnit: selectedLongTermConditionTemplate.linkExpiryUnit ?? 'months',
+                  }),
+                  (nextUnit) => updateLongTermConditionTemplate(selectedLongTermCondition, { linkExpiryUnit: nextUnit }),
+                )}
               </div>
               <div>
                 <h4 style={{ margin: '0 0 0.5rem' }}>Guidance</h4>
