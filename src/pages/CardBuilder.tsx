@@ -424,7 +424,7 @@ const CardBuilder: React.FC = () => {
 
         if (healthcheckRows.length > 0) {
           const next = createDefaultHealthCheckBuilderState();
-          const expiryNext: Record<string, number | undefined> = {};
+          const expiryNext: Record<string, { value: number; unit: 'weeks' | 'months' } | undefined> = {};
           healthcheckRows.forEach((row) => {
             const domainId = row.template_id as ClinicalDomainId;
             if (next[domainId]) {
