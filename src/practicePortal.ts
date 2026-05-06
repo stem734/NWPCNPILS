@@ -67,6 +67,8 @@ export type PracticeMedicationCardRow = {
   sick_days_needed?: boolean | null;
   review_months?: number | null;
   content_review_date?: string | null;
+  link_expiry_value?: number | null;
+  link_expiry_unit?: 'weeks' | 'months' | null;
   disclaimer_version: string;
   accepted_at?: string | null;
   accepted_by?: string | null;
@@ -129,6 +131,18 @@ export const coerceResolvedMedicationCard = (value: unknown): ResolvedMedication
         ? row.contentReviewDate
         : typeof row.content_review_date === 'string'
           ? row.content_review_date
+          : undefined,
+    linkExpiryValue:
+      typeof row.linkExpiryValue === 'number'
+        ? row.linkExpiryValue
+        : typeof row.link_expiry_value === 'number'
+          ? row.link_expiry_value
+          : undefined,
+    linkExpiryUnit:
+      row.linkExpiryUnit === 'weeks' || row.linkExpiryUnit === 'months'
+        ? row.linkExpiryUnit
+        : row.link_expiry_unit === 'weeks' || row.link_expiry_unit === 'months'
+          ? row.link_expiry_unit
           : undefined,
   };
 };

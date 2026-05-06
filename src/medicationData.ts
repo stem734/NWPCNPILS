@@ -10,6 +10,8 @@ export interface MedContent {
   generalKeyInfo?: string[];
   reviewMonths?: number;
   contentReviewDate?: string;
+  linkExpiryValue?: number;
+  linkExpiryUnit?: 'weeks' | 'months';
   nhsLink?: string;
   trendLinks: { title: string; url: string }[];
   keyInfo: string[];
