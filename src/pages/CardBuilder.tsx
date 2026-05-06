@@ -1201,16 +1201,10 @@ const CardBuilder: React.FC = () => {
   };
 
   const handleDelete = (medication: MedicationRecord) => {
-    const isBuiltIn = medication.isBuiltIn;
-    const deleteTitle = isBuiltIn ? 'Hide Medication?' : 'Delete Medication?';
-    const deleteMessage = isBuiltIn
-      ? `Hide medication ${medication.code}? It will be removed from the app until you restore it in the database.`
-      : `Delete medication ${medication.code}? This cannot be undone from the builder.`;
-
     setConfirmDialog({
-      title: deleteTitle,
-      message: deleteMessage,
-      confirmLabel: isBuiltIn ? 'Hide' : 'Delete',
+      title: 'Delete Medication?',
+      message: `Delete medication ${medication.code}? This will remove it from the database, but the audit history will still be available for restore.`,
+      confirmLabel: 'Delete',
       isDangerous: true,
       onConfirm: async () => {
         setDeletingCode(medication.code);
@@ -2095,6 +2089,7 @@ const CardBuilder: React.FC = () => {
                       onClick={() => {
                         setSelectedHealthCheckDomain(row.domainId);
                         setSelectedHealthCheckVariantCode(row.resultCodes[0] || '');
+                        setTemplateSaveCompleted((current) => ({ ...current, healthcheck: false }));
                         setHealthCheckEditorOpen(true);
                       }}
                       className="action-button-sm"
@@ -2147,7 +2142,7 @@ const CardBuilder: React.FC = () => {
                       className="action-button"
                       style={{ backgroundColor: '#4c6272' }}
                     >
-                      Close
+                      {templateSaveCompleted.healthcheck ? 'Close' : 'Cancel'}
                     </button>
                     <button
                       type="button"
@@ -2425,7 +2420,7 @@ const CardBuilder: React.FC = () => {
                       <button onClick={() => openPreview(previewUrl, 'This is a preview of what patients will see when they access this screening card.')} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Eye size={14} /> Preview
                       </button>
-                      <button onClick={() => { setScreeningType(template.id); setScreeningEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <button onClick={() => { setScreeningType(template.id); setTemplateSaveCompleted((current) => ({ ...current, screening: false })); setScreeningEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Edit2 size={14} /> Edit
                       </button>
                       <button
@@ -2482,7 +2477,7 @@ const CardBuilder: React.FC = () => {
                         <Eye size={14} /> Preview
                       </button>
                       <button
-                        onClick={() => { setImmunisationSelections([template.id]); setImmunisationEditorOpen(true); }}
+                        onClick={() => { setImmunisationSelections([template.id]); setTemplateSaveCompleted((current) => ({ ...current, immunisation: false })); setImmunisationEditorOpen(true); }}
                         className="action-button-sm"
                         style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}
                       >
@@ -2541,7 +2536,7 @@ const CardBuilder: React.FC = () => {
                       <button onClick={() => openPreview(previewUrl)} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #005eb8', color: '#005eb8', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Eye size={14} /> Preview
                       </button>
-                      <button onClick={() => { setSelectedLongTermCondition(template.id); setLtcEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <button onClick={() => { setSelectedLongTermCondition(template.id); setTemplateSaveCompleted((current) => ({ ...current, ltc: false })); setLtcEditorOpen(true); }} className="action-button-sm" style={{ background: '#eef7ff', border: '1px solid #4c6272', color: '#4c6272', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <Edit2 size={14} /> Edit
                       </button>
                       <button
@@ -2582,7 +2577,7 @@ const CardBuilder: React.FC = () => {
                     <Save size={16} /> Save
                   </button>
                   <button onClick={() => setScreeningEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                    Close
+                    {templateSaveCompleted.screening ? 'Close' : 'Cancel'}
                 </button>
               </div>
             </div>
@@ -2720,7 +2715,7 @@ const CardBuilder: React.FC = () => {
                     <Save size={16} /> Save
                   </button>
                   <button onClick={() => setImmunisationEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                    Close
+                    {templateSaveCompleted.immunisation ? 'Close' : 'Cancel'}
                 </button>
               </div>
             </div>
@@ -2816,7 +2811,7 @@ const CardBuilder: React.FC = () => {
                     <Save size={16} /> Save
                   </button>
                   <button onClick={() => setLtcEditorOpen(false)} className="action-button" style={{ backgroundColor: '#4c6272' }}>
-                    Close
+                    {templateSaveCompleted.ltc ? 'Close' : 'Cancel'}
                 </button>
               </div>
             </div>

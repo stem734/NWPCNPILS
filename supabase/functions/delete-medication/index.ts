@@ -25,20 +25,19 @@ serve(async (req) => {
       .eq('code', code)
       .single();
 
-    // Soft delete
-    const updateData = {
+    const deleteData = {
       is_deleted: true,
       deleted_at: now,
       deleted_by: userId,
     };
 
-    const { error: updateError } = await supabase
+    const { error: deleteError } = await supabase
       .from('medications')
-      .update(updateData)
+      .delete()
       .eq('code', code);
 
-    if (updateError) {
-      return errorResponse(`Failed to delete medication: ${updateError.message}`, 500);
+    if (deleteError) {
+      return errorResponse(`Failed to delete medication: ${deleteError.message}`, 500);
     }
 
     const templateKey = `medication:${code}`;
@@ -54,8 +53,8 @@ serve(async (req) => {
 
     const version = (existingTemplate?.version || 0) + 1;
     const payload = existingDoc
-      ? { ...existingDoc, ...updateData }
-      : { code, ...updateData };
+      ? { ...existingDoc, ...deleteData }
+      : { code, ...deleteData };
     const templateRecord = {
       template_key: templateKey,
       builder_type: 'medication',
