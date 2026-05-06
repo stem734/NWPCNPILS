@@ -463,6 +463,12 @@ const CardBuilder: React.FC = () => {
   const [immunisationSelections, setImmunisationSelections] = useState<string[]>(['flu']);
   const [longTermConditionTemplates, setLongTermConditionTemplates] = useState<Record<string, LongTermConditionTemplate>>(() => createDefaultLongTermConditionState());
   const [selectedLongTermCondition, setSelectedLongTermCondition] = useState('asthma');
+  const [templateSaveCompleted, setTemplateSaveCompleted] = useState<Record<Exclude<OutputBuilderType, 'medication'>, boolean>>({
+    healthcheck: false,
+    screening: false,
+    immunisation: false,
+    ltc: false,
+  });
   const [templateActionKey, setTemplateActionKey] = useState('');
   const [healthCheckLinkExpiry, setHealthCheckLinkExpiry] = useState<Record<string, { value: number; unit: 'weeks' | 'months' } | undefined>>({});
   const [healthCheckReviewMeta, setHealthCheckReviewMeta] = useState<Record<string, { reviewMonths?: number; contentReviewDate?: string }>>({});
@@ -1374,7 +1380,7 @@ const CardBuilder: React.FC = () => {
     label: string,
     payload: unknown,
     successMessage: string,
-  ) => {
+  ): Promise<boolean> => {
     const actionKey = `${builderType}:${templateId}`;
     setTemplateActionKey(actionKey);
     try {
@@ -1385,10 +1391,12 @@ const CardBuilder: React.FC = () => {
       if (!data?.success) throw new Error('Template save did not complete');
       showBuilderNotice(builderType as OutputBuilderType, successMessage);
       toast.success('Saved');
+      return true;
     } catch (err) {
       const message = await getFunctionErrorMessage(err, 'Failed to save card template.');
       showBuilderNotice(builderType as OutputBuilderType, message);
       toast.error(message);
+      return false;
     } finally {
       setTemplateActionKey('');
     }
@@ -1496,22 +1504,34 @@ const CardBuilder: React.FC = () => {
       payload.linkExpiryValue = hcExpiry.value;
       payload.linkExpiryUnit = hcExpiry.unit;
     }
-    await persistCardTemplate('healthcheck', domainId, familyLabel, payload, `${familyLabel} template saved.`);
+    const saved = await persistCardTemplate('healthcheck', domainId, familyLabel, payload, `${familyLabel} template saved.`);
+    if (saved) {
+      setTemplateSaveCompleted((current) => ({ ...current, healthcheck: true }));
+    }
   };
 
   const saveScreeningTemplate = async (templateId = screeningType) => {
     const template = screeningTemplates[templateId] || SCREENING_TEMPLATES.cervical;
-    await persistCardTemplate('screening', templateId, template.label, template, `${template.label} saved.`);
+    const saved = await persistCardTemplate('screening', templateId, template.label, template, `${template.label} saved.`);
+    if (saved) {
+      setTemplateSaveCompleted((current) => ({ ...current, screening: true }));
+    }
   };
 
   const saveImmunisationTemplate = async (templateId = immunisationSelections[0] || 'flu') => {
     const template = immunisationTemplates[templateId] || IMMUNISATION_TEMPLATES.flu;
-    await persistCardTemplate('immunisation', templateId, template.label, template, `${template.label} saved.`);
+    const saved = await persistCardTemplate('immunisation', templateId, template.label, template, `${template.label} saved.`);
+    if (saved) {
+      setTemplateSaveCompleted((current) => ({ ...current, immunisation: true }));
+    }
   };
 
   const saveLtcTemplate = async (templateId = selectedLongTermCondition) => {
     const template = longTermConditionTemplates[templateId] || LONG_TERM_CONDITION_TEMPLATES.asthma;
-    await persistCardTemplate('ltc', templateId, template.label, template, `${template.label} saved.`);
+    const saved = await persistCardTemplate('ltc', templateId, template.label, template, `${template.label} saved.`);
+    if (saved) {
+      setTemplateSaveCompleted((current) => ({ ...current, ltc: true }));
+    }
   };
 
   if (!authenticated) return null;
