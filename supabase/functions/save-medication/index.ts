@@ -35,6 +35,8 @@ serve(async (req) => {
       sickDaysNeeded: boolean;
       reviewMonths?: number;
       contentReviewDate?: string;
+      linkExpiryValue?: number;
+      linkExpiryUnit?: 'weeks' | 'months';
     };
 
     if (!data.title || !data.description || !data.category) {
@@ -137,6 +139,8 @@ serve(async (req) => {
       sick_days_needed: data.sickDaysNeeded || false,
       review_months: typeof data.reviewMonths === 'number' ? data.reviewMonths : 12,
       content_review_date: data.contentReviewDate || '',
+      link_expiry_value: typeof data.linkExpiryValue === 'number' ? data.linkExpiryValue : null,
+      link_expiry_unit: data.linkExpiryUnit || null,
       is_deleted: false,
       updated_at: now,
       updated_by: userId,

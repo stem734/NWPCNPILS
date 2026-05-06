@@ -359,6 +359,8 @@ const CardBuilder: React.FC = () => {
   const [sickDaysNeeded, setSickDaysNeeded] = useState(false);
   const [reviewMonths, setReviewMonths] = useState(12);
   const [contentReviewDate, setContentReviewDate] = useState('');
+  const [medLinkExpiryValue, setMedLinkExpiryValue] = useState<number | undefined>(undefined);
+  const [medLinkExpiryUnit, setMedLinkExpiryUnit] = useState<'weeks' | 'months'>('months');
   const [hasContent, setHasContent] = useState(false);
   const [medicationEditorOpen, setMedicationEditorOpen] = useState(false);
   const [editingCode, setEditingCode] = useState('');
@@ -569,6 +571,8 @@ const CardBuilder: React.FC = () => {
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
     setReviewMonths(medication.reviewMonths || 12);
     setContentReviewDate(medication.contentReviewDate || '');
+    setMedLinkExpiryValue(medication.linkExpiryValue ?? undefined);
+    setMedLinkExpiryUnit(medication.linkExpiryUnit ?? 'months');
     setEditingCode(medication.code);
     setRequestedCode(medication.code);
     setHasContent(true);
@@ -596,6 +600,8 @@ const CardBuilder: React.FC = () => {
     setSickDaysNeeded(Boolean(medication.sickDaysNeeded));
     setReviewMonths(medication.reviewMonths || 12);
     setContentReviewDate(medication.contentReviewDate || '');
+    setMedLinkExpiryValue(medication.linkExpiryValue ?? undefined);
+    setMedLinkExpiryUnit(medication.linkExpiryUnit ?? 'months');
     setEditingCode('');
     setRequestedCode('');
     setHasContent(true);
@@ -1078,6 +1084,8 @@ const CardBuilder: React.FC = () => {
           sickDaysNeeded,
           reviewMonths,
           contentReviewDate,
+          linkExpiryValue: medLinkExpiryValue,
+          linkExpiryUnit: medLinkExpiryUnit,
         },
       });
       if (invokeError) throw invokeError;
@@ -1571,6 +1579,27 @@ const CardBuilder: React.FC = () => {
                   onChange={e => setContentReviewDate(e.target.value)}
                   style={{ width: '100%', padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
                 />
+              </div>
+              <div style={{ flex: '1 1 180px', minWidth: '180px' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.25rem' }}>Link expiry</label>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    value={medLinkExpiryValue ?? ''}
+                    placeholder="None"
+                    onChange={e => setMedLinkExpiryValue(e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)))}
+                    style={{ flex: 1, padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', boxSizing: 'border-box' }}
+                  />
+                  <select
+                    value={medLinkExpiryUnit}
+                    onChange={e => setMedLinkExpiryUnit(e.target.value as 'weeks' | 'months')}
+                    style={{ padding: '0.6rem', border: '2px solid #d8dde0', borderRadius: '6px', fontSize: '0.95rem', background: '#ffffff' }}
+                  >
+                    <option value="weeks">weeks</option>
+                    <option value="months">months</option>
+                  </select>
+                </div>
               </div>
               <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'end', paddingBottom: '0.2rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>

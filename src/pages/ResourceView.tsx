@@ -7,6 +7,7 @@ import { useMedicationCatalog } from '../medicationCatalog';
 import { supabase } from '../supabase';
 import { getDemoNoticeText } from '../demoHelpers';
 import { isIssuedDateStale } from '../dateHelpers';
+import { useUrlExpiry } from '../useUrlExpiry';
 import WarningCallout from '../components/WarningCallout';
 import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
@@ -90,6 +91,8 @@ type PatientMedicationContent = {
   sickDaysNeeded?: boolean;
   reviewMonths?: number;
   contentReviewDate?: string;
+  linkExpiryValue?: number;
+  linkExpiryUnit?: 'weeks' | 'months';
 };
 
 const ResourceView: React.FC = () => {
@@ -107,6 +110,23 @@ const ResourceView: React.FC = () => {
   const previewToken = (searchParams.get('previewToken') || '').trim();
 
   const isOutOfDate = useMemo(() => isIssuedDateStale(dateParam, 6), [dateParam]);
+  const [resolvedContents, setResolvedContents] = useState<PatientMedicationContent[]>([]);
+
+  // Use the shortest expiry across all resolved cards so the check fires as
+  // soon as any card on the page has expired.
+  const shortestMedExpiry = useMemo(() => {
+    return resolvedContents.reduce<{ value: number; unit: 'weeks' | 'months' } | undefined>(
+      (shortest, card) => {
+        if (!card.linkExpiryValue || !card.linkExpiryUnit) return shortest;
+        const days = card.linkExpiryUnit === 'weeks' ? card.linkExpiryValue * 7 : card.linkExpiryValue * 30;
+        if (!shortest) return { value: card.linkExpiryValue, unit: card.linkExpiryUnit };
+        const sDays = shortest.unit === 'weeks' ? shortest.value * 7 : shortest.value * 30;
+        return days < sDays ? { value: card.linkExpiryValue, unit: card.linkExpiryUnit } : shortest;
+      },
+      undefined,
+    );
+  }, [resolvedContents]);
+  const isExpired = useUrlExpiry(shortestMedExpiry);
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -114,7 +134,6 @@ const ResourceView: React.FC = () => {
   const [practiceFeatures, setPracticeFeatures] = useState<PracticeFeatureSettings>(DEFAULT_PRACTICE_FEATURE_SETTINGS);
   const [validationNonce, setValidationNonce] = useState(0);
   const { medicationMap: allMeds } = useMedicationCatalog();
-  const [resolvedContents, setResolvedContents] = useState<PatientMedicationContent[]>([]);
   const [isResolvingContents, setIsResolvingContents] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const loggedAccessKeyRef = useRef<string | null>(null);
@@ -548,6 +567,18 @@ const ResourceView: React.FC = () => {
         >
           Try again
         </button>
+      </div>
+    );
+  }
+
+  if (isExpired) {
+    return (
+      <div className="card patient-state-card" style={{ textAlign: 'center' }}>
+        <FlaskConical size={64} color="#adb5bd" style={{ marginBottom: '1rem' }} />
+        <h1>Link Expired</h1>
+        <p style={{ color: '#4c6272', maxWidth: '40rem', margin: '0 auto', lineHeight: 1.6 }}>
+          This link has expired. Please ask your GP practice to generate a new one.
+        </p>
       </div>
     );
   }
