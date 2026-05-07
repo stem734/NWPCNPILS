@@ -1160,22 +1160,22 @@ p {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #005eb8;
+  color: #003a73;
   margin-bottom: 0.2rem;
 }
 
 .patient-group-heading--reauth .patient-group-eyebrow {
-  color: #007f3b;
+  color: #005a2e;
 }
 
 .patient-group-heading--general .patient-group-eyebrow {
-  color: #4c6272;
+  color: #334e68;
 }
 
 .patient-group-copy {
   margin: 0;
   font-size: 0.92rem;
-  color: #334e68;
+  color: #24343f;
 }
 
 .patient-card-meta {
@@ -1307,7 +1307,7 @@ p {
 
 .patient-resource-meta-text {
   font-weight: 600;
-  color: #24343f;
+  color: #1d2a33;
 }
 
 .patient-resource-link:focus-visible,
@@ -1348,7 +1348,7 @@ p {
 
 .patient-support-footer__text {
   margin: 0;
-  color: #24343f;
+  color: #1d2a33;
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.5;
@@ -1484,7 +1484,7 @@ p {
 
 .footer__copyright,
 .footer__version {
-  color: var(--nhs-secondary-text);
+  color: #24343f;
   font-size: 0.875rem;
   line-height: 1.5rem;
   margin: 0;

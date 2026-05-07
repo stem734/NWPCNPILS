@@ -342,6 +342,7 @@ const HealthCheckView: React.FC = () => {
   // ─── Results view ────────────────────────────────────────────────────────────
   return (
     <div className="hc-page hc-page--mobile patient-page-shell" ref={exportRef}>
+      <h1 className="sr-only">NHS health check results</h1>
       {/* Top bar */}
       <div className="hc-topbar">
         <Activity size={20} color="#005eb8" />
@@ -492,7 +493,12 @@ const HealthCheckView: React.FC = () => {
         <div className="hc-actions no-print">
           <h2 className="hc-actions__title">Save or print</h2>
           <div className="hc-actions__row">
-            <button type="button" className="hc-action-card hc-action-card--primary" onClick={() => void handleSavePdf()}>
+            <button
+              type="button"
+              className="hc-action-card hc-action-card--primary"
+              onClick={() => void handleSavePdf()}
+              aria-label="Save health check results as a PDF"
+            >
               <span className="hc-action-card__icon"><Printer size={22} /></span>
               <span className="hc-action-card__text">{isSavingPdf ? 'Saving PDF...' : 'Save page as PDF'}</span>
               <ChevronRight size={20} />

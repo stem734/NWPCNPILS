@@ -107,6 +107,7 @@ const LongTermConditionView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view">
+      <h1 className="sr-only">Long term condition information</h1>
       <div className="patient-greeting-card" role="status" style={{ marginBottom: '1rem' }}>
         <div className="patient-greeting-icon"><ClipboardList size={20} /></div>
         <p className="patient-greeting-text">
@@ -225,14 +226,21 @@ const LongTermConditionView: React.FC = () => {
         <h2 className="patient-resources-heading">Further guidance</h2>
         <div className="patient-resource-list patient-resource-list--compact">
           {selectedTemplate.nhsLinks.map((link) => (
-            <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="patient-resource-link patient-resource-link--compact"
+              aria-label={`${link.title} opens in new tab`}
+            >
               <div className="patient-resource-meta">
                 <div className="patient-resource-chip">NHS</div>
                 <span className="patient-resource-meta-text">National guidance</span>
               </div>
               <h3>{link.title}</h3>
               <p className="patient-resource-copy">{link.description}</p>
-              <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+              <span className="patient-resource-arrow" aria-hidden="true"><ExternalLink size={18} /></span>
             </a>
           ))}
         </div>

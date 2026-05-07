@@ -512,6 +512,7 @@ const CombinedPatientView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view patient-page-shell" ref={exportRef}>
+      <h1 className="sr-only">Patient information</h1>
       <SickDayRulesModal isOpen={sickDayModalOpen} onClose={() => setSickDayModalOpen(false)} />
       {isDemoMode && !isExactDemo && (
         <div className="patient-demo-banner no-print" role="note" aria-live="polite">
@@ -681,19 +682,32 @@ const CombinedPatientView: React.FC = () => {
                           </h3>
                           <div className="patient-resource-list patient-resource-list--compact">
                             {content.nhsLink && (
-                              <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
+                              <a
+                                href={content.nhsLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="patient-resource-link patient-resource-link--compact"
+                                aria-label="Read NHS.UK, opens in new tab"
+                              >
                                 <div className="patient-resource-meta">
                                   <div className="patient-resource-chip">NHS</div>
                                   <span className="patient-resource-meta-text">Official guidance</span>
                                 </div>
                                 <h3>Read NHS.UK <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
                                 <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
-                                <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
-                              </a>
-                            )}
+                              <span className="patient-resource-arrow" aria-hidden="true"><ExternalLink size={18} /></span>
+                            </a>
+                          )}
 
-                            {content.trendLinks.map((link, i) => (
-                              <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
+                          {content.trendLinks.map((link, i) => (
+                            <a
+                              key={i}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="patient-resource-link patient-resource-link--compact"
+                              aria-label={`${link.title} opens in new tab`}
+                            >
                                 <div className="patient-resource-meta patient-resource-meta--trend">
                                   <span className="patient-resource-meta-text">Further guidance</span>
                                 </div>
@@ -797,14 +811,21 @@ const CombinedPatientView: React.FC = () => {
             <h3 className="patient-resources-heading">Further guidance</h3>
             <div className="patient-resource-list patient-resource-list--compact">
               {template.nhsLinks.map((link) => (
-                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="patient-resource-link patient-resource-link--compact"
+                  aria-label={`${link.title} opens in new tab`}
+                >
                   <div className="patient-resource-meta">
                     <div className="patient-resource-chip">NHS</div>
                     <span className="patient-resource-meta-text">National guidance</span>
                   </div>
                   <h3>{link.title}</h3>
                   <p className="patient-resource-copy">{link.description}</p>
-                  <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+                  <span className="patient-resource-arrow" aria-hidden="true"><ExternalLink size={18} /></span>
                 </a>
               ))}
             </div>

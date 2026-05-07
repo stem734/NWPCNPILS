@@ -142,6 +142,7 @@ const renderLinkedText = (text: string) =>
                 href={token.href}
                 target="_blank"
                 rel="noreferrer"
+                aria-label={`${token.label} opens in new tab`}
               >
                 {token.label}
               </a>
@@ -273,6 +274,7 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                               target="_blank"
                               rel="noreferrer"
                               title={link.website}
+                              aria-label={`${link.title || 'More information'} opens in new tab`}
                             >
                               <span>{link.title || 'More information'}</span>
                               <ExternalLink size={14} aria-hidden="true" />
@@ -365,6 +367,7 @@ const HealthCheckCard: React.FC<HealthCheckCardProps> = ({
                               target="_blank"
                               rel="noreferrer"
                               title={link.website}
+                              aria-label={`${link.title || 'More information'} opens in new tab`}
                             >
                               <span>{link.title || 'More information'}</span>
                               <ExternalLink size={14} aria-hidden="true" />

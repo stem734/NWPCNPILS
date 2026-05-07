@@ -632,6 +632,7 @@ const ResourceView: React.FC = () => {
 
   return (
     <div className="animation-container patient-view patient-page-shell" ref={exportRef}>
+      <h1 className="sr-only">Patient medication information</h1>
       <SickDayRulesModal isOpen={sickDayModalOpen} onClose={() => setSickDayModalOpen(false)} />
       {isDemoMode && !isExactDemo && (
         <div className="patient-demo-banner no-print" role="note" aria-live="polite">
@@ -772,19 +773,32 @@ const ResourceView: React.FC = () => {
                       </h3>
                       <div className="patient-resource-list patient-resource-list--compact">
                         {content.nhsLink && (
-                          <a href={content.nhsLink} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
+                          <a
+                            href={content.nhsLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="patient-resource-link patient-resource-link--compact"
+                            aria-label="Read NHS.UK, opens in new tab"
+                          >
                             <div className="patient-resource-meta">
                               <div className="patient-resource-chip">NHS</div>
                               <span className="patient-resource-meta-text">Official Guidance</span>
                             </div>
                             <h3>Read NHS.UK <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
                             <p className="patient-resource-copy">Read the comprehensive medical guide from the NHS website.</p>
-                            <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
+                            <span className="patient-resource-arrow" aria-hidden="true"><ExternalLink size={18} /></span>
                           </a>
                         )}
 
                         {content.trendLinks.map((link, i) => (
-                          <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
+                          <a
+                            key={i}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="patient-resource-link patient-resource-link--compact"
+                            aria-label={`${link.title} opens in new tab`}
+                          >
                             <div className="patient-resource-meta patient-resource-meta--trend">
                               <span className="patient-resource-meta-text">Further guidance</span>
                             </div>
@@ -818,6 +832,7 @@ const ResourceView: React.FC = () => {
                   key={star}
                   onClick={() => handleRating(star)}
                   disabled={isSubmittingRating}
+                  aria-label={`Rate ${star} out of 5 stars${rating === star ? ', selected' : ''}`}
                   style={{
                     background: 'none',
                     border: 'none',
