@@ -4,6 +4,7 @@ import { ShieldPlus, ShieldCheck, ExternalLink, Phone, Mail, Globe, AlertCircle 
 import type { ImmunisationTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
+import PatientSupportFooter from '../components/PatientSupportFooter';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 import { getExpiryDate, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
@@ -171,7 +172,7 @@ const ImmunisationView: React.FC = () => {
                 </a>
               ))}
               {(localPhone || localEmail || localWebsite) && (
-                <div className="patient-resource-link patient-resource-link--compact" style={{ cursor: 'default' }}>
+                <div className="patient-resource-link patient-resource-link--compact patient-resource-link--contact" style={{ cursor: 'default' }}>
                   <div className="patient-resource-meta">
                     <div className="patient-resource-chip" style={{ background: '#007f3b' }}>LOCAL</div>
                     <span className="patient-resource-meta-text">{localSupportName}</span>
@@ -197,6 +198,8 @@ const ImmunisationView: React.FC = () => {
           </div>
         </div>
       ))}
+
+      <PatientSupportFooter />
     </div>
   );
 };

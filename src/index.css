@@ -713,7 +713,7 @@ p {
 .patient-greeting-text {
   margin: 0;
   font-weight: 600;
-  color: #005eb8;
+  color: var(--nhs-blue-ink);
   font-size: 1.1rem;
 }
 
@@ -782,7 +782,7 @@ p {
   padding: 0.28rem 0.55rem;
   border-radius: 999px;
   background: #eef7ff;
-  color: #005eb8;
+  color: var(--nhs-blue-ink);
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -811,7 +811,7 @@ p {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: #005eb8;
+  color: var(--nhs-blue-ink);
   font-size: 0.92rem;
   background: #eef7ff;
   padding: 0.8rem 1rem;
@@ -868,7 +868,7 @@ p {
 }
 
 .patient-section-copy {
-  color: #4c6272;
+  color: #334e68;
   margin: 0 0 1rem;
   line-height: 1.5;
   font-size: 0.95rem;
@@ -1175,7 +1175,7 @@ p {
 .patient-group-copy {
   margin: 0;
   font-size: 0.92rem;
-  color: #4c6272;
+  color: #334e68;
 }
 
 .patient-card-meta {
@@ -1191,10 +1191,11 @@ p {
   align-items: center;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: #f0f4f5;
-  color: #4c6272;
+  background: #eef3f6;
+  color: #24343f;
   font-size: 0.78rem;
   font-weight: 700;
+  border: 1px solid #c9d3d8;
 }
 
 .patient-medication-title {
@@ -1306,6 +1307,21 @@ p {
 
 .patient-resource-meta-text {
   font-weight: 600;
+  color: #24343f;
+}
+
+.patient-resource-link:focus-visible,
+.patient-bundle-jump:focus-visible,
+.hc-primary-cta:focus-visible,
+.hc-group__toggle:focus-visible,
+.hc-card__toggle:focus-visible {
+  outline: 3px solid #111827;
+  outline-offset: 3px;
+}
+
+.patient-resource-link--contact {
+  border-color: #7fb9e6;
+  background: #f8fbff;
 }
 
 .patient-resource-copy {
@@ -1319,6 +1335,23 @@ p {
   right: 1rem;
   transform: translateY(-50%);
   color: var(--nhs-blue);
+}
+
+.patient-support-footer {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #c9d3d8;
+  border-left: 4px solid var(--nhs-blue);
+  border-radius: 8px;
+  background: #f8fbfd;
+}
+
+.patient-support-footer__text {
+  margin: 0;
+  color: #24343f;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .resource-card {
@@ -2618,6 +2651,24 @@ p {
   .hc-grid {
     gap: 0.75rem !important;
   }
+  .patient-section,
+  .patient-content-panel {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    break-inside: auto !important;
+  }
+  .patient-section--new,
+  .patient-section--reauth,
+  .patient-section--general {
+    border-left: 0 !important;
+    padding-left: 0 !important;
+  }
+  .patient-card,
+  .patient-section-card,
+  .patient-group-heading {
+    margin-bottom: 0.75rem !important;
+  }
   .patient-resource-link--compact,
   .hc-card__contact,
   .hc-card__links,
@@ -2626,6 +2677,28 @@ p {
   .hc-card__left,
   .hc-card__right {
     display: block !important;
+  }
+  .patient-resource-list,
+  .hc-card__links {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .patient-resource-link--contact,
+  .hc-card__contact {
+    order: -1;
+    border-width: 2px !important;
+  }
+  .patient-resource-link--contact {
+    margin-bottom: 0.75rem !important;
+  }
+  .patient-code-chip,
+  .out-of-date-banner,
+  .data-indicator {
+    color: #212b32 !important;
+    border-color: #212b32 !important;
+  }
+  .out-of-date-banner {
+    background: #f3f4f6 !important;
   }
   .hc-card__toggle {
     width: 100% !important;

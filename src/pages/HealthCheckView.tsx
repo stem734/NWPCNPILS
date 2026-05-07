@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Activity, ShieldCheck, AlertTriangle, CircleCheck, CircleAlert, CalendarClock, ChevronRight, Printer } from 'lucide-react';
 import { parseHealthCheckParams } from '../healthCheckParser';
 import { METRIC_ORDER, METRIC_DEFINITIONS, type ParsedMetric } from '../healthCheckData';
 import { PREVIEW_DOMAIN_CONFIGS, type ClinicalDomainId } from '../healthCheckVariantConfig';
 import HealthCheckCard from '../components/HealthCheckCard';
+import PatientSupportFooter from '../components/PatientSupportFooter';
+import { saveElementAsPdf } from '../pdfExport';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
@@ -222,6 +224,8 @@ const HealthCheckView: React.FC = () => {
     const initial: Record<string, boolean> = {};
     return initial;
   });
+  const exportRef = useRef<HTMLDivElement | null>(null);
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
 
   // Auto-expand red cards on first render after metrics load
   useMemo(() => {
@@ -281,6 +285,22 @@ const HealthCheckView: React.FC = () => {
     document.getElementById(`metric-${mostUrgentMetric.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const handleSavePdf = async () => {
+    if (!exportRef.current || isSavingPdf) return;
+    setIsSavingPdf(true);
+    try {
+      await saveElementAsPdf(
+        exportRef.current,
+        org ? `${org} - Health Check Results` : 'MyMedInfo - Health Check Results',
+      );
+    } catch (error) {
+      console.error('Failed to save health check PDF', error);
+      window.print();
+    } finally {
+      setIsSavingPdf(false);
+    }
+  };
+
   if (access.loading) {
     return (
       <div className="card patient-state-card" style={{ textAlign: 'center' }}>
@@ -321,7 +341,7 @@ const HealthCheckView: React.FC = () => {
 
   // ─── Results view ────────────────────────────────────────────────────────────
   return (
-    <div className="hc-page hc-page--mobile patient-page-shell">
+    <div className="hc-page hc-page--mobile patient-page-shell" ref={exportRef}>
       {/* Top bar */}
       <div className="hc-topbar">
         <Activity size={20} color="#005eb8" />
@@ -472,14 +492,16 @@ const HealthCheckView: React.FC = () => {
         <div className="hc-actions no-print">
           <h2 className="hc-actions__title">Save or print</h2>
           <div className="hc-actions__row">
-            <button type="button" className="hc-action-card hc-action-card--primary" onClick={() => window.print()}>
+            <button type="button" className="hc-action-card hc-action-card--primary" onClick={() => void handleSavePdf()}>
               <span className="hc-action-card__icon"><Printer size={22} /></span>
-              <span className="hc-action-card__text">Print or save as PDF</span>
+              <span className="hc-action-card__text">{isSavingPdf ? 'Saving PDF...' : 'Save page as PDF'}</span>
               <ChevronRight size={20} />
             </button>
           </div>
         </div>
       )}
+
+      <PatientSupportFooter />
 
     </div>
   );

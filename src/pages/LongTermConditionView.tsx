@@ -4,6 +4,7 @@ import { ClipboardList, ShieldCheck, AlertTriangle, ExternalLink, AlertCircle } 
 import type { LongTermConditionTemplate } from '../patientTemplateCatalog';
 import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
+import PatientSupportFooter from '../components/PatientSupportFooter';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 import { getExpiryDate, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
@@ -236,6 +237,8 @@ const LongTermConditionView: React.FC = () => {
           ))}
         </div>
       </div>
+
+      <PatientSupportFooter />
     </div>
   );
 };

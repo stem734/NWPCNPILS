@@ -12,6 +12,7 @@ import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
+import PatientSupportFooter from '../components/PatientSupportFooter';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
 import { getExpiryDate, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
@@ -199,6 +200,8 @@ const ScreeningView: React.FC = () => {
           ))}
         </div>
       </div>
+
+      <PatientSupportFooter />
     </div>
   );
 };
