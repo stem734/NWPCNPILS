@@ -660,10 +660,6 @@ p {
   display: block;
 }
 
-.patient-page-shell__notice {
-  margin-bottom: 1rem;
-}
-
 .patient-view h1.patient-medication-title {
   font-size: 1.25rem;
   margin-bottom: 0.35rem;

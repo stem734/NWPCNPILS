@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { detectContentType, CONTENT_TYPES } from '../contentRouter';
-import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 
 // All content views are lazy-loaded to keep patient routes split by content type.
 const ResourceView = React.lazy(() => import('./ResourceView'));
@@ -83,11 +82,6 @@ const PatientRouter: React.FC = () => {
       <div className="patient-page-shell">
         <div className="patient-page-shell__brand no-print" aria-hidden="true">
           <img className="patient-page-shell__brand-logo" src="/MyMedInfo-logo.png" alt="" />
-        </div>
-        <div className="patient-page-shell__notice">
-          <PatientGuidanceNotice
-            text="Service provided by your GP practice on behalf of the NHS."
-          />
         </div>
         {renderContent()}
       </div>
