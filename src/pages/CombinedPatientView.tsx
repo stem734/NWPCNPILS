@@ -632,8 +632,7 @@ const CombinedPatientView: React.FC = () => {
                             {content.trendLinks.map((link, i) => (
                               <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">
                                 <div className="patient-resource-meta patient-resource-meta--trend">
-                                  <FlaskConical size={24} color="#007f3b" />
-                                  <span className="patient-resource-meta-text">Trend Diabetes</span>
+                                  <span className="patient-resource-meta-text">Further guidance</span>
                                 </div>
                                 <h3>{link.title} <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
                               </a>
