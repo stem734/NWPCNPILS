@@ -705,7 +705,7 @@ const ResourceView: React.FC = () => {
                   {content.state !== 'placeholder' && (content.nhsLink || content.trendLinks.length > 0) && (
                     <div className="patient-resources patient-section-divider">
                       <h2 className="patient-resources-heading">
-                        Trusted Resources for {content.title.split('-')[0].trim()}
+                        Further guidance
                       </h2>
                       <div className="patient-resource-list patient-resource-list--compact">
                         {content.nhsLink && (
@@ -727,8 +727,6 @@ const ResourceView: React.FC = () => {
                               <span className="patient-resource-meta-text">Trend Diabetes</span>
                             </div>
                             <h3>{link.title} <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
-                            <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
-                            <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                           </a>
                         ))}
                       </div>

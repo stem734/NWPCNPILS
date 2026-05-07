@@ -189,7 +189,7 @@ const LongTermConditionView: React.FC = () => {
       )}
 
       <div className="patient-resources patient-section-divider" style={{ marginTop: 0 }}>
-        <h2 className="patient-resources-heading">Trusted resources</h2>
+        <h2 className="patient-resources-heading">Further guidance</h2>
         <div className="patient-resource-list patient-resource-list--compact">
           {selectedTemplate.nhsLinks.map((link) => (
             <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">

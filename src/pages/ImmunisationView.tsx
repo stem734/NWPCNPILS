@@ -133,7 +133,7 @@ const ImmunisationView: React.FC = () => {
           </div>
 
           <div className="patient-resources patient-section-divider">
-            <h3 className="patient-resources-heading">NHS and local support links</h3>
+            <h3 className="patient-resources-heading">Further guidance</h3>
             <div className="patient-resource-list patient-resource-list--compact">
               {template.nhsLinks.map((link) => (
                 <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">

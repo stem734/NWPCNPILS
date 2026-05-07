@@ -636,8 +636,6 @@ const CombinedPatientView: React.FC = () => {
                                   <span className="patient-resource-meta-text">Trend Diabetes</span>
                                 </div>
                                 <h3>{link.title} <span style={{ fontSize: '0.85rem', fontWeight: 400 }}>(opens in new tab)</span></h3>
-                                <p className="patient-resource-copy">Specific leaflet for living well with your medication.</p>
-                                <span className="patient-resource-arrow"><ExternalLink size={18} /></span>
                               </a>
                             ))}
                           </div>
