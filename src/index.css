@@ -693,7 +693,7 @@ p {
   border-radius: 12px;
   border: 1px solid #005eb8;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
 }
 
@@ -710,7 +710,27 @@ p {
   margin: 0;
   font-weight: 600;
   color: var(--nhs-blue-ink);
-  font-size: 1.1rem;
+  font-size: 1rem;
+}
+
+.patient-greeting-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.patient-greeting-title {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.25;
+  font-weight: 700;
+  color: #212b32;
+}
+
+.patient-greeting-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4c6272;
 }
 
 .patient-summary-card {

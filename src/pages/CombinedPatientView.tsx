@@ -31,18 +31,15 @@ const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
   GENERAL: 2,
 };
 
-const GROUP_COPY: Record<'NEW' | 'REAUTH' | 'GENERAL', { title: string; description: string }> = {
+const GROUP_COPY: Record<'NEW' | 'REAUTH' | 'GENERAL', { title: string }> = {
   NEW: {
     title: 'Newly prescribed',
-    description: 'These medicines have been newly prescribed. Please read this information carefully so you know what to expect and how to take them safely.',
   },
   REAUTH: {
     title: 'Ongoing treatment',
-    description: 'These medicines are part of your ongoing treatment and are included here as a reminder to help you keep using them safely.',
   },
   GENERAL: {
     title: 'Medication Information',
-    description: 'These medicines include general information to help you manage your treatment safely.',
   },
 };
 
@@ -62,6 +59,28 @@ const stripTreatmentSuffix = (title: string) =>
 
 const getMedicationStateLabel = (badge: 'NEW' | 'REAUTH' | 'GENERAL') =>
   badge === 'NEW' ? 'Newly prescribed' : badge === 'REAUTH' ? 'Ongoing treatment' : 'Information';
+
+const getMedicationGroupCopy = (
+  badge: 'NEW' | 'REAUTH' | 'GENERAL',
+  count: number,
+  hasNewerGroup: boolean,
+  hasOlderGroup: boolean,
+) => {
+  const itemWord = count === 1 ? 'medicine' : 'medicines';
+  if (badge === 'NEW') {
+    return `You have ${count} newly prescribed ${itemWord} below. ${hasOlderGroup ? 'Scroll down for medicines in ongoing treatment and any general information.' : 'Read this information carefully so you know what to expect and how to take it safely.'}`;
+  }
+
+  if (badge === 'REAUTH') {
+    const instructions = [
+      hasNewerGroup ? 'Scroll up for newly prescribed medicines.' : '',
+      hasOlderGroup ? 'Scroll down for any general information.' : '',
+    ].filter(Boolean).join(' ');
+    return `You have ${count} ${itemWord} in ongoing treatment below. ${instructions || 'Read this information carefully so you know what to expect and how to take it safely.'}`;
+  }
+
+  return `You have ${count} ${itemWord} with general information below. ${hasNewerGroup ? 'Scroll up for newly prescribed medicines and ongoing treatment.' : 'Read this information carefully so you know what to expect and how to take it safely.'}`;
+};
 
 const getMedicationDisplayParts = (title: string) => {
   const strippedTitle = stripTreatmentSuffix(title).trim();
@@ -85,6 +104,24 @@ const formatValidUntil = (issuedAt: Date | null, value?: number, unit?: 'weeks' 
 const formatExpiryWindowLabel = (value?: number, unit?: 'weeks' | 'months') => {
   if (!value || !unit) return '';
   return `${value} ${value === 1 ? unit.replace(/s$/, '') : unit}`;
+};
+
+const getEarliestExpiryDate = (
+  issuedAt: Date | null,
+  contents: Array<{ linkExpiryValue?: number; linkExpiryUnit?: 'weeks' | 'months' }>,
+) : Date | null => {
+  if (!issuedAt) return null;
+  let earliest: Date | null = null;
+
+  contents.forEach((content) => {
+    if (!content.linkExpiryValue || !content.linkExpiryUnit) return;
+    const expiry = getExpiryDate(issuedAt, content.linkExpiryValue, content.linkExpiryUnit);
+    if (!earliest || expiry < earliest) {
+      earliest = expiry;
+    }
+  });
+
+  return earliest;
 };
 
 const sortMedicationGroups = <
@@ -460,6 +497,19 @@ const CombinedPatientView: React.FC = () => {
     );
   }, [medicationContents]);
 
+  const pageHeadline = orgName
+    ? `Your patient information from ${orgName}`
+    : 'Your patient information';
+
+  const pageValidUntil = useMemo(() => {
+    const sources = [
+      ...medicationContents.map((content) => ({ linkExpiryValue: content.linkExpiryValue, linkExpiryUnit: content.linkExpiryUnit })),
+      ...selectedScreenings.map((template) => ({ linkExpiryValue: template.linkExpiryValue, linkExpiryUnit: template.linkExpiryUnit })),
+    ];
+    const expiry = getEarliestExpiryDate(issuedAt, sources);
+    return expiry ? expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  }, [issuedAt, medicationContents, selectedScreenings]);
+
   const sectionLinks = useMemo(() => {
     const links: Array<{ id: string; label: string }> = [];
     if (medicationContents.length > 0) links.push({ id: 'bundle-medications', label: 'Medications' });
@@ -524,7 +574,17 @@ const CombinedPatientView: React.FC = () => {
         <div className="patient-greeting-icon">
           <Info size={20} aria-hidden="true" />
         </div>
-        <p className="patient-greeting-text">{patientGreeting}</p>
+        <div className="patient-greeting-copy">
+          <p className="patient-greeting-title">{pageHeadline}</p>
+          {(issuedDateDisplay || pageValidUntil) && (
+            <p className="patient-greeting-meta">
+              {issuedDateDisplay ? `Sent ${issuedDateDisplay}` : ''}
+              {issuedDateDisplay && pageValidUntil ? ' · ' : ''}
+              {pageValidUntil ? `Valid until ${pageValidUntil}` : ''}
+            </p>
+          )}
+          <p className="patient-greeting-text">{patientGreeting}</p>
+        </div>
       </div>
 
       <section className="card patient-bundle-summary">
@@ -570,12 +630,19 @@ const CombinedPatientView: React.FC = () => {
 
       {medicationContents.length > 0 && (
         <section id="bundle-medications">
-          {groupedMedicationContents.map(([badge, items]) => (
-            <section key={badge} className={`patient-section patient-section--${badge.toLowerCase()}`}>
-              <div className={`patient-group-heading patient-group-heading--${badge.toLowerCase()}`}>
-                <div className="patient-group-eyebrow">{GROUP_COPY[badge].title}</div>
-                <p className="patient-group-copy">{GROUP_COPY[badge].description}</p>
-              </div>
+      {groupedMedicationContents.map(([badge, items], index) => (
+        <section key={badge} className={`patient-section patient-section--${badge.toLowerCase()}`}>
+          <div className={`patient-group-heading patient-group-heading--${badge.toLowerCase()}`}>
+            <div className="patient-group-eyebrow">{GROUP_COPY[badge].title}</div>
+            <p className="patient-group-copy">
+              {getMedicationGroupCopy(
+                badge,
+                items.length,
+                index > 0,
+                index < groupedMedicationContents.length - 1,
+              )}
+            </p>
+          </div>
 
               <div className={`patient-content-grid${items.length === 1 ? ' patient-content-grid--single' : ''}`}>
                 {items.map((content) => {
