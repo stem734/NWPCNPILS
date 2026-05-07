@@ -540,7 +540,7 @@ const ResourceView: React.FC = () => {
     return 'Nottingham West Primary Care Network';
   }, [orgName, resolvedContents]);
 
-  const guidanceNoticeText = `This information has been prepared and checked by the clinical pharmacists at ${guidanceOrganisationName}.`;
+  const guidanceNoticeText = `Service provided by ${guidanceOrganisationName} on behalf of the NHS. This information has been prepared and checked by the clinical pharmacists at ${guidanceOrganisationName}.`;
 
   if ((isValidating || isResolvingContents) && hasPracticeIdentifier && !previewOnly) {
     return (

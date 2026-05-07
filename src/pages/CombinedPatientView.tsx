@@ -838,7 +838,7 @@ const CombinedPatientView: React.FC = () => {
       )}
 
       <div className="hc-rating__notice">
-        <PatientGuidanceNotice text="This information is for guidance only. Always follow the specific advice from your GP or clinical team." />
+        <PatientGuidanceNotice text="Service provided by your GP practice on behalf of the NHS." />
       </div>
     </div>
   );

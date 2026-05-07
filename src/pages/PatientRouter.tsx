@@ -86,7 +86,7 @@ const PatientRouter: React.FC = () => {
         </div>
         <div className="patient-page-shell__notice">
           <PatientGuidanceNotice
-            text="This information is for guidance only. Always follow the specific advice from your GP or clinical team."
+            text="Service provided by your GP practice on behalf of the NHS."
           />
         </div>
         {renderContent()}
