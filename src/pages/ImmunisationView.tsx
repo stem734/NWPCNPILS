@@ -207,7 +207,7 @@ const ImmunisationView: React.FC = () => {
         </div>
       ))}
 
-      <PatientSupportFooter />
+      <PatientSupportFooter text={org || 'Nottingham West Primary Care Network'} />
     </div>
   );
 };

@@ -880,7 +880,7 @@ const ResourceView: React.FC = () => {
       ))}
 
       {contents.length > 0 && (
-        <PatientSupportFooter />
+        <PatientSupportFooter text={guidanceOrganisationName} />
       )}
 
       {hasPracticeIdentifier && isAuthorised && contents.length > 0 && (

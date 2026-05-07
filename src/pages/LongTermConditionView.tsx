@@ -246,7 +246,7 @@ const LongTermConditionView: React.FC = () => {
         </div>
       </div>
 
-      <PatientSupportFooter />
+      <PatientSupportFooter text={org || 'Nottingham West Primary Care Network'} />
     </div>
   );
 };

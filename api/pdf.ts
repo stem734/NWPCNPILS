@@ -71,21 +71,30 @@ export default {
           { timeout: 30000 },
         ).catch(() => undefined);
 
-        await page.addScriptTag({ content: getExportCleanupScript() });
-        await page.evaluate(() => {
-          document.querySelectorAll('.no-print, .patient-demo-banner, .patient-print-bar, .hc-rating, .hc-rating__notice, .patient-page-shell__brand')
-            .forEach((node) => node.remove());
+    await page.addScriptTag({ content: getExportCleanupScript() });
+    await page.evaluate(() => {
+      document.querySelectorAll('.no-print, .patient-demo-banner, .patient-print-bar, .hc-rating, .hc-rating__notice, .patient-page-shell__brand')
+        .forEach((node) => node.remove());
+      document.querySelectorAll('.patient-support-footer')
+        .forEach((node) => {
+          node.classList.add('patient-support-footer--compact');
+          const text = node.querySelector('.patient-support-footer__text');
+          if (text) {
+            text.textContent = text.textContent?.trim() || '';
+          }
         });
-        await page.addStyleTag({
-          content: `
+    });
+    await page.addStyleTag({
+      content: `
             html, body { background: #ffffff !important; margin: 0 !important; padding: 0 !important; }
             .patient-page-shell { max-width: 100% !important; width: 100% !important; }
             .patient-view, .hc-page { box-shadow: none !important; }
             .patient-section-card, .patient-card, .card { break-inside: avoid; page-break-inside: avoid; }
             .patient-section { break-inside: auto; page-break-inside: auto; }
-            .patient-support-footer { margin-top: 12px !important; }
+            .patient-support-footer { margin-top: 12px !important; padding: 0 !important; background: transparent !important; border: 0 !important; }
+            .patient-support-footer__text { margin: 0 !important; padding: 0 !important; font-size: 10pt !important; color: #4c6272 !important; }
           `,
-        });
+    });
 
         const pdf = await page.pdf({
           format: 'A4',

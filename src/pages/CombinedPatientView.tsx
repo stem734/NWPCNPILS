@@ -901,7 +901,7 @@ const CombinedPatientView: React.FC = () => {
       ))}
 
       {(resolvedContents.length > 0 || selectedScreenings.length > 0) && (
-        <PatientSupportFooter />
+        <PatientSupportFooter text={orgName || 'Nottingham West Primary Care Network'} />
       )}
 
       <div className="hc-rating__notice">
