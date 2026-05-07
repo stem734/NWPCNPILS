@@ -31,12 +31,12 @@ const MEDICATION_BADGE_ORDER: Record<'NEW' | 'REAUTH' | 'GENERAL', number> = {
 
 const GROUP_COPY: Record<'NEW' | 'REAUTH' | 'GENERAL', { title: string; description: string }> = {
   NEW: {
-    title: 'New Medications',
-    description: 'You have been newly prescribed these medicines. Please read this information carefully so you know what to expect and how to take them safely.',
+    title: 'Newly prescribed',
+    description: 'These medicines have been newly prescribed. Please read this information carefully so you know what to expect and how to take them safely.',
   },
   REAUTH: {
-    title: 'Annual Reviews',
-    description: 'You are already prescribed these medicines. They are included here as a reminder and as part of your routine annual review.',
+    title: 'Ongoing treatment',
+    description: 'These medicines are part of your ongoing treatment and are included here as a reminder to help you keep using them safely.',
   },
   GENERAL: {
     title: 'Medication Information',
@@ -55,7 +55,21 @@ const isFreshValidationCache = (value: { expiresAt?: number; valid?: boolean }) 
 const stripTreatmentSuffix = (title: string) =>
   title
     .replace(/\s*-\s*Starting Treatment$/i, '')
-    .replace(/\s*-\s*Annual Review$/i, '');
+    .replace(/\s*-\s*Annual Review$/i, '')
+    .replace(/\s*-\s*Reauthorisation$/i, '');
+
+const getMedicationStateLabel = (badge: 'NEW' | 'REAUTH' | 'GENERAL') =>
+  badge === 'NEW' ? 'Newly prescribed' : badge === 'REAUTH' ? 'Ongoing treatment' : 'Information';
+
+const getMedicationDisplayParts = (title: string) => {
+  const strippedTitle = stripTreatmentSuffix(title).trim();
+  const firstSegment = strippedTitle.split(' - ')[0]?.trim() || strippedTitle;
+  const secondary = strippedTitle === firstSegment ? '' : strippedTitle;
+  return {
+    primary: firstSegment,
+    secondary,
+  };
+};
 
 const sortMedicationGroups = <
   T extends {
@@ -529,7 +543,9 @@ const CombinedPatientView: React.FC = () => {
               </div>
 
               <div className={`patient-content-grid${items.length === 1 ? ' patient-content-grid--single' : ''}`}>
-                {items.map((content) => (
+                {items.map((content) => {
+                  const displayTitle = getMedicationDisplayParts(content.title);
+                  return (
                   <article key={content.id} className="patient-content-panel">
                     <div className="card patient-card">
                       {issuedAt && content.linkExpiryValue && content.linkExpiryUnit && isUrlExpired(issuedAt, content.linkExpiryValue, content.linkExpiryUnit) && (
@@ -545,11 +561,14 @@ const CombinedPatientView: React.FC = () => {
                       )}
                       <div className="patient-card-meta">
                         <span className={`badge badge-${content.badge.toLowerCase()}`}>
-                          {content.badge === 'NEW' ? 'START' : content.badge === 'REAUTH' ? 'REVIEW' : 'INFO'}
+                          {getMedicationStateLabel(content.badge)}
                         </span>
                       </div>
 
-                      <h2 className="patient-medication-title">{stripTreatmentSuffix(content.title)}</h2>
+                      <h2 className="patient-medication-title">{displayTitle.primary}</h2>
+                      {displayTitle.secondary && (
+                        <p className="patient-medication-subtitle">{displayTitle.secondary}</p>
+                      )}
                       <p className="patient-section-copy">{content.description}</p>
 
                       {content.state !== 'placeholder' && content.generalKeyInfo && content.generalKeyInfo.length > 0 && (
@@ -614,7 +633,7 @@ const CombinedPatientView: React.FC = () => {
                       {content.state !== 'placeholder' && (content.nhsLink || content.trendLinks.length > 0) && (
                         <div className="patient-resources patient-section-divider">
                           <h2 className="patient-resources-heading">
-                            Trusted resources for {content.title.split('-')[0].trim()}
+                            Further guidance
                           </h2>
                           <div className="patient-resource-list patient-resource-list--compact">
                             {content.nhsLink && (
@@ -642,7 +661,8 @@ const CombinedPatientView: React.FC = () => {
                       )}
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))}

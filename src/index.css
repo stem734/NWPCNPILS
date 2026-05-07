@@ -1201,8 +1201,15 @@ p {
   display: block;
   font-size: 1.1rem;
   line-height: 1.25;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.2rem;
   color: var(--nhs-text);
+}
+
+.patient-medication-subtitle {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--nhs-secondary-text);
 }
 
 .patient-info-section {
@@ -1355,24 +1362,32 @@ p {
 }
 
 .badge {
-  display: inline-block;
-  padding: 0.2rem 0.65rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.24rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.73rem;
   font-weight: 700;
   margin-bottom: 0;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .badge-new {
-  background-color: #005eb8;
-  color: white;
+  background-color: #d8efff;
+  color: #003d78;
+  border: 1px solid #7fb9e6;
 }
 
 .badge-reauth {
-  background-color: #007f3b;
-  color: white;
+  background-color: #e6f4ea;
+  color: #005a2e;
+  border: 1px solid #7bc69b;
+}
+
+.badge-general {
+  background-color: #f0f4f5;
+  color: #4c6272;
+  border: 1px solid #d8dde0;
 }
 
 .footer {
