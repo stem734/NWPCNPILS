@@ -21,7 +21,6 @@ export async function saveElementAsPdf(element: HTMLElement, filename: string) {
     windowWidth: Math.max(element.scrollWidth, element.clientWidth, 1024),
   });
 
-  const imageData = canvas.toDataURL('image/png');
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'pt',
@@ -30,20 +29,41 @@ export async function saveElementAsPdf(element: HTMLElement, filename: string) {
   });
 
   const availableWidth = A4_WIDTH_PT - PDF_MARGIN_PT * 2;
-  const renderedHeight = (canvas.height * availableWidth) / canvas.width;
-  const printablePageHeight = A4_HEIGHT_PT - PDF_MARGIN_PT * 2;
+  const scale = availableWidth / canvas.width;
+  const pageHeightPx = Math.floor((A4_HEIGHT_PT - PDF_MARGIN_PT * 2) / scale);
+  const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
 
-  let remainingHeight = renderedHeight;
-  let imageOffset = PDF_MARGIN_PT;
+  const createSlice = (sourceCanvas: HTMLCanvasElement, y: number, height: number) => {
+    const slice = document.createElement('canvas');
+    slice.width = sourceCanvas.width;
+    slice.height = height;
+    const ctx = slice.getContext('2d');
+    if (!ctx) return null;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, slice.width, slice.height);
+    ctx.drawImage(sourceCanvas, 0, y, sourceCanvas.width, height, 0, 0, sourceCanvas.width, height);
+    return slice;
+  };
 
-  pdf.addImage(imageData, 'PNG', PDF_MARGIN_PT, imageOffset, availableWidth, renderedHeight, undefined, 'FAST');
-  remainingHeight -= printablePageHeight;
-
-  while (remainingHeight > 0) {
-    imageOffset -= printablePageHeight;
-    pdf.addPage();
-    pdf.addImage(imageData, 'PNG', PDF_MARGIN_PT, imageOffset, availableWidth, renderedHeight, undefined, 'FAST');
-    remainingHeight -= printablePageHeight;
+  for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
+    const y = pageIndex * pageHeightPx;
+    const sliceHeight = Math.min(pageHeightPx, canvas.height - y);
+    const slice = createSlice(canvas, y, sliceHeight);
+    if (!slice) continue;
+    const sliceData = slice.toDataURL('image/png');
+    if (pageIndex > 0) {
+      pdf.addPage();
+    }
+    pdf.addImage(
+      sliceData,
+      'PNG',
+      PDF_MARGIN_PT,
+      PDF_MARGIN_PT,
+      availableWidth,
+      sliceHeight * scale,
+      undefined,
+      'FAST',
+    );
   }
 
   pdf.save(`${sanitizeFilename(filename)}.pdf`);
