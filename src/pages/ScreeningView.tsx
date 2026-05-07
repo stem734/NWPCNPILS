@@ -13,7 +13,7 @@ import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore'
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
+import { getExpiryDate, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 /**
  * ScreeningView — renders screening invitation / result info.
@@ -39,6 +39,14 @@ const ScreeningView: React.FC = () => {
   const knownTemplateIds = useMemo(() => Object.keys(SCREENING_TEMPLATES), []);
   const selectedTemplate = loadedTemplate;
   const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
+  const validUntil = useMemo(() => {
+    if (!issuedAt || !selectedTemplate?.linkExpiryValue || !selectedTemplate?.linkExpiryUnit) return '';
+    return getExpiryDate(issuedAt, selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [issuedAt, selectedTemplate]);
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -128,11 +136,16 @@ const ScreeningView: React.FC = () => {
 
       <div className="card patient-section-card">
         {issuedAt && selectedTemplate.linkExpiryValue && selectedTemplate.linkExpiryUnit && isUrlExpired(issuedAt, selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit) && (
-          <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+          <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#8a1538', fontSize: '0.95rem', backgroundColor: '#fbe3ea', padding: '0.85rem 1rem', borderRadius: '8px', border: '2px solid #8a1538', marginBottom: '1rem', fontWeight: 700 }}>
             <AlertCircle size={20} style={{ flexShrink: 0 }} />
             <span>
-              You were sent this information more than {selectedTemplate.linkExpiryValue} {selectedTemplate.linkExpiryValue === 1 ? selectedTemplate.linkExpiryUnit.replace(/s$/, '') : selectedTemplate.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
+              This information is more than {selectedTemplate.linkExpiryValue} {selectedTemplate.linkExpiryValue === 1 ? selectedTemplate.linkExpiryUnit.replace(/s$/, '') : selectedTemplate.linkExpiryUnit} old and may be out of date. If you have any queries please speak to your GP practice.
             </span>
+          </div>
+        )}
+        {validUntil && !(issuedAt && selectedTemplate.linkExpiryValue && selectedTemplate.linkExpiryUnit && isUrlExpired(issuedAt, selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit)) && (
+          <div className="patient-card-meta" style={{ marginBottom: '0.85rem' }}>
+            <span className="patient-code-chip">Valid until {validUntil}</span>
           </div>
         )}
         <h2 className="patient-section-title">{selectedTemplate.label}</h2>

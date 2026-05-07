@@ -138,13 +138,22 @@ export function isUrlExpired(
   unit: 'weeks' | 'months',
   referenceDate: Date = new Date(),
 ): boolean {
+  const cutoff = getExpiryDate(timestamp, value, unit);
+  return referenceDate > cutoff;
+}
+
+export function getExpiryDate(
+  timestamp: Date,
+  value: number,
+  unit: 'weeks' | 'months',
+): Date {
   const cutoff = new Date(timestamp);
   if (unit === 'months') {
     cutoff.setMonth(cutoff.getMonth() + value);
   } else {
     cutoff.setDate(cutoff.getDate() + value * 7);
   }
-  return referenceDate > cutoff;
+  return cutoff;
 }
 
 /**

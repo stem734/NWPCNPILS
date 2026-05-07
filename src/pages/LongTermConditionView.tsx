@@ -6,7 +6,21 @@ import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
+import { getExpiryDate, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
+
+const formatValidUntil = (issuedAt: Date | null, value?: number, unit?: 'weeks' | 'months') => {
+  if (!issuedAt || !value || !unit) return '';
+  return getExpiryDate(issuedAt, value, unit).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
+
+const formatExpiryWindowLabel = (value?: number, unit?: 'weeks' | 'months') => {
+  if (!value || !unit) return '';
+  return `${value} ${value === 1 ? unit.replace(/s$/, '') : unit}`;
+};
 
 const LongTermConditionView: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -19,6 +33,19 @@ const LongTermConditionView: React.FC = () => {
   const [loadedTemplate, setLoadedTemplate] = useState<LongTermConditionTemplate | null>(null);
   const access = usePracticeContentAccess(practiceIdentifier, 'ltc_enabled', { skip: isDemoMode });
   const selectedTemplate = loadedTemplate;
+  const validUntil = useMemo(
+    () => formatValidUntil(issuedAt, selectedTemplate?.linkExpiryValue, selectedTemplate?.linkExpiryUnit),
+    [issuedAt, selectedTemplate],
+  );
+  const isExpired = useMemo(
+    () => Boolean(
+      issuedAt &&
+      selectedTemplate?.linkExpiryValue &&
+      selectedTemplate?.linkExpiryUnit &&
+      isUrlExpired(issuedAt, selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit),
+    ),
+    [issuedAt, selectedTemplate],
+  );
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -87,12 +114,17 @@ const LongTermConditionView: React.FC = () => {
       </div>
 
       <div className="card patient-section-card">
-        {issuedAt && selectedTemplate.linkExpiryValue && selectedTemplate.linkExpiryUnit && isUrlExpired(issuedAt, selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit) && (
-          <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+        {isExpired && (
+          <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#8a1538', fontSize: '0.95rem', backgroundColor: '#fbe3ea', padding: '0.85rem 1rem', borderRadius: '8px', border: '2px solid #8a1538', marginBottom: '1rem', fontWeight: 700 }}>
             <AlertCircle size={20} style={{ flexShrink: 0 }} />
             <span>
-              You were sent this information more than {selectedTemplate.linkExpiryValue} {selectedTemplate.linkExpiryValue === 1 ? selectedTemplate.linkExpiryUnit.replace(/s$/, '') : selectedTemplate.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
+              This information is more than {formatExpiryWindowLabel(selectedTemplate.linkExpiryValue, selectedTemplate.linkExpiryUnit)} old and may be out of date. If you have any queries please speak to your GP practice.
             </span>
+          </div>
+        )}
+        {validUntil && !isExpired && (
+          <div className="patient-card-meta" style={{ marginBottom: '0.85rem' }}>
+            <span className="patient-code-chip">Valid until {validUntil}</span>
           </div>
         )}
         <h2 className="patient-section-title">{selectedTemplate.label}</h2>

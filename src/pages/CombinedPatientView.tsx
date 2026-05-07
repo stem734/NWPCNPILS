@@ -19,7 +19,7 @@ import PatientGuidanceNotice from '../components/PatientGuidanceNotice';
 import SickDayRulesModal from '../components/SickDayRulesModal';
 import { NhsCross, NhsTick } from '../components/NhsIcons';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { isUrlExpired, parsePatientDate, parseSystmOneTimestamp } from '../dateHelpers';
+import { getExpiryDate, isUrlExpired, parsePatientDate, parseSystmOneTimestamp } from '../dateHelpers';
 
 const VALIDATION_CACHE_TTL_MS = 5 * 60 * 1000;
 const VALIDATION_CACHE_VERSION = 'v2';
@@ -69,6 +69,20 @@ const getMedicationDisplayParts = (title: string) => {
     primary: firstSegment,
     secondary,
   };
+};
+
+const formatValidUntil = (issuedAt: Date | null, value?: number, unit?: 'weeks' | 'months') => {
+  if (!issuedAt || !value || !unit) return '';
+  return getExpiryDate(issuedAt, value, unit).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
+
+const formatExpiryWindowLabel = (value?: number, unit?: 'weeks' | 'months') => {
+  if (!value || !unit) return '';
+  return `${value} ${value === 1 ? unit.replace(/s$/, '') : unit}`;
 };
 
 const sortMedicationGroups = <
@@ -545,17 +559,24 @@ const CombinedPatientView: React.FC = () => {
               <div className={`patient-content-grid${items.length === 1 ? ' patient-content-grid--single' : ''}`}>
                 {items.map((content) => {
                   const displayTitle = getMedicationDisplayParts(content.title);
+                  const validUntil = formatValidUntil(issuedAt, content.linkExpiryValue, content.linkExpiryUnit);
+                  const isExpired = Boolean(
+                    issuedAt &&
+                    content.linkExpiryValue &&
+                    content.linkExpiryUnit &&
+                    isUrlExpired(issuedAt, content.linkExpiryValue, content.linkExpiryUnit),
+                  );
                   return (
                   <article key={content.id} className="patient-content-panel">
                     <div className="card patient-card">
-                      {issuedAt && content.linkExpiryValue && content.linkExpiryUnit && isUrlExpired(issuedAt, content.linkExpiryValue, content.linkExpiryUnit) && (
+                      {isExpired && (
                         <div
                           className="out-of-date-banner"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}
-                        >
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#8a1538', fontSize: '0.95rem', backgroundColor: '#fbe3ea', padding: '0.85rem 1rem', borderRadius: '8px', border: '2px solid #8a1538', marginBottom: '1rem', fontWeight: 700 }}
+                          >
                           <AlertCircle size={20} style={{ flexShrink: 0 }} />
                           <span>
-                            You were sent this information more than {content.linkExpiryValue} {content.linkExpiryValue === 1 ? content.linkExpiryUnit.replace(/s$/, '') : content.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
+                            This information is more than {formatExpiryWindowLabel(content.linkExpiryValue, content.linkExpiryUnit)} old and may be out of date. If you have any queries please speak to your GP practice.
                           </span>
                         </div>
                       )}
@@ -563,6 +584,9 @@ const CombinedPatientView: React.FC = () => {
                         <span className={`badge badge-${content.badge.toLowerCase()}`}>
                           {getMedicationStateLabel(content.badge)}
                         </span>
+                        {validUntil && !isExpired && (
+                          <span className="patient-code-chip">Valid until {validUntil}</span>
+                        )}
                       </div>
 
                       <h2 className="patient-medication-title">{displayTitle.primary}</h2>
@@ -685,14 +709,32 @@ const CombinedPatientView: React.FC = () => {
 
       {selectedScreenings.map((template) => (
         <section key={template.id} id={`screening-${template.code.toLowerCase()}`} className="card patient-section-card patient-section-card--bundle">
-          {issuedAt && template.linkExpiryValue && template.linkExpiryUnit && isUrlExpired(issuedAt, template.linkExpiryValue, template.linkExpiryUnit) && (
-            <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+          {(() => {
+            const validUntil = formatValidUntil(issuedAt, template.linkExpiryValue, template.linkExpiryUnit);
+            const isExpired = Boolean(
+              issuedAt &&
+              template.linkExpiryValue &&
+              template.linkExpiryUnit &&
+              isUrlExpired(issuedAt, template.linkExpiryValue, template.linkExpiryUnit),
+            );
+            return (
+              <>
+          {isExpired && (
+            <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#8a1538', fontSize: '0.95rem', backgroundColor: '#fbe3ea', padding: '0.85rem 1rem', borderRadius: '8px', border: '2px solid #8a1538', marginBottom: '1rem', fontWeight: 700 }}>
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
               <span>
-                You were sent this information more than {template.linkExpiryValue} {template.linkExpiryValue === 1 ? template.linkExpiryUnit.replace(/s$/, '') : template.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
+                This information is more than {formatExpiryWindowLabel(template.linkExpiryValue, template.linkExpiryUnit)} old and may be out of date. If you have any queries please speak to your GP practice.
               </span>
             </div>
           )}
+          {validUntil && !isExpired && (
+            <div className="patient-card-meta" style={{ marginBottom: '0.85rem' }}>
+              <span className="patient-code-chip">Valid until {validUntil}</span>
+            </div>
+          )}
+              </>
+            );
+          })()}
           <div className="patient-bundle-section-label">
             <Search size={16} />
             Screening reminder
@@ -732,7 +774,7 @@ const CombinedPatientView: React.FC = () => {
           )}
 
           <div className="patient-resources patient-section-divider">
-            <h3 className="patient-resources-heading">Trusted resources</h3>
+            <h3 className="patient-resources-heading">Further guidance</h3>
             <div className="patient-resource-list patient-resource-list--compact">
               {template.nhsLinks.map((link) => (
                 <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="patient-resource-link patient-resource-link--compact">

@@ -6,7 +6,7 @@ import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
+import { getExpiryDate, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 /**
  * ImmunisationView — renders post-immunisation information.
@@ -108,14 +108,38 @@ const ImmunisationView: React.FC = () => {
 
       {selectedVaccines.map((template) => (
         <div key={template.id} className="card patient-section-card">
+          {(() => {
+            const validUntil = issuedAt && template.linkExpiryValue && template.linkExpiryUnit
+              ? getExpiryDate(issuedAt, template.linkExpiryValue, template.linkExpiryUnit).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })
+              : '';
+            const isExpired = Boolean(
+              issuedAt &&
+              template.linkExpiryValue &&
+              template.linkExpiryUnit &&
+              isUrlExpired(issuedAt, template.linkExpiryValue, template.linkExpiryUnit),
+            );
+            return (
+              <>
           {issuedAt && template.linkExpiryValue && template.linkExpiryUnit && isUrlExpired(issuedAt, template.linkExpiryValue, template.linkExpiryUnit) && (
-            <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '1rem', fontWeight: 600 }}>
+            <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#8a1538', fontSize: '0.95rem', backgroundColor: '#fbe3ea', padding: '0.85rem 1rem', borderRadius: '8px', border: '2px solid #8a1538', marginBottom: '1rem', fontWeight: 700 }}>
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
               <span>
-                You were sent this information more than {template.linkExpiryValue} {template.linkExpiryValue === 1 ? template.linkExpiryUnit.replace(/s$/, '') : template.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
+                This information is more than {template.linkExpiryValue} {template.linkExpiryValue === 1 ? template.linkExpiryUnit.replace(/s$/, '') : template.linkExpiryUnit} old and may be out of date. If you have any queries please speak to your GP practice.
               </span>
             </div>
           )}
+          {validUntil && !isExpired && (
+            <div className="patient-card-meta" style={{ marginBottom: '0.85rem' }}>
+              <span className="patient-code-chip">Valid until {validUntil}</span>
+            </div>
+          )}
+              </>
+            );
+          })()}
           <h2 className="patient-section-title">{template.label}</h2>
           <p className="patient-section-copy">{template.headline}</p>
           <p className="patient-section-copy">{template.explanation}</p>

@@ -10,7 +10,7 @@ import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore'
 import type { HealthCheckTemplatePayload } from '../cardTemplateTypes';
 import { usePracticeContentAccess } from '../usePracticeContentAccess';
 import { getPracticeLookupFromSearchParams } from '../practiceLookup';
-import { isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
+import { getExpiryDate, isUrlExpired, parseSystmOneTimestamp } from '../dateHelpers';
 
 // ─── Helpers (ported from NHSHealthCheck/App.tsx) ─────────────────────────────
 
@@ -100,6 +100,15 @@ const buildPreviewMetrics = (domainId: ClinicalDomainId): ParsedMetric[] => {
     meaning: metric.pathway,
     helpLinks: [],
   }));
+};
+
+const formatValidUntil = (issuedAt: Date | null, value?: number, unit?: 'weeks' | 'months') => {
+  if (!issuedAt || !value || !unit) return '';
+  return getExpiryDate(issuedAt, value, unit).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 };
 
 // ─── Main HealthCheckView ─────────────────────────────────────────────────────
@@ -387,6 +396,7 @@ const HealthCheckView: React.FC = () => {
                   templatePayload?.linkExpiryUnit &&
                   isUrlExpired(issuedAt, templatePayload.linkExpiryValue, templatePayload.linkExpiryUnit),
                 );
+                const validUntil = formatValidUntil(issuedAt, templatePayload?.linkExpiryValue, templatePayload?.linkExpiryUnit);
                 const cholBreakdown = metric.id === 'ldl' && metric.components ? [
                   { label: 'HDL',     value: metric.components.hdl || '', unit: 'mmol/L' },
                   { label: 'LDL',     value: metric.components.ldl || '', unit: 'mmol/L' },
@@ -401,11 +411,16 @@ const HealthCheckView: React.FC = () => {
                 return (
                   <div key={metric.id} id={`metric-${metric.id}`}>
                     {metricExpired && (
-                      <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#d5281b', fontSize: '0.95rem', backgroundColor: '#fde8e8', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #d5281b', marginBottom: '0.75rem', fontWeight: 600 }}>
+                      <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#8a1538', fontSize: '0.95rem', backgroundColor: '#fbe3ea', padding: '0.85rem 1rem', borderRadius: '8px', border: '2px solid #8a1538', marginBottom: '0.75rem', fontWeight: 700 }}>
                         <AlertTriangle size={20} style={{ flexShrink: 0 }} />
                         <span>
-                          You were sent this information more than {templatePayload?.linkExpiryValue} {templatePayload?.linkExpiryValue === 1 ? templatePayload?.linkExpiryUnit?.replace(/s$/, '') : templatePayload?.linkExpiryUnit} ago, so it may be out of date. If you have any queries please speak to your GP practice.
+                          This information is more than {templatePayload?.linkExpiryValue} {templatePayload?.linkExpiryValue === 1 ? templatePayload?.linkExpiryUnit?.replace(/s$/, '') : templatePayload?.linkExpiryUnit} old and may be out of date. If you have any queries please speak to your GP practice.
                         </span>
+                      </div>
+                    )}
+                    {validUntil && !metricExpired && (
+                      <div className="patient-card-meta" style={{ marginBottom: '0.75rem' }}>
+                        <span className="patient-code-chip">Valid until {validUntil}</span>
                       </div>
                     )}
                     <HealthCheckCard
