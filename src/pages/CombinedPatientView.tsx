@@ -498,8 +498,8 @@ const CombinedPatientView: React.FC = () => {
   }, [medicationContents]);
 
   const pageHeadline = orgName
-    ? `Your patient information from ${orgName}`
-    : 'Your patient information';
+    ? `Your information from ${orgName}`
+    : 'Your information';
 
   const pageValidUntil = useMemo(() => {
     const sources = [
@@ -522,8 +522,8 @@ const CombinedPatientView: React.FC = () => {
   }, [medicationContents.length, selectedScreenings]);
 
   const patientGreeting = orgName
-    ? `Hi, ${orgName} has shared the information below about your medication${selectedScreenings.length > 0 ? ' and screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`
-    : `Hi, your practice has shared the information below about your medication${selectedScreenings.length > 0 ? ' and screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`;
+    ? `Hi, ${orgName} has shared the information below${medicationContents.length > 0 && selectedScreenings.length > 0 ? ' about your medication and screening' : medicationContents.length > 0 ? ' about your medication' : selectedScreenings.length > 0 ? ' about your screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`
+    : `Hi, your practice has shared the information below${medicationContents.length > 0 && selectedScreenings.length > 0 ? ' about your medication and screening' : medicationContents.length > 0 ? ' about your medication' : selectedScreenings.length > 0 ? ' about your screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`;
 
   const summaryParts = [
     medicationContents.length > 0 ? `${medicationContents.length} medication ${medicationContents.length === 1 ? 'update' : 'updates'}` : '',
