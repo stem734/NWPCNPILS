@@ -28,7 +28,8 @@ const PatientRouter: React.FC = () => {
   const hasHealthCheckParams = Boolean((searchParams.get('s1') || searchParams.get('s1csv') || searchParams.get('payload') || searchParams.get('hc') || '').trim());
   const hasImmunisationParams = Boolean((searchParams.get('vaccine') || searchParams.get('jab') || searchParams.get('imms') || '').trim());
   const hasLtcParams = Boolean((searchParams.get('ltc') || searchParams.get('condition') || '').trim());
-  const isCombinedBundle = hasMedicationParams && hasScreeningParams;
+  const mvpBundleParamCount = [hasMedicationParams, hasScreeningParams, hasImmunisationParams].filter(Boolean).length;
+  const isCombinedBundle = mvpBundleParamCount > 1;
 
   const { contentType } = useMemo(
     () => detectContentType(searchParams),

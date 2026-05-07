@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, ExternalLink, FlaskConical, Info, Link as LinkIcon, Printer, Search } from 'lucide-react';
+import { AlertCircle, ExternalLink, FlaskConical, Info, Link as LinkIcon, Printer, Search, ShieldCheck } from 'lucide-react';
 import { parseMedicationCodes, recordPatientAccess, resolveOrganisationMedicationCards, validateOrganisation } from '../protocolService';
 import { DEFAULT_PRACTICE_FEATURE_SETTINGS, type PracticeFeatureSettings } from '../practiceFeatures';
 import { useMedicationCatalog } from '../medicationCatalog';
@@ -9,8 +9,10 @@ import { fetchCardTemplates } from '../cardTemplateStore';
 import { fetchPatientPracticeCardTemplates } from '../practiceCardTemplateStore';
 import {
   SCREENING_TEMPLATES,
+  IMMUNISATION_TEMPLATES,
   findScreeningTemplateByIdentifier,
   hydrateScreeningTemplate,
+  type ImmunisationTemplate,
   type ScreeningTemplate,
   withScreeningTemplateDefaults,
 } from '../patientTemplateCatalog';
@@ -136,11 +138,18 @@ const sortMedicationGroups = <
     return Number.parseInt(left.id, 10) - Number.parseInt(right.id, 10);
   });
 
-const parseRequestedScreenings = (value: string) =>
+const parseRequestedList = (value: string) =>
   value
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+
+const getContentListPhrase = (items: string[]) => {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+};
 
 const CombinedPatientView: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -152,6 +161,7 @@ const CombinedPatientView: React.FC = () => {
   const practiceIdentifier = practiceLookup.lookupValue;
   const hasPracticeIdentifier = practiceLookup.hasIdentifier;
   const screenParam = searchParams.get('screen') || searchParams.get('screening') || '';
+  const vaccineParam = searchParams.get('vaccine') || searchParams.get('jab') || searchParams.get('imms') || '';
   const isDemoMode = searchParams.get('demo') === '1';
   const isExactDemo = searchParams.get('exactDemo') === '1';
   const requestedCodes = useMemo(() => {
@@ -161,7 +171,11 @@ const CombinedPatientView: React.FC = () => {
     const matches = rawCode.match(/\d{3}/g) || [];
     return Array.from(new Set(matches));
   }, [codesParam, rawCode]);
-  const requestedScreenings = useMemo(() => Array.from(new Set(parseRequestedScreenings(screenParam))), [screenParam]);
+  const requestedScreenings = useMemo(() => Array.from(new Set(parseRequestedList(screenParam))), [screenParam]);
+  const requestedImmunisations = useMemo(
+    () => Array.from(new Set(parseRequestedList(vaccineParam).map((item) => item.toLowerCase()))),
+    [vaccineParam],
+  );
   const issuedAt = useMemo(() => parseSystmOneTimestamp(searchParams.get('codes')), [searchParams]);
   const issuedDateDisplay = useMemo(() => {
     const issuedDate = parsePatientDate(dateParam) || issuedAt;
@@ -175,6 +189,14 @@ const CombinedPatientView: React.FC = () => {
   const builtInScreeningIds = useMemo(
     () => builtInScreeningTemplates.map((template) => template.id),
     [builtInScreeningTemplates],
+  );
+  const builtInImmunisationTemplates = useMemo(
+    () => Object.values(IMMUNISATION_TEMPLATES),
+    [],
+  );
+  const builtInImmunisationIds = useMemo(
+    () => builtInImmunisationTemplates.map((template) => template.id),
+    [builtInImmunisationTemplates],
   );
 
   const [isAuthorised, setIsAuthorised] = useState<boolean | null>(null);
@@ -202,9 +224,11 @@ const CombinedPatientView: React.FC = () => {
     linkExpiryUnit?: 'weeks' | 'months';
   }>>([]);
   const [selectedScreenings, setSelectedScreenings] = useState<ScreeningTemplate[]>([]);
+  const [selectedImmunisations, setSelectedImmunisations] = useState<ImmunisationTemplate[]>([]);
   const [isResolvingContents, setIsResolvingContents] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [screeningError, setScreeningError] = useState<string | null>(null);
+  const [immunisationError, setImmunisationError] = useState<string | null>(null);
   const [sickDayModalOpen, setSickDayModalOpen] = useState(false);
   const loggedAccessKeyRef = useRef<string | null>(null);
   const exportRef = useRef<HTMLDivElement | null>(null);
@@ -324,7 +348,7 @@ const CombinedPatientView: React.FC = () => {
       return;
     }
 
-    const accessKey = `${practiceIdentifier.toLowerCase()}|${requestedCodes.join(',')}|${requestedScreenings.join(',')}`;
+    const accessKey = `${practiceIdentifier.toLowerCase()}|${requestedCodes.join(',')}|${requestedScreenings.join(',')}|${requestedImmunisations.join(',')}`;
     if (loggedAccessKeyRef.current === accessKey) {
       return;
     }
@@ -339,7 +363,7 @@ const CombinedPatientView: React.FC = () => {
         setValidationNonce((n) => n + 1);
       }
     })();
-  }, [isAuthorised, isDemoMode, practiceIdentifier, requestedCodes, requestedScreenings]);
+  }, [isAuthorised, isDemoMode, practiceIdentifier, requestedCodes, requestedScreenings, requestedImmunisations]);
 
   useEffect(() => {
     let cancelled = false;
@@ -465,6 +489,68 @@ const CombinedPatientView: React.FC = () => {
     };
   }, [builtInScreeningIds, builtInScreeningTemplates, isAuthorised, isDemoMode, practiceFeatures.screening_enabled, practiceIdentifier, requestedScreenings]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadImmunisations = async () => {
+      if (requestedImmunisations.length === 0) {
+        if (!cancelled) {
+          setSelectedImmunisations([]);
+          setImmunisationError(null);
+        }
+        return;
+      }
+
+      if (!isDemoMode && (isAuthorised !== true || !practiceFeatures.immunisation_enabled)) {
+        if (!cancelled) {
+          setSelectedImmunisations([]);
+          setImmunisationError(null);
+        }
+        return;
+      }
+
+      try {
+        const [practiceRows, globalRows] = await Promise.all([
+          practiceIdentifier
+            ? fetchPatientPracticeCardTemplates<ImmunisationTemplate>(practiceIdentifier, 'immunisation', builtInImmunisationIds)
+            : Promise.resolve([]),
+          fetchCardTemplates<ImmunisationTemplate>('immunisation'),
+        ]);
+
+        const candidates = [
+          ...builtInImmunisationTemplates,
+          ...globalRows.map((row) => row.payload),
+          ...practiceRows.map((row) => row.payload),
+        ];
+        const templateMap = new Map(candidates.map((template) => [template.id.toLowerCase(), template]));
+        const resolvedImmunisations = requestedImmunisations
+          .map((identifier) => templateMap.get(identifier.toLowerCase()))
+          .filter((item): item is ImmunisationTemplate => Boolean(item));
+
+        if (!cancelled) {
+          setSelectedImmunisations(resolvedImmunisations);
+          setImmunisationError(
+            resolvedImmunisations.length === requestedImmunisations.length
+              ? null
+              : 'Some immunisation information could not be loaded for this link. Please contact your GP practice if this problem continues.',
+          );
+        }
+      } catch (error) {
+        console.error('Failed to load immunisation templates', error);
+        if (!cancelled) {
+          setSelectedImmunisations([]);
+          setImmunisationError('We could not load immunisation information right now. Please try again.');
+        }
+      }
+    };
+
+    void loadImmunisations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [builtInImmunisationIds, builtInImmunisationTemplates, isAuthorised, isDemoMode, practiceFeatures.immunisation_enabled, practiceIdentifier, requestedImmunisations]);
+
   const medicationContents = useMemo(() => {
     if (isDemoMode || !hasPracticeIdentifier) {
       return sortMedicationGroups(
@@ -505,10 +591,11 @@ const CombinedPatientView: React.FC = () => {
     const sources = [
       ...medicationContents.map((content) => ({ linkExpiryValue: content.linkExpiryValue, linkExpiryUnit: content.linkExpiryUnit })),
       ...selectedScreenings.map((template) => ({ linkExpiryValue: template.linkExpiryValue, linkExpiryUnit: template.linkExpiryUnit })),
+      ...selectedImmunisations.map((template) => ({ linkExpiryValue: template.linkExpiryValue, linkExpiryUnit: template.linkExpiryUnit })),
     ];
     const expiry = getEarliestExpiryDate(issuedAt, sources);
     return expiry ? expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  }, [issuedAt, medicationContents, selectedScreenings]);
+  }, [issuedAt, medicationContents, selectedScreenings, selectedImmunisations]);
 
   const sectionLinks = useMemo(() => {
     const links: Array<{ id: string; label: string }> = [];
@@ -518,20 +605,33 @@ const CombinedPatientView: React.FC = () => {
         links.push({ id: `screening-${screening.code.toLowerCase()}`, label: screening.label });
       });
     }
+    if (selectedImmunisations.length > 0) {
+      selectedImmunisations.forEach((immunisation) => {
+        links.push({ id: `immunisation-${immunisation.id.toLowerCase()}`, label: immunisation.label });
+      });
+    }
     return links;
-  }, [medicationContents.length, selectedScreenings]);
+  }, [medicationContents.length, selectedScreenings, selectedImmunisations]);
 
+  const sharedContentTypes = [
+    medicationContents.length > 0 ? 'medication' : '',
+    selectedScreenings.length > 0 ? 'screening' : '',
+    selectedImmunisations.length > 0 ? 'immunisation' : '',
+  ].filter(Boolean);
+
+  const sharedContentPhrase = getContentListPhrase(sharedContentTypes);
   const patientGreeting = orgName
-    ? `Hi, ${orgName} has shared the information below${medicationContents.length > 0 && selectedScreenings.length > 0 ? ' about your medication and screening' : medicationContents.length > 0 ? ' about your medication' : selectedScreenings.length > 0 ? ' about your screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`
-    : `Hi, your practice has shared the information below${medicationContents.length > 0 && selectedScreenings.length > 0 ? ' about your medication and screening' : medicationContents.length > 0 ? ' about your medication' : selectedScreenings.length > 0 ? ' about your screening' : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`;
+    ? `Hi, ${orgName} has shared the information below${sharedContentPhrase ? ` about your ${sharedContentPhrase}` : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`
+    : `Hi, your practice has shared the information below${sharedContentPhrase ? ` about your ${sharedContentPhrase}` : ''}${issuedDateDisplay ? `. This was sent on ${issuedDateDisplay}.` : '.'}`;
 
   const summaryParts = [
     medicationContents.length > 0 ? `${medicationContents.length} medication ${medicationContents.length === 1 ? 'update' : 'updates'}` : '',
     selectedScreenings.length > 0 ? `${selectedScreenings.length} screening ${selectedScreenings.length === 1 ? 'reminder' : 'reminders'}` : '',
+    selectedImmunisations.length > 0 ? `${selectedImmunisations.length} immunisation ${selectedImmunisations.length === 1 ? 'update' : 'updates'}` : '',
   ].filter(Boolean);
 
   const summaryText = summaryParts.length > 0
-    ? `${summaryParts.join(' and ')} ready to review.`
+    ? `${getContentListPhrase(summaryParts)} ready to review.`
     : 'Your GP practice has shared information for you to review.';
 
   if ((isValidating || isResolvingContents) && hasPracticeIdentifier && !isDemoMode) {
@@ -900,7 +1000,95 @@ const CombinedPatientView: React.FC = () => {
         </section>
       ))}
 
-      {(resolvedContents.length > 0 || selectedScreenings.length > 0) && (
+      {requestedImmunisations.length > 0 && !practiceFeatures.immunisation_enabled && hasPracticeIdentifier && isAuthorised === true && !isDemoMode && (
+        <div className="card patient-state-card" role="alert" aria-live="assertive">
+          <h2 className="patient-section-title">Immunisation information unavailable</h2>
+          <p className="patient-section-copy" style={{ marginBottom: 0 }}>Immunisation information is not enabled for this practice yet.</p>
+        </div>
+      )}
+
+      {immunisationError && (
+        <div className="card patient-state-card" role="alert" aria-live="assertive">
+          <h2 className="patient-section-title">Immunisation information unavailable</h2>
+          <p className="patient-section-copy" style={{ marginBottom: 0 }}>{immunisationError}</p>
+        </div>
+      )}
+
+      {selectedImmunisations.map((template) => (
+        <section key={template.id} id={`immunisation-${template.id.toLowerCase()}`} className="card patient-section-card patient-section-card--bundle">
+          {(() => {
+            const validUntil = formatValidUntil(issuedAt, template.linkExpiryValue, template.linkExpiryUnit);
+            const isExpired = Boolean(
+              issuedAt &&
+              template.linkExpiryValue &&
+              template.linkExpiryUnit &&
+              isUrlExpired(issuedAt, template.linkExpiryValue, template.linkExpiryUnit),
+            );
+            return (
+              <>
+                {isExpired && (
+                  <div className="out-of-date-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#8a1538', fontSize: '0.95rem', backgroundColor: '#fbe3ea', padding: '0.85rem 1rem', borderRadius: '8px', border: '2px solid #8a1538', marginBottom: '1rem', fontWeight: 700 }}>
+                    <AlertCircle size={20} style={{ flexShrink: 0 }} />
+                    <span>
+                      This information is more than {formatExpiryWindowLabel(template.linkExpiryValue, template.linkExpiryUnit)} old and may be out of date. If you have any queries please speak to your GP practice.
+                    </span>
+                  </div>
+                )}
+                {validUntil && !isExpired && (
+                  <div className="patient-card-meta" style={{ marginBottom: '0.85rem' }}>
+                    <span className="patient-code-chip">Valid until {validUntil}</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+          <div className="patient-bundle-section-label">
+            <ShieldCheck size={16} />
+            Immunisation update
+          </div>
+          <h2 className="patient-section-title">{template.label}</h2>
+          <p className="patient-section-copy">{template.headline}</p>
+          <p className="patient-section-copy">{template.explanation}</p>
+
+          <div className="patient-info-section">
+            <h3 className="patient-section-title patient-section-title--small">Aftercare and guidance</h3>
+            <ul className="patient-info-list">
+              {template.guidance.map((item, index) => (
+                <li key={index} className="patient-info-item">
+                  <div className="patient-info-icon"><NhsTick size={22} aria-hidden="true" /></div>
+                  <span className="patient-info-text">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="patient-resources patient-section-divider">
+            <h3 className="patient-resources-heading">Further guidance</h3>
+            <div className="patient-resource-list patient-resource-list--compact">
+              {template.nhsLinks.map((link) => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="patient-resource-link patient-resource-link--compact"
+                  aria-label={`${link.title} opens in new tab`}
+                >
+                  <div className="patient-resource-meta">
+                    <div className="patient-resource-chip">NHS</div>
+                    <span className="patient-resource-meta-text">National guidance</span>
+                  </div>
+                  <h3>{link.title}</h3>
+                  <p className="patient-resource-copy">{link.description}</p>
+                  <span className="patient-resource-arrow" aria-hidden="true"><ExternalLink size={18} /></span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      ))}
+
+      {(resolvedContents.length > 0 || selectedScreenings.length > 0 || selectedImmunisations.length > 0) && (
         <PatientSupportFooter text={orgName || 'Nottingham West Primary Care Network'} />
       )}
 
