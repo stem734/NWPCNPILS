@@ -824,13 +824,6 @@ p {
   margin: 0 0 1rem;
 }
 
-.data-indicator__logo {
-  display: block;
-  width: 3rem;
-  height: auto;
-  flex: 0 0 auto;
-}
-
 .data-indicator__icon {
   flex: 0 0 auto;
 }
